@@ -7,13 +7,15 @@ void getdataBroadcastNew(int mode,char readCode){
 	commandCAN = 0;
 	clear_can_array(can_default_buffer);  //clear out temp buffer
 	
-  switch(readCode)
-  {
-	case 'T':  //tilt only
+  	switch(readCode){
+	case 'T':  {//tilt only
 
 		if (PRINT_MODE == 1) Serial.println("  --function: getdataBroadcastNew(), case T -- called");
 		Serial1.print("ARQWAIT");        
-		GET_DATA(columnData,PASS_AXEL1_ADC_CALIB_MINMAX); 
+		// GET_DATA(columnData,PASS_AXEL1_ADC_CALIB_MINMAX); 
+		String temp= "";
+		temp= "000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914000F0200541703207914";
+		temp.toCharArray(columnData, 521);
 		Serial.println(columnData);
 		parsedData = parser(columnData,8);
 		writeData(parsedData);													//write data to sdcard
@@ -21,7 +23,9 @@ void getdataBroadcastNew(int mode,char readCode){
 		sprintf(allData,parsedData ,strlen(parsedData));		
 
 		Serial1.print("ARQWAIT");                
-		GET_DATA(columnData,PASS_AXEL2_ADC_CALIB_MINMAX);
+		// GET_DATA(columnData,PASS_AXEL2_ADC_CALIB_MINMAX);
+		temp= "000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914000F0210541703207914";
+		temp.toCharArray(columnData, 521);
 		Serial.println(columnData);
 		parsedData = parser(columnData,8);
 		writeData(parsedData);													//write data to sdcard
@@ -29,25 +33,25 @@ void getdataBroadcastNew(int mode,char readCode){
 		strncat(allData,"+" ,1);
 		strncat(allData,parsedData ,strlen(parsedData));
                 
-                if (PIEZO == 1) {		
-    		  Serial1.print("ARQWAIT");        
-    		  GET_DATA(columnData,255); // piezo
-    		  Serial1.print("ARQWAIT");
-    		  Serial.println(columnData);
-    		  parsedData = parser(columnData,8);
-    		  writeData(parsedData);													//write data to sdcard
-    		  Serial.println(parsedData);
-    		  strncat(allData,"+" ,1);
-    		  strncat(allData,parsedData ,strlen(parsedData));
-                }
+        if (PIEZO == 1) {		
+    		Serial1.print("ARQWAIT");        
+    		GET_DATA(columnData,255); // piezo
+    		Serial1.print("ARQWAIT");
+    		Serial.println(columnData);
+    		parsedData = parser(columnData,8);
+    		writeData(parsedData);													//write data to sdcard
+    		Serial.println(parsedData);
+    		strncat(allData,"+" ,1);
+    		strncat(allData,parsedData ,strlen(parsedData));
+        }
 
 			   
 		printData(allData, mode);
 
 		digitalWrite(RELAYPIN, LOW);
-
+	}
         break;
-    case 'S':  //with soms 
+    case 'S': { //with soms 
 				
 		if (PRINT_MODE == 1) Serial.println("  --function: getdataBroadcastNew(), case S -- called");
 		Serial1.print("ARQWAIT");
@@ -111,6 +115,7 @@ void getdataBroadcastNew(int mode,char readCode){
 		break;
 
    }
+}
    digitalWrite(trigSW, LOW);
 }
 

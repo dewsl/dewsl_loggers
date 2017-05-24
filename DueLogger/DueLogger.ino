@@ -41,7 +41,7 @@ const int trigSW =  50;
 
 
 int lastSec, lastMin, lastHr;
-char columnData[2500];
+char columnData[521];
 char allData[5000];
 char subcolumnData[150];
 char subcolumnDataBackUp[150];
@@ -184,101 +184,96 @@ void sensorMessageIdConfig(int sensorVersion){
 
 
 void menu (bool arq) {
-  int mode = 0;
-  char cmd1;
-  char cmd2;
-  char serbuffer[22] = {};
+    int mode = 0;
+    char cmd1;
+    char cmd2;
+    char serbuffer[22] = {};
 
-  if (arq == false) {
-    mode = 0;
-  } else {
-    mode = 1;
-  }
-
-  if (arq) {
-    if (CUSTOMDUE) {
-      while (!Serial1.available());
-      Serial1.readBytesUntil('\n', serbuffer, 22);
+    if (arq == false) {
+        mode = 0;
     } else {
-      while (!Serial3.available());
-      Serial3.readBytesUntil('\n', serbuffer, 22);
+        mode = 1;
     }
-  } else {
-    while (!Serial.available());
-    Serial.readBytesUntil('\n', serbuffer, 22);
-  }
-  serbuffer[22] = 0x00;
-  Serial.println(serbuffer);
-  if (strstr(serbuffer, "CMD")) {
-    cmd1 = serbuffer[6];
-    cmd2 = serbuffer[7];
-    for (i = 8; i < 22; i++) {
-      TIMESTAMP[i - 8] = serbuffer[i];
+
+    if (arq) {
+        if (CUSTOMDUE) {
+            while (!Serial1.available());
+            Serial1.readBytesUntil('\n', serbuffer, 22);
+        } 
+        else {
+            while (!Serial3.available());
+            Serial3.readBytesUntil('\n', serbuffer, 22);
+        }
+    } 
+    else {
+        while (!Serial.available());
+        Serial.readBytesUntil('\n', serbuffer, 22);
     }
-    Serial.print("TIMESTAMP: ");
-    Serial.println(TIMESTAMP);
-  }
+    serbuffer[22] = 0x00;
+    Serial.println(serbuffer);
+    
+    if (strstr(serbuffer, "CMD")) {
+        cmd1 = serbuffer[6];
+        cmd2 = serbuffer[7];
+        for (i = 8; i < 22; i++) {
+            TIMESTAMP[i - 8] = serbuffer[i];
+        }
+        Serial.print("TIMESTAMP: ");
+        Serial.println(TIMESTAMP);
+    }
 
-  switch (cmd1) {
-
-    case '6' : {
-        Serial.print("Recognized ARQCMD6- GET BROADCASTEDNEW DATA");
-        getdataBroadcastNew(mode, cmd2);
-        break;
-      }
-    case '9': {
-        Serial.println("Exiting debug mode");
-        //debugCheck=1;
-      }
-    default: {
-        Serial.println("Command not recognized");
-        break;
-      }
-  }//SWITCH
+    switch (cmd1) {
+        case '6' : {
+            Serial.print("Recognized ARQCMD6- GET BROADCASTEDNEW DATA");
+            getdataBroadcastNew(mode, cmd2);
+            break;
+        }
+        case '9': {
+            Serial.println("Exiting debug mode");
+            //debugCheck=1;
+        }
+        default: {
+            Serial.println("Command not recognized");
+            break;
+        }
+    }
 }
 
-int* checkIdentifier(char* token){
-    int ret[] = {0,0};
-    int idfier = 0;
-    int cutoff = 0;
-    switch (token[0]) {
+char checkIdentifier(char* token){
+    char idfier = '0';
+    switch (token[3]) {
         case '1': {
-          if (token[1] == '5') {
-            idfier = 'b';
-            cutoff = 130;
-          }
-          else if (token[1] == 'A') {
-            idfier = 'c';
-            cutoff = 133;
-          }
-          break;
+            if (token[4] == '5') {
+                idfier = 'b';
+            }
+            else if (token[4] == 'A') {
+                idfier = 'c';
+            }
+            break;
         }
 
-      case '0': {
-          cutoff = 135;  //15 chars only for axel
-          if (token[1] == 'B')
-            idfier = 'x';
-          else if (token[1] == 'C')
-            idfier = 'y';
-          break;
+        case '0': {
+            if (token[4] == 'B')
+                idfier = 'x';
+            else if (token[3] == 'C')
+                idfier = 'y';
+            break;
         }
-      case '2': {
-          cutoff = 135;  //15 chars only for axel
-          if (token[1] == '0')
-            idfier = 'x';
-          else if (token[1] == '1')
-            idfier = 'y';
-          break;
+        case '2': {
+            Serial.println(token[4]);
+            if (token[4] == '0'){
+                idfier = 'x';}
+            else if (token[4] == '1'){
+                idfier = 'y';}
+            break;
         }
-      case '6': {
-          idfier = 'b';
-          cutoff = 130;  //10 chars only for axel
-          break;
+        case '6': {
+            idfier = 'b';
+            break;
         }
-      case '7': {
-          idfier = 'c';
-          cutoff = 133;  //7 chars for raw soms
-          break;
+        case '7': {
+            idfier = 'c';
+            break;
         }
         /*
         case 'F': {
@@ -287,14 +282,42 @@ int* checkIdentifier(char* token){
           break;
         }
         */
-      default: {
-          idfier = '0';
+        default: {
+            idfier = '0';
+            break;
+        }
+    }
+    return idfier;
+}
+
+int checkCutoff(char idf){
+    int cutoff=0;
+    Serial.println("idf");
+    Serial.println(idf);
+    switch (idf) {
+        case 'b': {
+            cutoff = 130;
+            break;
+        }
+        case 'x': {
+          cutoff = 135;  //15 chars only for axel
+          break;
+        }
+        case 'y': {
+          cutoff = 135;  //15 chars only for axel
+          break;
+        }
+        case 'c': {
+          cutoff = 133;  //15 chars only for axel
+          break;
+        }
+        default: {
           cutoff = 0;
           break;
         }
-    ret= {idfier, cutoff};
-    return ret;
-}
+
+    }
+    return cutoff;
 }
 
 void printData(char *rawcolData, int mode ) {
@@ -323,14 +346,11 @@ void printData(char *rawcolData, int mode ) {
     //create another function here: check identifier
     for (i = 0; i < j; i++) {
         strarray[i].toCharArray(tokenlen, 999);
-        Serial.println(strarray[i]);
         columnLen = strlen(tokenlen);
         //check yung message id
-        int* results={};
-        results= checkIdentifier(tokenlen);
-        idfier[i]= results[0];
-        cutoff[i]= results[1];
-    
+        idfier[i]= checkIdentifier(tokenlen);
+        cutoff[i]= checkCutoff(idfier[i]);
+        
         if (columnLen == 0) {
             subloopnum[i] = 0;
         } 
@@ -363,8 +383,8 @@ void printData(char *rawcolData, int mode ) {
         Serial1.println(subcolumnData);
         Serial.println(subcolumnData);
 
-      } else {
-        //len is not yet fixed-----------------------------------
+    } 
+    else {
         int partnum = 0;
         int subpartnum = 0;
 
@@ -376,6 +396,9 @@ void printData(char *rawcolData, int mode ) {
             strarray[i].toCharArray(tokenlen, 999);
             columnPointer = tokenlen;
             subpartnum = 0;
+
+            
+
             while (subpartnum < subloopnum[i]) {            // if data were present
                 if (strlen(columnPointer) > cutoff[i]) {
                     len = cutoff[i] + 20;
@@ -426,40 +449,40 @@ void printData(char *rawcolData, int mode ) {
             columnPointer = columnPointer + cutoff[i];
 
             if (partnum == 0) {
-              Serial.println("Inside partnum == 0 ");
-              if (mode == 1) { //arqMode
-                Serial.println(subcolumnData);
-                Serial1.println(subcolumnData);
-                Serial1.flush();
-              }
-              else if (mode == 0) { //debugMode
-                Serial1.println(subcolumnData);
-                Serial1.flush();
-                Serial.println(subcolumnData);
-                Serial.flush();
-              }
+                Serial.println("Inside partnum == 0 ");
+                 if (mode == 1) { //arqMode
+                    Serial.println(subcolumnData);
+                    Serial1.println(subcolumnData);
+                    Serial1.flush();
+                }
+                else if (mode == 0) { //debugMode
+                    Serial1.println(subcolumnData);
+                    Serial1.flush();
+                    Serial.println(subcolumnData);
+                    Serial.flush();
+                }
             }
             else if (partnum > 0) {
-              Serial.print("partnum == "); Serial.println(partnum);
+                Serial.print("partnum == "); Serial.println(partnum);
 
-              if (mode == 0) { // debug
-                int OKflag = 0;
-                do {
-                    int timestart = millis();
-                    int timenow = millis();
+                if (mode == 0) { // debug
+                    int OKflag = 0;
+                    do {
+                        int timestart = millis();
+                        int timenow = millis();
 
-                    while (!Serial.available()) {
-                        while ( timenow - timestart < 9000 ) {
-                        timenow = millis();
+                        while (!Serial.available()) {
+                            while ( timenow - timestart < 9000 ) {
+                            timenow = millis();
+                        }
+                        Serial.println("Time out...");
+                        break;
                     }
-                    Serial.println("Time out...");
-                    break;
-                }
-                if (Serial.find("OK")) {
-                    //              delay(9000);
-                    Serial.println("OK found");
-                    Serial.println(subcolumnData);
-                    OKflag = 1;
+                    if (Serial.find("OK")) {
+                        //              delay(9000);
+                        Serial.println("OK found");
+                        Serial.println(subcolumnData);
+                        OKflag = 1;
                 }
                 else {
                     Serial.println("did not find ok");
