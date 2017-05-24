@@ -191,7 +191,7 @@ unsigned int processConfigLine(char *ptr){
     }
     
 
-	else if(str.startsWith("ColumnCommand")){ //checks if the command is for column
+	else if(str.startsWith("column_command")){ //checks if the command is for column
 		indexOfValue =str.indexOf("=");
 	 	indexOfValue++; // get index of the number
 	 	while(str[indexOfValue] == ' ')
@@ -204,7 +204,7 @@ unsigned int processConfigLine(char *ptr){
 	 	return 0;		 
 	}
 
-	else if(str.startsWith("column_cool_off")){
+	else if(str.startsWith("column_cool_off") || str.startsWith("ColumnCommand")){
 		indexOfValue =str.indexOf("=");
 		indexOfValue++; // get index of the number
 	  	sptr = &str[indexOfValue];

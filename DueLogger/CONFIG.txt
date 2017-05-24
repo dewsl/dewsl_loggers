@@ -8,7 +8,6 @@ ColumnCommand = S
 column_cool_off = 30
 sampling_max_num_of_retry = 2
 turn_on_delay = 30
-enable_find_node_ids = 0
 repeating_frames_limit = 10
 repeating_retry_limit = 3
 allowed_missing_nodes = 0
