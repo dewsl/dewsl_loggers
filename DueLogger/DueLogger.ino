@@ -42,23 +42,12 @@ int dataloggerVersion = 2;
 #define POLL_SOMS_RAW_NEW                  110
 #define POLL_SOMS_CALIB_NEW                113
 */
-int COLUMN_COOL_OFF = 2000;
 
-int TIMEOUT = 2000;
-int unique_ids[40] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-int t_unique_ids[40] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; // temp unique node ids
+int RELAYPIN = 44; //CUSTOM DUE
+int chipSelect = SS3;  //!< the pin for chip select in sdcard
+bool eepromFlag = true;
+const int trigSW =  50;
 
-RX_CAN_FRAME incoming;
-int inbyte, id, cmd;
-int columnLen, loopnum, commandCAN;
-int nodearray[NUMBERNODES] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40};
-unsigned long GIDTable[100][2];
-bool timeout_status = false;
-
-char MASTERNAME[6] = "XXXXX";
-unsigned char ColumnCommand = 'T';
-unsigned int numOfNodes = 11;
-char TIMESTAMP[19];
 
 int lastSec, lastMin, lastHr;
 char columnData[2500];
@@ -72,9 +61,21 @@ char *parsedData = {};
 RX_CAN_FRAME can_rcv_data_array[numberofnodes];
 RX_CAN_FRAME temp_can_rcv_data_array[numberofnodes];
 TX_CAN_FRAME can_snd_data_array[2];
+RX_CAN_FRAME incoming;
+int inbyte, id, cmd;
+int columnLen, loopnum, commandCAN;
+int nodearray[NUMBERNODES] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40};
+unsigned long GIDTable[100][2];
+bool timeout_status = false;
+char TIMESTAMP[19];
+extern RX_CAN_FRAME can_default_buffer[100];
 
-/*from mega global variables*/
-const int trigSW =  50;
+
+int i = 0;
+char tempo[3];
+char line[40];
+int numOfData, sizeofarray, msgid;
+unsigned int counter;
 
 /*SD card variables */
 /*config file variables  with default values*/
@@ -85,22 +86,16 @@ unsigned int REPEATING_FRAMES_RETRY_LIMIT = 2;
 int TURN_ON_DELAY = 2000;
 int PIEZO = 0;
 unsigned int column1;
+int COLUMN_COOL_OFF = 2000;
+int TIMEOUT = 2000;
+int unique_ids[40] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int t_unique_ids[40] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}; // temp unique node ids
+char MASTERNAME[6] = "XXXXX";
+unsigned char ColumnCommand = 'T';
+unsigned int numOfNodes = 11;
 
-int i = 0;
-char tempo[3];
-char line[40];
-int numOfData, sizeofarray, msgid;
-unsigned int counter;
-
-extern RX_CAN_FRAME can_default_buffer[100];
-int RELAYPIN = 44; //CUSTOM DUE
-int chipSelect = SS3;  //!< the pin for chip select in sdcard
-bool eepromFlag = true;
 
 void setup() {
-
-  RELAYPIN = 44; //CUSTOM DUE
-  chipSelect = SS3;  //!< the pin for chip select in sdcard
 
   pinMode(51, OUTPUT);
   digitalWrite(51, HIGH);
@@ -121,9 +116,6 @@ void setup() {
   Serial.println(" MASTER BOX");
   Serial.print("Build no:  ");
   Serial.println(BUILDNUMBER);
-
-
-
 
   int timestart = millis();
   int timenow = millis();
