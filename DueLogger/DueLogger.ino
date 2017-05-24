@@ -29,19 +29,10 @@
 #include <DueFlashStorage.h>
 DueFlashStorage dueFlashStorage;
 
-
 int PASS_AXEL1_ADC_CALIB_MINMAX = 32;        // version 2
 int PASS_AXEL2_ADC_CALIB_MINMAX = 33;
 int POLL_SOMS_RAW_NEW  = 111;
 int POLL_SOMS_CALIB_NEW = 112;
-int sensorVersion = 2;
-int dataloggerVersion = 2;
-/*
-#define PASS_AXEL1_ADC_CALIB_MINMAX         11          // version 3
-#define PASS_AXEL2_ADC_CALIB_MINMAX         12
-#define POLL_SOMS_RAW_NEW                  110
-#define POLL_SOMS_CALIB_NEW                113
-*/
 
 int RELAYPIN = 44; //CUSTOM DUE
 int chipSelect = SS3;  //!< the pin for chip select in sdcard
@@ -93,91 +84,102 @@ int t_unique_ids[40] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 char MASTERNAME[6] = "XXXXX";
 unsigned char ColumnCommand = 'T';
 unsigned int numOfNodes = 11;
-
+int sensorVersion = 2;
+int dataloggerVersion = 2;
 
 void setup() {
+    initialization();
+    int timestart = millis();
+    int timenow = millis();
 
-  pinMode(51, OUTPUT);
-  digitalWrite(51, HIGH);
+    int debugCheck = 0;
 
-  int debugCheck = 0;
-  pinMode(trigSW, OUTPUT);
-  digitalWrite(trigSW, LOW);
-
-  pinMode(RELAYPIN, OUTPUT);
-  digitalWrite(RELAYPIN, LOW);
-  delay(1000);
-
-  Serial.begin(BAUD);
-  Serial1.begin(BAUDARQ);
-
-  Serial.print("\nSENSLOPE ");
-  Serial.print(MASTERNAME);
-  Serial.println(" MASTER BOX");
-  Serial.print("Build no:  ");
-  Serial.println(BUILDNUMBER);
-
-  int timestart = millis();
-  int timenow = millis();
-  generateGIDtable();			//initialize the table in the ram
-
-  loadVariablesFromSdcard();
-
-  Serial.println("Press anything in 3 seconds to copy config file from sd card");
-  while ( timenow - timestart < 3000 ) {
-    timenow = millis();
-    if (Serial.available()) {
-      Serial.println("Changed the EEPROM flag to TRUE");
-      eepromFlag = true;
-      break;
-    }
-  }
-  loadVariablesFromSdcard();
-  if (eepromFlag == true) {
+    generateGIDtable();			//initialize the table in the ram
     loadVariablesFromSdcard();
-  }
 
-  if (numOfNodes != 255) {
-    for (int i = 0; i < numOfNodes; i++) {
-      t_unique_ids[i] = GIDTable[i][1];
+    Serial.println("Press anything in 3 seconds to copy config file from sd card");
+    while ( timenow - timestart < 3000 ) {
+        timenow = millis();
+        if (Serial.available()) {
+            Serial.println("Changed the EEPROM flag to TRUE");
+            eepromFlag = true;
+            break;
+        }
     }
-  }
 
-  getValuesfromEEPROM();
-
-  if (sensorVersion == 2) {
-    PASS_AXEL1_ADC_CALIB_MINMAX = 32;
-    PASS_AXEL2_ADC_CALIB_MINMAX = 33;
-    POLL_SOMS_RAW_NEW = 111;
-    POLL_SOMS_CALIB_NEW = 112;
-  } else if ( sensorVersion == 3) {
-    PASS_AXEL1_ADC_CALIB_MINMAX = 11;
-    PASS_AXEL2_ADC_CALIB_MINMAX = 12;
-    POLL_SOMS_RAW_NEW = 110;
-    POLL_SOMS_CALIB_NEW = 113;
-  } else { // set default as version 3
-    PASS_AXEL1_ADC_CALIB_MINMAX = 11;
-    PASS_AXEL2_ADC_CALIB_MINMAX = 12;
-    POLL_SOMS_RAW_NEW = 110;
-    POLL_SOMS_CALIB_NEW = 113;
-  }
-  Serial.println("Press anything to enter debugger mode");
-  while ( timenow - timestart < 5000 ) {
-    timenow = millis();
-    if (Serial.available()) {
-      Serial.println("Waiting for commands... DBGCMD9 TO EXIT");
-      while (debugCheck == 0) {
-        menu(false);
-        delay(1000);
-      }
+    loadVariablesFromSdcard();
+    
+    if (eepromFlag == true) {
+        loadVariablesFromSdcard();
     }
-  }
-  Serial.println("Continuing...");
+
+    if (numOfNodes != 255) {
+        for (int i = 0; i < numOfNodes; i++) {
+            t_unique_ids[i] = GIDTable[i][1];
+        }
+    }
+
+    getValuesfromEEPROM();
+
+    sensorMessageIdConfig(sensorVersion);
+    
+    Serial.println("Press anything to enter debugger mode");
+    while ( timenow - timestart < 5000 ) {
+        timenow = millis();
+        if (Serial.available()) {
+            Serial.println("Waiting for commands... DBGCMD9 TO EXIT");
+            while (debugCheck == 0) {
+                menu(false);
+                delay(1000);
+            }
+        }
+    }
+    Serial.println("Continuing...");
 }
 
 void loop() {
   menu(true);
   delay(200);
+}
+
+
+void initialization(){
+    pinMode(51, OUTPUT);
+    digitalWrite(51, HIGH);
+
+    pinMode(trigSW, OUTPUT);
+    digitalWrite(trigSW, LOW);
+
+    pinMode(RELAYPIN, OUTPUT);
+    digitalWrite(RELAYPIN, LOW);
+    delay(1000);
+
+    Serial.begin(BAUD);
+    Serial1.begin(BAUDARQ);
+    Serial.print("\nSENSLOPE ");
+    Serial.print(MASTERNAME);
+    Serial.println(" MASTER BOX");
+    Serial.print("Build no:  ");
+    Serial.println(BUILDNUMBER);
+}
+
+void sensorMessageIdConfig(int sensorVersion){
+    if (sensorVersion == 2) {
+        PASS_AXEL1_ADC_CALIB_MINMAX = 32;
+        PASS_AXEL2_ADC_CALIB_MINMAX = 33;
+        POLL_SOMS_RAW_NEW = 111;
+        POLL_SOMS_CALIB_NEW = 112;
+    } else if ( sensorVersion == 3) {
+        PASS_AXEL1_ADC_CALIB_MINMAX = 11;
+        PASS_AXEL2_ADC_CALIB_MINMAX = 12;
+        POLL_SOMS_RAW_NEW = 110;
+        POLL_SOMS_CALIB_NEW = 113;
+    } else { // set default as version 3
+        PASS_AXEL1_ADC_CALIB_MINMAX = 11;
+        PASS_AXEL2_ADC_CALIB_MINMAX = 12;
+        POLL_SOMS_RAW_NEW = 110;
+        POLL_SOMS_CALIB_NEW = 113;
+    }
 }
 
 
@@ -210,9 +212,7 @@ void menu (bool arq) {
   if (strstr(serbuffer, "CMD")) {
     cmd1 = serbuffer[6];
     cmd2 = serbuffer[7];
-    //FOR
     for (i = 8; i < 22; i++) {
-      ;
       TIMESTAMP[i - 8] = serbuffer[i];
     }
     Serial.print("TIMESTAMP: ");
@@ -236,76 +236,48 @@ void menu (bool arq) {
       }
   }//SWITCH
 }
-void printData(char *rawcolData, int mode ) {
-  int cmd = 0;
-  char idfier[5] = "";
-  int cutoff[5] = {};
-  char lenc[2] = {};
-  String strarray[5] = {}; // String array
-  const char s[2] = "+";
-  char tokenlen[1000] = "";
-  int subloopnum[5] = {};
-  char *token;
 
-  /* get the first token */
-  token = strtok(rawcolData, s);
-
-  int j = 0;
-
-  while (token != NULL) {
-    strarray[j] = token;
-    token = strtok(NULL, s);
-    delay(200);
-    j++;
-  }
-
-  int columnLen = 0, loopnum = 0;
-  //create another function here: check identifier
-  for (i = 0; i < j; i++) {
-
-    strarray[i].toCharArray(tokenlen, 999);
-    Serial.println(strarray[i]);
-    columnLen = strlen(tokenlen);
-
-    //check yung message id
-
-    switch (tokenlen[2]) {
-      case '1': {
-          if (tokenlen[3] == '5') {
-            idfier[i] = 'b';
-            cutoff[i] = 130;
+int* checkIdentifier(char* token){
+    int ret[] = {0,0};
+    int idfier = 0;
+    int cutoff = 0;
+    switch (token[0]) {
+        case '1': {
+          if (token[1] == '5') {
+            idfier = 'b';
+            cutoff = 130;
           }
-          else if (tokenlen[3] == 'A') {
-            idfier[i] = 'c';
-            cutoff[i] = 133;
+          else if (token[1] == 'A') {
+            idfier = 'c';
+            cutoff = 133;
           }
           break;
         }
 
       case '0': {
-          cutoff[i] = 135;  //15 chars only for axel
-          if (tokenlen[3] == 'B')
-            idfier[i] = 'x';
-          else if (tokenlen[3] == 'C')
-            idfier[i] = 'y';
+          cutoff = 135;  //15 chars only for axel
+          if (token[1] == 'B')
+            idfier = 'x';
+          else if (token[1] == 'C')
+            idfier = 'y';
           break;
         }
       case '2': {
-          cutoff[i] = 135;  //15 chars only for axel
-          if (tokenlen[3] == '0')
-            idfier[i] = 'x';
-          else if (tokenlen[3] == '1')
-            idfier[i] = 'y';
+          cutoff = 135;  //15 chars only for axel
+          if (token[1] == '0')
+            idfier = 'x';
+          else if (token[1] == '1')
+            idfier = 'y';
           break;
         }
       case '6': {
-          idfier[i] = 'b';
-          cutoff[i] = 130;  //10 chars only for axel
+          idfier = 'b';
+          cutoff = 130;  //10 chars only for axel
           break;
         }
       case '7': {
-          idfier[i] = 'c';
-          cutoff[i] = 133;  //7 chars for raw soms
+          idfier = 'c';
+          cutoff = 133;  //7 chars for raw soms
           break;
         }
         /*
@@ -316,22 +288,62 @@ void printData(char *rawcolData, int mode ) {
         }
         */
       default: {
-          idfier[i] = '0';
-          cutoff[i] = 0;
+          idfier = '0';
+          cutoff = 0;
           break;
         }
+    ret= {idfier, cutoff};
+    return ret;
+}
+}
+void printData(char *rawcolData, int mode ) {
+    int cmd = 0;
+    char idfier[5] = "";
+    int cutoff[5] = {};
+    char lenc[2] = {};
+    String strarray[5] = {}; // String array
+    const char s[2] = "+";
+    char tokenlen[1000] = "";
+    int subloopnum[5] = {};
+    char *token;
+
+    /* get the first token */
+    token = strtok(rawcolData, s);
+    int j = 0;
+
+    while (token != NULL) {
+        strarray[j] = token;
+        token = strtok(NULL, s);
+        delay(200);
+        j++;
     }
 
-    if (columnLen == 0) {
-      subloopnum[i] = 0;
-    } else {
-      subloopnum[i] = (columnLen / cutoff[i]);
-      if (columnLen % cutoff[i] != 0) {
-        subloopnum[i] ++;
-      }
+    int columnLen = 0, loopnum = 0;
+    //create another function here: check identifier
+    for (i = 0; i < j; i++) {
+        strarray[i].toCharArray(tokenlen, 999);
+        Serial.println(strarray[i]);
+        columnLen = strlen(tokenlen);
+        //check yung message id
+        int* results={};
+        results= checkIdentifier(tokenlen);
+        idfier[i]= results[0];
+        cutoff[i]= results[1];
+    
+        if (columnLen == 0) {
+            subloopnum[i] = 0;
+        } 
+        else {
+            subloopnum[i] = (columnLen / cutoff[i]);
+            if (columnLen % cutoff[i] != 0) {
+                subloopnum[i] ++;
+            }
+        }
+        loopnum = loopnum + subloopnum[i];
     }
-    loopnum = loopnum + subloopnum[i];
-  }// END OF FOR LOO
+
+
+
 
 
   if (loopnum <= 0) {
