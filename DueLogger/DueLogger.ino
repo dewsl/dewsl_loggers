@@ -296,6 +296,7 @@ int* checkIdentifier(char* token){
     return ret;
 }
 }
+
 void printData(char *rawcolData, int mode ) {
     int cmd = 0;
     char idfier[5] = "";
@@ -342,175 +343,170 @@ void printData(char *rawcolData, int mode ) {
         loopnum = loopnum + subloopnum[i];
     }
 
-
-
-
-
-  if (loopnum <= 0) {
-    Serial.println("if (loopnum <= 0)");
-    // if there is an error parsing the data or no data
-    sprintf(subcolumnData, "040", 3);
-    strncat(subcolumnData, ">>", 2);
-    strncat(subcolumnData, "1/1#", 4);
-    strncat(subcolumnData, MASTERNAME, 5);
-    strncat(subcolumnData, "*0*ERROR: no data parsed<<", 26);
-    if (mode == 1) { //arqMode
-      //Serial3.println(subcolumnData);
-      Serial1.println(subcolumnData);
-      Serial.println(subcolumnData);
-    }
-
-    else if (mode == 0) { //debugMode
-      Serial.println(subcolumnData);
-    }
-    Serial1.println(subcolumnData);
-    Serial.println(subcolumnData);
-
-  } else {
-    //len is not yet fixed-----------------------------------
-    int partnum = 0;
-    int subpartnum = 0;
-
-    for (i = 0; i < j; i++) {
-      char charnum[1] = {};
-      int len = 0 ;
-      int notState = 0;
-      char *columnPointer = "";
-      strarray[i].toCharArray(tokenlen, 999);
-      columnPointer = tokenlen;
-      subpartnum = 0;
-      while (subpartnum < subloopnum[i]) {            // if data were present
-        if (strlen(columnPointer) > cutoff[i]) {
-          len = cutoff[i] + 20;
-          if (len < 99 ) {
-            sprintf(subcolumnData, "0", 1);
-            sprintf(lenc, "%d", len);
-            strncat(subcolumnData, lenc, 2);
-          } else {
-            sprintf(subcolumnData, "%d", len);
-          }
-        } else {
-          len = strlen(columnPointer);
-          len = len + 20;
-          if (len < 99 ) {
-            sprintf(subcolumnData, "0", 1);
-            sprintf(lenc, "%d", len);
-            strncat(subcolumnData, lenc, 2);
-          } else {
-            sprintf(subcolumnData, "%d", len);
-          }
-        }
+    if (loopnum <= 0) {
+        Serial.println("if (loopnum <= 0)");
+        // if there is an error parsing the data or no data
+        sprintf(subcolumnData, "040", 3);
         strncat(subcolumnData, ">>", 2);
-        if (partnum > 8) {
-          sprintf(charnum, "%d", ((partnum + 1) / 10));
-          strncat(subcolumnData, charnum, 1);
-        }
-        sprintf(charnum, "%d", (partnum + 1) - (((partnum + 1) / 10) * 10));
-        strncat(subcolumnData, charnum, 1);
-        strncat(subcolumnData, "/", 1);
-        if (loopnum > 8) {
-          sprintf(charnum, "%d", ((loopnum) / 10));
-          strncat(subcolumnData, charnum, 1);
-        }
-        sprintf(charnum, "%d", loopnum - (((loopnum) / 10) * 10));
-        strncat(subcolumnData, charnum, 1);
-        strncat(subcolumnData, "#", 1);
+        strncat(subcolumnData, "1/1#", 4);
         strncat(subcolumnData, MASTERNAME, 5);
-        strncat(subcolumnData, "*", 1);
-        sprintf(charnum, "%c", idfier[i]);
-        strncat(subcolumnData, charnum, 1);
-        strncat(subcolumnData, "*", 1);
-        strncat(subcolumnData, columnPointer, cutoff[i]);
-        strncat(subcolumnData, "<<", 2);
-
-        columnPointer = columnPointer + cutoff[i];
-
-        if (partnum == 0) {
-          Serial.println("Inside partnum == 0 ");
-          if (mode == 1) { //arqMode
-            Serial.println(subcolumnData);
-            Serial1.println(subcolumnData);
-            //          Serial1.print(subcolumnData);
-            Serial1.flush();
-          }
-          else if (mode == 0) { //debugMode
-            Serial1.println(subcolumnData);
-            //          Serial1.print(subcolumnData);
-            Serial1.flush();
-
-            Serial.println(subcolumnData);
-            Serial.flush();
-          }
+        strncat(subcolumnData, "*0*ERROR: no data parsed<<", 26);
+        if (mode == 1) { //arqMode
+          //Serial3.println(subcolumnData);
+          Serial1.println(subcolumnData);
+          Serial.println(subcolumnData);
         }
-        else if (partnum > 0) {
-          Serial.print("partnum == "); Serial.println(partnum);
 
-          if (mode == 0) { // debug
-            int OKflag = 0;
-            do {
-              int timestart = millis();
-              int timenow = millis();
+        else if (mode == 0) { //debugMode
+          Serial.println(subcolumnData);
+        }
+        Serial1.println(subcolumnData);
+        Serial.println(subcolumnData);
 
-              while (!Serial.available()) {
-                while ( timenow - timestart < 9000 ) {
-                  timenow = millis();
+      } else {
+        //len is not yet fixed-----------------------------------
+        int partnum = 0;
+        int subpartnum = 0;
+
+        for (i = 0; i < j; i++) {
+            char charnum[1] = {};
+            int len = 0 ;
+            int notState = 0;
+            char *columnPointer = "";
+            strarray[i].toCharArray(tokenlen, 999);
+            columnPointer = tokenlen;
+            subpartnum = 0;
+            while (subpartnum < subloopnum[i]) {            // if data were present
+                if (strlen(columnPointer) > cutoff[i]) {
+                    len = cutoff[i] + 20;
+                    if (len < 99 ) {
+                        sprintf(subcolumnData, "0", 1);
+                        sprintf(lenc, "%d", len);
+                        strncat(subcolumnData, lenc, 2);
+                    }
+                    else {
+                        sprintf(subcolumnData, "%d", len);
+                    }
+                } else {
+                len = strlen(columnPointer);
+                len = len + 20;
+                if (len < 99 ) {
+                    sprintf(subcolumnData, "0", 1);
+                    sprintf(lenc, "%d", len);
+                    strncat(subcolumnData, lenc, 2);
+                } 
+                else {
+                    sprintf(subcolumnData, "%d", len);
                 }
-                Serial.println("Time out...");
-                break;
-              }
-              if (Serial.find("OK")) {
-                //              delay(9000);
-                Serial.println("OK found");
+            }
+            
+            strncat(subcolumnData, ">>", 2);
+            if (partnum > 8) {
+              sprintf(charnum, "%d", ((partnum + 1) / 10));
+              strncat(subcolumnData, charnum, 1);
+            }
+            sprintf(charnum, "%d", (partnum + 1) - (((partnum + 1) / 10) * 10));
+            strncat(subcolumnData, charnum, 1);
+            strncat(subcolumnData, "/", 1);
+            if (loopnum > 8) {
+              sprintf(charnum, "%d", ((loopnum) / 10));
+              strncat(subcolumnData, charnum, 1);
+            }
+            sprintf(charnum, "%d", loopnum - (((loopnum) / 10) * 10));
+            strncat(subcolumnData, charnum, 1);
+            strncat(subcolumnData, "#", 1);
+            strncat(subcolumnData, MASTERNAME, 5);
+            strncat(subcolumnData, "*", 1);
+            sprintf(charnum, "%c", idfier[i]);
+            strncat(subcolumnData, charnum, 1);
+            strncat(subcolumnData, "*", 1);
+            strncat(subcolumnData, columnPointer, cutoff[i]);
+            strncat(subcolumnData, "<<", 2);
+
+            columnPointer = columnPointer + cutoff[i];
+
+            if (partnum == 0) {
+              Serial.println("Inside partnum == 0 ");
+              if (mode == 1) { //arqMode
                 Serial.println(subcolumnData);
-                OKflag = 1;
-              }
-              else {
-                Serial.println("did not find ok");
-                Serial.println(subcolumnDataBackUp);
-                OKflag = 0;
-              }
-            } while (OKflag != 1);
-
-          }
-
-          if (mode == 1) { // ARQ
-            int OKflag = 0;
-            do {
-              int timestart = millis();
-              int timenow = millis();
-
-              while (!Serial1.available()) {
-                while ( timenow - timestart < 9000 ) {
-                  timenow = millis();
-                }
-                Serial.println("Time out...");
-                break;
-              }
-              if (Serial1.find("OK")) {
-                //              delay(9000);
-                Serial.println("OK found");
                 Serial1.println(subcolumnData);
-                OKflag = 1;
+                Serial1.flush();
               }
-              else {
-                Serial.println("did no find ok");
-                Serial1.println(subcolumnDataBackUp);
-                OKflag = 0;
+              else if (mode == 0) { //debugMode
+                Serial1.println(subcolumnData);
+                Serial1.flush();
+                Serial.println(subcolumnData);
+                Serial.flush();
               }
+            }
+            else if (partnum > 0) {
+              Serial.print("partnum == "); Serial.println(partnum);
+
+              if (mode == 0) { // debug
+                int OKflag = 0;
+                do {
+                    int timestart = millis();
+                    int timenow = millis();
+
+                    while (!Serial.available()) {
+                        while ( timenow - timestart < 9000 ) {
+                        timenow = millis();
+                    }
+                    Serial.println("Time out...");
+                    break;
+                }
+                if (Serial.find("OK")) {
+                    //              delay(9000);
+                    Serial.println("OK found");
+                    Serial.println(subcolumnData);
+                    OKflag = 1;
+                }
+                else {
+                    Serial.println("did not find ok");
+                    Serial.println(subcolumnDataBackUp);
+                    OKflag = 0;
+                }
             } while (OKflag != 1);
+
+        }
+
+            if (mode == 1) { // ARQ
+                int OKflag = 0;
+                do {
+                    int timestart = millis();
+                    int timenow = millis();
+
+                    while (!Serial1.available()) {
+                        while ( timenow - timestart < 9000 ) {
+                            timenow = millis();
+                        }
+                        Serial.println("Time out...");
+                        break;
+                    }
+                    if (Serial1.find("OK")) {
+                    //              delay(9000);
+                        Serial.println("OK found");
+                        Serial1.println(subcolumnData);
+                        OKflag = 1;
+                    }
+                    else {
+                        Serial.println("did no find ok");
+                        Serial1.println(subcolumnDataBackUp);
+                        OKflag = 0;
+                    }
+                } while (OKflag != 1);
+              }
+            }
+            partnum = partnum + 1;
+            subpartnum = subpartnum + 1;
+            //subcolumnDataBackUp= subcolumnData;
+            strcpy(subcolumnDataBackUp, subcolumnData);
           }
         }
-        partnum = partnum + 1;
-        subpartnum = subpartnum + 1;
-        //subcolumnDataBackUp= subcolumnData;
-        strcpy(subcolumnDataBackUp, subcolumnData);
-      }
     }
-
-  }
-  delay(2000);
-  Serial.println("done");
-  Serial1.println("ARQSTOP");
+    delay(2000);
+    Serial.println("done");
+    Serial1.println("ARQSTOP");
 }
 
 char *parser(char *raw, int cmd) {
