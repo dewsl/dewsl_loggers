@@ -510,52 +510,49 @@ void printData(char *rawcolData, int mode ) {
 }
 
 char *parser(char *raw, int cmd) {
-  int i = 0, datalength = 0;
-  char pArray[2500] = {};
-  datalength  = strlen(raw);
+	int i = 0, datalength = 0;
+	char pArray[2500] = {};
+	datalength  = strlen(raw);
 
-  Serial.println("Acquiring data...");
+	Serial.println("Acquiring data...");
 
-  for (i = 0; i < datalength; i++, raw++) {
-    switch (cmd) {
-      case 1: {// axel data //13
-          if (i % 20 != 0 && i % 20 != 1 && i % 20 != 4 && i % 20 != 5 && i % 20 != 8 && i % 20 != 12 && i % 20 != 16 ) {
-            strncat(pArray, raw, 1);
-          }
-          break;
-        }
-      case 2: { // raw soms // 10
-          if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 != 12 && i % 20 < 14 ) {
-            strncat(pArray, raw, 1);
-          }
-          break;
-        }
-
-      case 3: { //calib soms //7
-          //ginawang 14 muna
-          //if (i%20 != 0 && i%20!= 1 && i%20 != 4 && i%20!= 5 && i%20 < 16 ) { strncat(pArray, raw, 1); }
-          if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 < 10 ) {
-            strncat(pArray, raw, 1);
-          }
-          break;
-        }
-
-      case 4: { // old format
-          if (i % 18 != 2 && i % 18 != 6 && i % 18 != 10) {
-            strncat(pArray, raw, 1);
-          }
-          break;
-        }
-
-      case 8: { // old axel /for 15
-          if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 != 12 && i % 20 != 16 ) {
-            strncat(pArray, raw, 1);
-          }
-          break;
-        }
-    }
-  }
-  pArray[i] = '\0';
-  i = 0;
-  return pArray;
+	for (i = 0; i < datalength; i++, raw++) {
+		switch (cmd) {
+			case 1: {// axel data //13
+				if (i % 20 != 0 && i % 20 != 1 && i % 20 != 4 && i % 20 != 5 && i % 20 != 8 && i % 20 != 12 && i % 20 != 16 ) {
+					strncat(pArray, raw, 1);
+				}
+				break;
+			}
+			case 2: { // raw soms // 10
+				if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 != 12 && i % 20 < 14 ) {
+					strncat(pArray, raw, 1);
+				}
+				break;
+			}
+			case 3: { //calib soms //7
+			  //ginawang 14 muna
+			  //if (i%20 != 0 && i%20!= 1 && i%20 != 4 && i%20!= 5 && i%20 < 16 ) { strncat(pArray, raw, 1); }
+				if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 < 10 ) {
+					strncat(pArray, raw, 1);
+				}
+				break;
+			}
+			case 4: { // old format
+				if (i % 18 != 2 && i % 18 != 6 && i % 18 != 10) {
+					strncat(pArray, raw, 1);
+				}
+				break;
+			}
+			case 8: { // old axel /for 15
+			  	if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 != 12 && i % 20 != 16 ) {
+			    	strncat(pArray, raw, 1);
+			  	}
+			  	break;
+			}
+		}
+	}
+	pArray[i] = '\0';
+	i = 0;
+	return pArray;
 }
