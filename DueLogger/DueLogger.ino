@@ -319,6 +319,21 @@ int checkCutoff(char idf){
     }
     return cutoff;
 }
+void noDataParsed(char *scd){
+    Serial.println("if (loopnum <= 0)");
+
+    char subcolumnData1[100];
+    // if there is an error parsing the data or no data
+    sprintf(subcolumnData1, "040", 3);
+    strncat(subcolumnData1, ">>", 2);
+    strncat(subcolumnData1, "1/1#", 4);
+    strncat(subcolumnData1, MASTERNAME, 5);
+    strncat(subcolumnData1, "*0*ERROR: no data parsed<<", 26);
+    
+    Serial1.println(subcolumnData1);
+    Serial.println(subcolumnData1);
+    scd= subcolumnData1;
+}
 
 void printData(char *rawcolData, int mode ) {
     int cmd = 0;
@@ -364,24 +379,7 @@ void printData(char *rawcolData, int mode ) {
     }
 
     if (loopnum <= 0) {
-        Serial.println("if (loopnum <= 0)");
-        // if there is an error parsing the data or no data
-        sprintf(subcolumnData, "040", 3);
-        strncat(subcolumnData, ">>", 2);
-        strncat(subcolumnData, "1/1#", 4);
-        strncat(subcolumnData, MASTERNAME, 5);
-        strncat(subcolumnData, "*0*ERROR: no data parsed<<", 26);
-        if (mode == 1) { //arqMode
-          //Serial3.println(subcolumnData);
-          Serial1.println(subcolumnData);
-          Serial.println(subcolumnData);
-        }
-
-        else if (mode == 0) { //debugMode
-          Serial.println(subcolumnData);
-        }
-        Serial1.println(subcolumnData);
-        Serial.println(subcolumnData);
+         noDataParsed(subcolumnData);       
 
     } 
     else {
