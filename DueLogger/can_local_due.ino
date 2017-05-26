@@ -458,7 +458,6 @@ int Poll_Piezo ( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray, unsigned lo
 	int first_frame = 1;
 	int repeating = 0;    
 	int illegal_limit = 0;
-	//char temp[10];
 
 	//CAN.enable();
 	Turn_on_column();
@@ -493,14 +492,14 @@ int Poll_Piezo ( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray, unsigned lo
 		}
 		CAN.get_rx_buff(&incoming);
 		if ((incoming.id) == 255){
-                                //LABOLABO YUNG DATA FRAME DITO NALANG INADJUST KESA SA PIEZO MISMO
-				store_can_frame((incoming.id),incoming.data[0],incoming.data[1],incoming.data[2],incoming.data[3],incoming.data[4],incoming.data[5],incoming.data[6],incoming.data[7]);
-				dataptr->id = (incoming.id);
-				dataptr->data[0]=incoming.data[0];		dataptr->data[1]=incoming.data[1];
-				dataptr->data[2]=incoming.data[2];		dataptr->data[3]=incoming.data[3];
-				dataptr->data[4]=incoming.data[4];		dataptr->data[5]=incoming.data[5];
-				dataptr->data[6]=incoming.data[6];		dataptr->data[7]=incoming.data[7];
-				dataptr++;
+
+			store_can_frame((incoming.id),incoming.data[0],incoming.data[1],incoming.data[2],incoming.data[3],incoming.data[4],incoming.data[5],incoming.data[6],incoming.data[7]);
+			dataptr->id = (incoming.id);
+			dataptr->data[0]=incoming.data[0];		dataptr->data[1]=incoming.data[1];
+			dataptr->data[2]=incoming.data[2];		dataptr->data[3]=incoming.data[3];
+			dataptr->data[4]=incoming.data[4];		dataptr->data[5]=incoming.data[5];
+			dataptr->data[6]=incoming.data[6];		dataptr->data[7]=incoming.data[7];
+			dataptr++;
 		} else {
 			i--;
 			Serial.print(" !@#$ id: "); Serial.print(incoming.id);Serial.print("_");
@@ -529,22 +528,20 @@ int store_can_frame(int id,int d0,int d1,int d2,int d3,int d4,int d5,int d6,int 
 		//pwede na ifilter
 		check_ptr = temp_can_rcv_data_array;
 		for (int i = 0; i<numOfNodes;i++){
-				if (check_ptr->id == id && check_ptr->data[0] == d0){
-						if (PRINT_MODE == 1) {Serial.println("    FRAME already in temp_can_rcv_array.");}
-						unique = 0;
-						break;
-				}
-				check_ptr++;
+			if (check_ptr->id == id && check_ptr->data[0] == d0){
+				if (PRINT_MODE == 1) {Serial.println("    FRAME already in temp_can_rcv_array.");}
+				unique = 0;
+				break;
+			}
+			check_ptr++;
 		}
 		if (unique == 1){
-				//if (PRINT_MODE == 1) { Serial.println("    **FRAME stored.");}
-				t_dataptr->id =id;
-				t_dataptr->data[0]=d0;	t_dataptr->data[1]=d1;
-				t_dataptr->data[2]=d2;	t_dataptr->data[3]=d3;
-				t_dataptr->data[4]=d4;	t_dataptr->data[5]=d5;
-				t_dataptr->data[6]=d6;	t_dataptr->data[7]=d7;
-				//if (PRINT_MODE == 1) {printRX_Frame(temp_can_rcv_data_array,CanGetRcvArraySize(temp_can_rcv_data_array),1);}
-				t_dataptr++;
+			t_dataptr->id =id;
+			t_dataptr->data[0]=d0;	t_dataptr->data[1]=d1;
+			t_dataptr->data[2]=d2;	t_dataptr->data[3]=d3;
+			t_dataptr->data[4]=d4;	t_dataptr->data[5]=d5;
+			t_dataptr->data[6]=d6;	t_dataptr->data[7]=d7;
+			t_dataptr++;
 		}
 	} else if (prev_cmd != d0) {
 				if (PRINT_MODE == 1) { Serial.println("    Command Changed ");}
@@ -564,11 +561,11 @@ int store_can_frame(int id,int d0,int d1,int d2,int d3,int d4,int d5,int d6,int 
 }
 
 void printRX_Frame(RX_CAN_FRAME* canRcvDataArray,int ctrid, int checksum){
-    int sum = 0;
-    char temp[10];
-    RX_CAN_FRAME *dataptr;
-    dataptr = canRcvDataArray;
-    for(int x=0;x<ctrid;x++){	 
+	int sum = 0;
+	char temp[10];
+	RX_CAN_FRAME *dataptr;
+	dataptr = canRcvDataArray;
+	for(int x=0;x<ctrid;x++){	 
 		sprintf(temp,"%02X",dataptr->id);Serial.print(temp);Serial.print("_");	 
 		sprintf(temp,"%02X",dataptr->data[0]);Serial.print(temp);Serial.print("_");
 		sprintf(temp,"%02X",dataptr->data[1]);Serial.print(temp);Serial.print("_");
@@ -586,19 +583,19 @@ void printRX_Frame(RX_CAN_FRAME* canRcvDataArray,int ctrid, int checksum){
 		} else if( checksum == 1){
 			sum = dataptr->id+dataptr->data[0]+dataptr->data[1]+dataptr->data[2]+dataptr->data[3]+dataptr->data[4]+dataptr->data[5]+dataptr->data[6]+dataptr->data[7];
 			if (sum == 0){
-			   break;
-			}  
+				break;
+			}
 		}
-    }
-    Serial.println("");
+	}
+	Serial.println("");
 }
 
-void clear_uid(){
-   if (PRINT_MODE == 1) {Serial.println("  -- function: clear_uid() -- called"); }
-   for (int i = 0; i<numOfNodes ; i++ ){
-      unique_ids[i] = 0;
-   } 
-}
+// void clear_uid(){
+// 	if (PRINT_MODE == 1) {Serial.println("  -- function: clear_uid() -- called"); }
+// 	for (int i = 0; i<numOfNodes ; i++ ){
+// 		unique_ids[i] = 0;
+// 	} 
+// }
 
 
  /**
