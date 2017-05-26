@@ -158,13 +158,13 @@ void GET_DATA(char *columnPointer, int CMD){
 			CanInitialize(40000,can_rcv_data_array,numberofnodes);
 			Broadcast_CMD(can_snd_data_array, can_rcv_data_array , numOfNodes , TIMEOUT,t_unique_ids);
 		} else if (CMD == 255){
-                          clear_can_array(can_rcv_data_array);
-                          CanInitialize(40000,temp_can_rcv_data_array,numberofnodes);
-			  CanInitialize(40000,can_rcv_data_array,numberofnodes);
-                          if (PIEZO)  {
-                            Poll_Piezo(can_snd_data_array, can_rcv_data_array , TIMEOUT);
-                          }
-                } else {
+			clear_can_array(can_rcv_data_array);
+			CanInitialize(40000,temp_can_rcv_data_array,numberofnodes);
+			CanInitialize(40000,can_rcv_data_array,numberofnodes);
+			if (PIEZO)  {
+				Poll_Piezo(can_snd_data_array, can_rcv_data_array , TIMEOUT);
+			}
+		} else {
 			if (PRINT_MODE == 1) {Serial.println("  -- function called: GET_DATA( broadcast )");}
 			cmd_error = 3; // force while condition
 			while( cmd_error >= 3 ) {
@@ -189,7 +189,7 @@ void GET_DATA(char *columnPointer, int CMD){
 					//Broadcast_CMD(can_snd_data_array, can_rcv_data_array , numOfNodes,TIMEOUT,t_unique_ids); // dapat GIDTable[x][1]
 					break;
 		
-		               }
+				}
 			} 
 		}
 		Serial.println("  Final temp_can_rcv_data_array");
@@ -218,90 +218,86 @@ unsigned int Broadcast_CMD( TX_CAN_FRAME* toSend, RX_CAN_FRAME* canRcvDataArray 
 	int illegal_limit = 0;
 	int uid = 0;
 	int retry = 0;
-        int wrongID = 0;
+	int wrongID = 0;
 	if (PRINT_MODE == 1) {Serial.println("function: Broadcast_CMD() -- called"); }	
 	CAN.enable();
 	Turn_on_column();  
 	error = 0;
 	if(msgId > MASTERBROADCASTIDLIMIT){										//means outside broadcast range
-			error = 1;
-			CAN.disable();
-			return error;
+		error = 1;
+		CAN.disable();
+		return error;
 	}
 	dataptr = canRcvDataArray;
 	for (int ctrid = 0; ctrid < numOfNodes; ctrid++) {
-			uid = id_array[ctrid];
-			if (PRINT_MODE == 1){Serial.print("-- -- -- id_array[ "); Serial.print(ctrid); Serial.print(" ] = "); Serial.println(uid);}
-			txdataptr = toSend;
-			msgId = txdataptr->data[0];											//extract message ID
-			msgHolder[0] = msgId;	msgHolder[1] = uid >> 8;	
-			msgHolder[2] = uid & 0xFF;	msgHolder[3] = txdataptr->data[3];	
-			msgHolder[4] = txdataptr->data[4];	msgHolder[5] = txdataptr->data[5];
-			msgHolder[6] = txdataptr->data[6];	msgHolder[7] = txdataptr->data[7];
+		uid = id_array[ctrid];
+		if (PRINT_MODE == 1){Serial.print("-- -- -- id_array[ "); Serial.print(ctrid); Serial.print(" ] = "); Serial.println(uid);}
+		txdataptr = toSend;
+		msgId = txdataptr->data[0];	
+		msgHolder[0] = msgId;	msgHolder[1] = uid >> 8;	
+		msgHolder[2] = uid & 0xFF;	msgHolder[3] = txdataptr->data[3];
+		msgHolder[4] = txdataptr->data[4];	msgHolder[5] = txdataptr->data[5];
+		msgHolder[6] = txdataptr->data[6];	msgHolder[7] = txdataptr->data[7];
 
-			CAN.mailbox_set_datah(1,  msgHolder[4] + (msgHolder[5] << 8) + (msgHolder[6] << 16) + (msgHolder[7]<<24) );
-			CAN.mailbox_set_datal(1, msgHolder[0] + (msgHolder[1] << 8) + (msgHolder[2] << 16) + (msgHolder[3]<<24) );
-			CAN.mailbox_set_datalen(1,8);
-			CAN.enable_interrupt(CAN_IER_MB1);
-			CAN.enable_interrupt(CAN_IER_MB0); 
-			CAN.global_send_transfer_cmd(CAN_TCR_MB1); // sends command
+		CAN.mailbox_set_datah(1,  msgHolder[4] + (msgHolder[5] << 8) + (msgHolder[6] << 16) + (msgHolder[7]<<24) );
+		CAN.mailbox_set_datal(1, msgHolder[0] + (msgHolder[1] << 8) + (msgHolder[2] << 16) + (msgHolder[3]<<24) );
+		CAN.mailbox_set_datalen(1,8);
+		CAN.enable_interrupt(CAN_IER_MB1);
+		CAN.enable_interrupt(CAN_IER_MB0); 
+		CAN.global_send_transfer_cmd(CAN_TCR_MB1); // sends command
 
-			if (CanCheckTimeout(timeout) == true){                                // If no data, print timeout for node id
-				if (PRINT_MODE == 1){
-					Serial.print("-- -- -- Timed Out Polling node  ");
-					Serial.println(uid);
-				}
-				if ( retry <= 1){
-                                        ctrid--;
-					Serial.print("  Resend cmd for  "); Serial.println(uid);
-                                        retry++;
-					continue;
-					
-				} else {
-                                        retry = 0;
-                                        Serial1.print("ARQWAIT");
-				        Serial.println("ARQWAIT ...");
-                                        continue;
-                                }
+		if (CanCheckTimeout(timeout) == true){                                // If no data, print timeout for node id
+			if (PRINT_MODE == 1){
+				Serial.print("-- -- -- Timed Out Polling node  ");
+				Serial.println(uid);
 			}
-			CAN.get_rx_buff(&incoming);
-			if (incoming.data[0] != msgId){
-					Serial.println("  !@#$%^ illegal msgId FOUND!!");
-					ctrid--;
-					illegal_limit++; 
-					if ( illegal_limit >= 15 ){ 				// consider this as repeating frame and resend cmd.
-							Turn_off_column();
-							CAN.disable();				        // reset can controller	
-							dataptr->id = 0;					// para di maisama sa ipaparse na data
-							dataptr->data[0] = 0;	dataptr->data[1] = 0;
-							dataptr->data[2] = 0;	dataptr->data[3] = 0;
-							dataptr->data[4] = 0;	dataptr->data[5] = 0;
-							dataptr->data[6] = 0;	dataptr->data[7] = 0;
-							error = 3;
-							return error;
-					}
-					continue;
+			if ( retry <= 1){
+				ctrid--;
+				Serial.print("  Resend cmd for  "); Serial.println(uid);
+				retry++;
+				continue;
+			} else {
+				retry = 0;
+				Serial1.print("ARQWAIT");
+				Serial.println("ARQWAIT ...");
+				continue;
 			}
-			if (incoming.id != uid){
-					Serial.println("  !@#$^& Wrong ID found.");
-                                        wrongID++;
-                                        if ( wrongID <= 100 ){
-					    ctrid--;
-                                        }
-					continue;
+		}
+		CAN.get_rx_buff(&incoming);
+		if (incoming.data[0] != msgId){
+			Serial.println("  !@#$%^ illegal msgId FOUND!!");
+			ctrid--;
+			illegal_limit++; 
+			if ( illegal_limit >= 15 ){ 				// consider this as repeating frame and resend cmd.
+				Turn_off_column();
+				CAN.disable();				        // reset can controller	
+				dataptr->id = 0;					// para di maisama sa ipaparse na data
+				dataptr->data[0] = 0;	dataptr->data[1] = 0;
+				dataptr->data[2] = 0;	dataptr->data[3] = 0;
+				dataptr->data[4] = 0;	dataptr->data[5] = 0;
+				dataptr->data[6] = 0;	dataptr->data[7] = 0;
+				error = 3;
+				return error;
 			}
-                        retry = 0; //reset retry value for the next nodes.
-			store_can_frame(incoming.id,incoming.data[0],incoming.data[1],incoming.data[2],incoming.data[3],incoming.data[4],incoming.data[5],incoming.data[6],incoming.data[7]);
-			dataptr->id = incoming.id;
-			dataptr->dlc = incoming.dlc;
-			dataptr->data[0]=incoming.data[0];	dataptr->data[1]=incoming.data[1];
-			dataptr->data[2]=incoming.data[2];	dataptr->data[3]=incoming.data[3];
-			dataptr->data[4]=incoming.data[4];	dataptr->data[5]=incoming.data[5];
-			dataptr->data[6]=incoming.data[6];	dataptr->data[7]=incoming.data[7];
-			dataptr++;
-			//Serial.print( "CanGetRcvArraySize(canRcvDataArray) ="); Serial.println(CanGetRcvArraySize(canRcvDataArray));
-			//Serial.print(" numOfNodes = "); Serial.println(numOfNodes); 
-
+			continue;
+		}
+		if (incoming.id != uid){
+			Serial.println("  !@#$^& Wrong ID found.");
+			wrongID++;
+			if ( wrongID <= 100 ){
+				ctrid--;
+			}
+			continue;
+		}
+		retry = 0; //reset retry value for the next nodes.
+		store_can_frame(incoming.id,incoming.data[0],incoming.data[1],incoming.data[2],incoming.data[3],incoming.data[4],incoming.data[5],incoming.data[6],incoming.data[7]);
+		dataptr->id = incoming.id;
+		dataptr->dlc = incoming.dlc;
+		dataptr->data[0]=incoming.data[0];	dataptr->data[1]=incoming.data[1];
+		dataptr->data[2]=incoming.data[2];	dataptr->data[3]=incoming.data[3];
+		dataptr->data[4]=incoming.data[4];	dataptr->data[5]=incoming.data[5];
+		dataptr->data[6]=incoming.data[6];	dataptr->data[7]=incoming.data[7];
+		dataptr++;
 	}	
 	dataptr->id = 0;                                 //terminating char?    
 	dataptr->data[0] = 0;	dataptr->data[1] = 0;
@@ -328,8 +324,7 @@ int Broadcast_CMD( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray,unsigned i
 	int first_frame = 1;
 	int repeating = 0;    
 	int illegal_limit = 0;
-	//char temp[10];
-	
+
 	CAN.enable();
 	Turn_on_column();
 	error = 0;
@@ -355,105 +350,101 @@ int Broadcast_CMD( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray,unsigned i
 	CAN.enable_interrupt(CAN_IER_MB1);
 	CAN.enable_interrupt(CAN_IER_MB0); 
 	CAN.global_send_transfer_cmd(CAN_TCR_MB1); // sends command
-	//indexCnt = 0;
+
 	dataptr = canRcvDataArray;
 	for (ctrid=0; ctrid<numOfnodes; ctrid++){
 		if (CanCheckTimeout(timeout) == true){                                // If no data, print timeout for node id
-				Serial.print("-- -- -- Timeout broadcast after receiving "); Serial.print(ctrid); Serial.println(" messages");
-				
-				dataptr->id = 0;				// para di maisama sa ipaparse na data
-				dataptr->data[0] = 0;	dataptr->data[1] = 0;
-				dataptr->data[2] = 0;	dataptr->data[3] = 0;
-				dataptr->data[4] = 0;	dataptr->data[5] = 0;
-				dataptr->data[6] = 0;	dataptr->data[7] = 0;
-				
-				if (PRINT_MODE == 1){printRX_Frame(canRcvDataArray,ctrid,1);}
-				//Serial1.print("ARQWAIT");
-				Turn_off_column();
-				CAN.disable();				        // reset can controller	
-				error = 4;
-				return error;
+			Serial.print("-- -- -- Timeout broadcast after receiving "); Serial.print(ctrid); Serial.println(" messages");
+			dataptr->id = 0;				// para di maisama sa ipaparse na data
+			dataptr->data[0] = 0;	dataptr->data[1] = 0;
+			dataptr->data[2] = 0;	dataptr->data[3] = 0;
+			dataptr->data[4] = 0;	dataptr->data[5] = 0;
+			dataptr->data[6] = 0;	dataptr->data[7] = 0;
+			if (PRINT_MODE == 1){printRX_Frame(canRcvDataArray,ctrid,1);}
+			//Serial1.print("ARQWAIT");
+			Turn_off_column();
+			CAN.disable();				        // reset can controller	
+			error = 4;
+			return error;
 		}
+
 		CAN.get_rx_buff(&incoming);
 		if (incoming.data[0] != msgId){
-				Serial.println("  !@#$%^ illegal msgId FOUND!!");
-				Serial.print("id: "); Serial.print(incoming.id);
-				Serial.print("  d0: "); Serial.println(incoming.data[0]);
-				ctrid--;
-				illegal_limit++; 
-				if ( illegal_limit >= 25 ){ // consider this as repeating frame and resend cmd.
-						Turn_off_column();
-						CAN.disable();				        // reset can controller	
-						dataptr->id = 0;				// para di maisama sa ipaparse na data
-						dataptr->data[0] = 0;		dataptr->data[1] = 0;
-						dataptr->data[2] = 0;		dataptr->data[3] = 0;
-						dataptr->data[4] = 0;		dataptr->data[5] = 0;
-						dataptr->data[6] = 0;		dataptr->data[7] = 0;
-						error = 3;
-						return error;
-				}
-				continue;
+			Serial.println("  !@#$%^ illegal msgId FOUND!!");
+			Serial.print("id: "); Serial.print(incoming.id);
+			Serial.print("  d0: "); Serial.println(incoming.data[0]);
+			ctrid--;
+			illegal_limit++; 
+			if ( illegal_limit >= 25 ){ // consider this as repeating frame and resend cmd.
+				Turn_off_column();
+				CAN.disable();				        // reset can controller	
+				dataptr->id = 0;				// para di maisama sa ipaparse na data
+				dataptr->data[0] = 0;		dataptr->data[1] = 0;
+				dataptr->data[2] = 0;		dataptr->data[3] = 0;
+				dataptr->data[4] = 0;		dataptr->data[5] = 0;
+				dataptr->data[6] = 0;		dataptr->data[7] = 0;
+				error = 3;
+				return error;
+			}
+			continue;
 		}
-		
-		//check for repeating data here, ctrid-- medyo di gumagana.
-		if (first_frame == 1) {
-				first_frame++;
+
+		if (first_frame == 1) { 
+			first_frame++;
 		} else {  
-				c_dataptr = canRcvDataArray;
-				for (int j=0; j <=numOfNodes; j++) {
-					if (c_dataptr->id == incoming.id && c_dataptr->data[0] == incoming.data[0]){
-						if (PRINT_MODE == 1) {Serial.print("    REPEATING :"); Serial.println(dataptr->id);}
-						repeating = 1;
-						break;
-					}
-					c_dataptr++;
+			c_dataptr = canRcvDataArray;
+			for (int j=0; j <=numOfNodes; j++) {
+				if (c_dataptr->id == incoming.id && c_dataptr->data[0] == incoming.data[0]){
+					if (PRINT_MODE == 1) {Serial.print("    REPEATING :"); Serial.println(dataptr->id);}
+					repeating = 1;
+					break;
 				}
+				c_dataptr++;
+			}
 		}
+
 		if (repeating == 1) {
-				if (PRINT_MODE == 1) {Serial.println("  -- function: Broadcast_CMD() -- called -- repeating frames found"); }
-				r_f_count++;
-				Serial.print("  -- r_f_count : "); Serial.println(r_f_count); 
-				if (r_f_count == REPEATING_FRAMES_LIMIT){    
-						//Serial.print("  -- Repeating frames exceeded max count of "); Serial.println(REPEATING_FRAMES_LIMIT);
-						//Serial1.print("ARQWAIT");		      // causes arq to not timeout waiting for serial
-						r_f_count = 0;
-						Turn_off_column();
-						CAN.disable();				        // reset can controller	
-						dataptr->id = 0;				// para di maisama sa ipaparse na data
-						dataptr->data[0] = 0;		dataptr->data[1] = 0;
-						dataptr->data[2] = 0;		dataptr->data[3] = 0;
-						dataptr->data[4] = 0;		dataptr->data[5] = 0;
-						dataptr->data[6] = 0;		dataptr->data[7] = 0;
-						error = 3;
-						return error;
-				}
-				ctrid--;      
-				repeating = 0; 
+			if (PRINT_MODE == 1) {Serial.println("  -- function: Broadcast_CMD() -- called -- repeating frames found"); }
+			r_f_count++;
+			Serial.print("  -- r_f_count : "); Serial.println(r_f_count); 
+			if (r_f_count == REPEATING_FRAMES_LIMIT){    
+				r_f_count = 0;
+				Turn_off_column();
+				CAN.disable();				        // reset can controller	
+				dataptr->id = 0;				// para di maisama sa ipaparse na data
+				dataptr->data[0] = 0;		dataptr->data[1] = 0;
+				dataptr->data[2] = 0;		dataptr->data[3] = 0;
+				dataptr->data[4] = 0;		dataptr->data[5] = 0;
+				dataptr->data[6] = 0;		dataptr->data[7] = 0;
+				error = 3;
+				return error;
+			}
+			ctrid--;      
+			repeating = 0; 
 		} else  {
-		
-                    // not repeating, place in struct dataptr
-				store_can_frame(incoming.id,incoming.data[0],incoming.data[1],incoming.data[2],incoming.data[3],incoming.data[4],incoming.data[5],incoming.data[6],incoming.data[7]);
-				if ( CanGetRcvArraySize(temp_can_rcv_data_array) == numOfNodes ){ //kumpleto na yung frames
-						Serial.println("  Frames complete! :) ");
-						CAN.disable();
-						return 0;
-				}
-				dataptr->id = incoming.id;
-				dataptr->dlc = incoming.dlc;
-				dataptr->data[0]=incoming.data[0];		dataptr->data[1]=incoming.data[1];
-				dataptr->data[2]=incoming.data[2];		dataptr->data[3]=incoming.data[3];
-				dataptr->data[4]=incoming.data[4];		dataptr->data[5]=incoming.data[5];
-				dataptr->data[6]=incoming.data[6];		dataptr->data[7]=incoming.data[7];
-				dataptr++;
-				} 
-        }
+			// not repeating, place in struct dataptr
+			store_can_frame(incoming.id,incoming.data[0],incoming.data[1],incoming.data[2],incoming.data[3],incoming.data[4],incoming.data[5],incoming.data[6],incoming.data[7]);
+			if ( CanGetRcvArraySize(temp_can_rcv_data_array) == numOfNodes ){ //kumpleto na yung frames
+				Serial.println("  Frames complete! :) ");
+				CAN.disable();
+				return 0;
+			}
+			dataptr->id = incoming.id;
+			dataptr->dlc = incoming.dlc;
+			dataptr->data[0]=incoming.data[0];		dataptr->data[1]=incoming.data[1];
+			dataptr->data[2]=incoming.data[2];		dataptr->data[3]=incoming.data[3];
+			dataptr->data[4]=incoming.data[4];		dataptr->data[5]=incoming.data[5];
+			dataptr->data[6]=incoming.data[6];		dataptr->data[7]=incoming.data[7];
+			dataptr++;
+			} 
+    }
 	CAN.disable();
 	error = 0;
 	return error;
 }
+
 int Poll_Piezo ( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray, unsigned long timeout) {
-//	if (PRINT_MODE == 1) {Serial.println("  -- function: Poll_Piezo -- called"); }
-        Serial.println("  -- function: Poll_Piezo -- called");
+	if (PRINT_MODE == 1) {Serial.println("  -- function: Poll_Piezo -- called"); }
 	RX_CAN_FRAME *dataptr,*c_dataptr;
 	TX_CAN_FRAME *txdataptr;
 	int ctrid, k=0,x,retry=0;;
