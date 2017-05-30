@@ -544,18 +544,18 @@ int store_can_frame(int id,int d0,int d1,int d2,int d3,int d4,int d5,int d6,int 
 			t_dataptr++;
 		}
 	} else if (prev_cmd != d0) {
-				if (PRINT_MODE == 1) { Serial.println("    Command Changed ");}
-				prev_cmd = d0;
-				clear_can_array(temp_can_rcv_data_array);
-				t_dataptr = temp_can_rcv_data_array; // START FROM BEGINNING OF TEMP_CAN_RCV_ARRAY
-				//Serial.println("    **INTIAL FRAME stored.");
-				t_dataptr->id =id;
-				t_dataptr->data[0]=d0;	t_dataptr->data[1]=d1;
-				t_dataptr->data[2]=d2;	t_dataptr->data[3]=d3;
-				t_dataptr->data[4]=d4;	t_dataptr->data[5]=d5;
-				t_dataptr->data[6]=d6;	t_dataptr->data[7]=d7;
-				//if (PRINT_MODE == 1) {printRX_Frame(temp_can_rcv_data_array,CanGetRcvArraySize(temp_can_rcv_data_array),1);}
-				t_dataptr++;
+			if (PRINT_MODE == 1) { Serial.println("    Command Changed ");}
+			prev_cmd = d0;
+			clear_can_array(temp_can_rcv_data_array);
+			t_dataptr = temp_can_rcv_data_array; // START FROM BEGINNING OF TEMP_CAN_RCV_ARRAY
+			//Serial.println("    **INTIAL FRAME stored.");
+			t_dataptr->id =id;
+			t_dataptr->data[0]=d0;	t_dataptr->data[1]=d1;
+			t_dataptr->data[2]=d2;	t_dataptr->data[3]=d3;
+			t_dataptr->data[4]=d4;	t_dataptr->data[5]=d5;
+			t_dataptr->data[6]=d6;	t_dataptr->data[7]=d7;
+			//if (PRINT_MODE == 1) {printRX_Frame(temp_can_rcv_data_array,CanGetRcvArraySize(temp_can_rcv_data_array),1);}
+			t_dataptr++;
 	}
  
 }
@@ -628,62 +628,48 @@ setup
 /* OLD SITES */
 void can_initialize(void){
   //initialization of version 1 column
-  if (CAN.init(SystemCoreClock, 40000)) {
-    CAN.disable_interrupt(CAN_DISABLE_ALL_INTERRUPT_MASK);      // Disable all CAN0 interrupt
-    NVIC_EnableIRQ(CAN0_IRQn);
-    if (SERIAL)
-    Serial.println("CAN Initialization SUCCESS\n\n");
-  }
-  else {
-    if (SERIAL)
-    Serial.println("CAN Initialization ERROR\n");
-  }
+	if (CAN.init(SystemCoreClock, 40000)) {
+		CAN.disable_interrupt(CAN_DISABLE_ALL_INTERRUPT_MASK);      // Disable all CAN0 interrupt
+		NVIC_EnableIRQ(CAN0_IRQn);
+		Serial.println("CAN Initialization SUCCESS\n\n");
+	} else {
+		if (SERIAL) Serial.println("CAN Initialization ERROR\n");
+	}
 
-  CAN.mailbox_set_mode(0, CAN_MB_RX_MODE);                     // Set MB0 as receiver
-  CAN.mailbox_set_mode(1, CAN_MB_TX_MODE);                     // Set MB1 as transmitter
-  CAN.mailbox_set_accept_mask(1, 0, false);                    // Accept mask filter of MB1
-  CAN.mailbox_set_datalen(1, 8);                               // CAN frame data length
+	CAN.mailbox_set_mode(0, CAN_MB_RX_MODE);                     // Set MB0 as receiver
+	CAN.mailbox_set_mode(1, CAN_MB_TX_MODE);                     // Set MB1 as transmitter
+	CAN.mailbox_set_accept_mask(1, 0, false);                    // Accept mask filter of MB1
+	CAN.mailbox_set_datalen(1, 8);                               // CAN frame data length
+	}
 
-}
 void check_timeout(void) {
-  
-  timeout_status = false; 
-  int timestart = millis();
-  
-  do {
-    if (millis() - timestart == TIMEOUT) {
-      timeout_status = true;
-      break;
-    }
-  } while (!CAN.rx_avail());                                   // while no frame received
-  
+	timeout_status = false; 
+	int timestart = millis();
+	do {
+		if (millis() - timestart == TIMEOUT) {
+			timeout_status = true;
+			break;
+		}
+	} while (!CAN.rx_avail());                                   // while no frame received
 }
 
 /* NEW SITES VERSION2 */
-void CanInitialize(unsigned long canbitrate, RX_CAN_FRAME* can_data_array,unsigned int numofnodes)
-{
+void CanInitialize(unsigned long canbitrate, RX_CAN_FRAME* can_data_array,unsigned int numofnodes){
 	unsigned int x,y;
-	//canRcvArrySize = numofnodes;
-	
 	if (CAN.init(SystemCoreClock, canbitrate)) {
 		CAN.disable_interrupt(CAN_DISABLE_ALL_INTERRUPT_MASK);			// Disable all CAN0 interrupt
 		NVIC_EnableIRQ(CAN0_IRQn);
-		if (SERIAL)
-			Serial.println("CAN Initialization SUCCESS\n\n");
-	}else 
-	{
-		if (SERIAL)
-			Serial.println("CAN Initialization ERROR\n");
+	if (SERIAL) Serial.println("CAN Initialization SUCCESS\n\n");
+	} else {
+		if (SERIAL) Serial.println("CAN Initialization ERROR\n");
 	}
-
 	CAN.mailbox_set_mode(0, CAN_MB_RX_MODE);							// Set MB0 as receiver
 	CAN.mailbox_set_id(0, 0, true);										// Set MB0 receive ID extended id
 	CAN.mailbox_set_accept_mask(0,0,true);								//make it receive everything seen in bus
-  
 	CAN.mailbox_set_mode(1, CAN_MB_TX_MODE);							// Set MB1 as transmitter
 	CAN.mailbox_set_id(1,MASTERMSGID, true);							// Set MB1 transfer ID to 1 extended id
 	CAN.enable();
-  
+
 	//initialize the data array
 	for(x=0;x<numofnodes;x++){
 		can_data_array[x].id = 0;										//zero out the id
@@ -691,7 +677,6 @@ void CanInitialize(unsigned long canbitrate, RX_CAN_FRAME* can_data_array,unsign
 		for(y=0;y<8;y++) {
 			can_data_array[x].data[y] = 0;								//zero out the databytes
 		}
-		
 	}  
 	return;
 }
@@ -713,18 +698,16 @@ it exits and returns a true which means that the timeout occurred first.
 
 */
 bool CanCheckTimeout(unsigned long timeout) {
-  bool ctimeout_status;
-  ctimeout_status = false; 
-  int timestart = millis();
-  
-  do {
-    if (millis() - timestart == timeout) {
-      ctimeout_status = true;
-      break;
-    }
-  } while (!CAN.rx_avail());                                   // while no frame received
-  
-  return ctimeout_status;
+	bool ctimeout_status;
+	ctimeout_status = false; 
+	int timestart = millis();
+	do {
+		if (millis() - timestart == timeout) {
+			ctimeout_status = true;
+			break;
+		}
+	} while (!CAN.rx_avail());                                   // while no frame received
+	return ctimeout_status;
 }
 
 /**
@@ -756,11 +739,11 @@ int ArrangeCanMsgOrder(RX_CAN_FRAME* rcvDataArray,char order)
 	int index_of_min;
 	int index_of_max;
 	unsigned int id1,id2;
-	
+
 	dataptr = rcvDataArray;
 	msgnum = 0;
 	//while(dataptr->id != 0){
-        while(dataptr->data[0] != 0){
+	while(dataptr->data[0] != 0){
 		dataptr++;
 		msgnum++;
 		//error checking if there is no zero in id 
