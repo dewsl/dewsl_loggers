@@ -10,8 +10,21 @@ void getdataBroadcastNew(int mode,char readCode){
   	switch(readCode){
 	case 'T':  {//tilt only
 
+
 		if (PRINT_MODE == 1) Serial.println("  --function: getdataBroadcastNew(), case T -- called");
-		Serial1.print("ARQWAIT");        
+		if (sensorVersion == 1){
+                Serial1.print("ARQWAIT");   
+                String temp= "";
+                temp.toCharArray(columnData, 521);
+                Serial.println(columnData);
+                parsedData = parser(columnData,8);
+                Serial.println("Right after 1ST parsedData = parser(columnData,8);");
+		writeData(parsedData);													//write data to sdcard
+		Serial.println(parsedData);
+		sprintf(allData,parsedData ,strlen(parsedData));                
+                }else{
+
+                Serial1.print("ARQWAIT");        
 		// GET_DATA(columnData,PASS_AXEL1_ADC_CALIB_MINMAX); 
 		String temp= "";
 		// temp="";
@@ -35,7 +48,7 @@ void getdataBroadcastNew(int mode,char readCode){
 		writeData(parsedData);													//write data to sdcard
 		Serial.println(parsedData);
 		strncat(allData,"+" ,1);
-		strncat(allData,parsedData ,strlen(parsedData));
+		strncat(allData,parsedData ,strlen(parsedData));}
                 
         if (PIEZO == 1) {		
     		Serial1.print("ARQWAIT");        

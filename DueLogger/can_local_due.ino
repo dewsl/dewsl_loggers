@@ -5,7 +5,7 @@
  * @brief Controller Area Network (CAN) related code of Due based datalogger for the SENSLOPE PROJECT.
  *
  * This file requires due_can.h for it to run. This file contains CanInitialize to initialize the CAN.
- * A messaging function Broadcast_CMD is used to gather data from the nodes. A CAN message is sent to
+ * A messaging function broadcmd is used to gather data from the nodes. A CAN message is sent to
  * all the nodes connected, and a reply is expected. Also contains the functions to process and arrange
  * the aggregated data from CAN Frames to a string placed in a buffer. 
  *
@@ -156,7 +156,7 @@ void GET_DATA(char *columnPointer, int CMD){
 			if (PRINT_MODE == 1) {Serial.println("  -- function called: GET_DATA( polling )");}
 			CanInitialize(40000,temp_can_rcv_data_array,numberofnodes);
 			CanInitialize(40000,can_rcv_data_array,numberofnodes);
-			Broadcast_CMD(can_snd_data_array, can_rcv_data_array , numOfNodes , TIMEOUT,t_unique_ids);
+			broadcmd(can_snd_data_array, can_rcv_data_array , numOfNodes , TIMEOUT,t_unique_ids);
 		} else if (CMD == 255){
 			clear_can_array(can_rcv_data_array);
 			CanInitialize(40000,temp_can_rcv_data_array,numberofnodes);
@@ -166,10 +166,15 @@ void GET_DATA(char *columnPointer, int CMD){
 			}
 		} else {
 			if (PRINT_MODE == 1) {Serial.println("  -- function called: GET_DATA( broadcast )");}
-			cmd_error = 3; // force while condition
+	               // if (sensorVersion == 1){
+                       // Broadcast_CMD(can_snd_data_array, can_rcv_data_array , numOfNodes , TIMEOUT);
+                       //  }		
+                        //else{
+        
+                        cmd_error = 3; // force while condition
 			while( cmd_error >= 3 ) {
 				CanInitialize(40000,can_rcv_data_array,numberofnodes);
-				cmd_error = Broadcast_CMD(can_snd_data_array, can_rcv_data_array , numOfNodes , TIMEOUT);
+				cmd_error = broadcmd(can_snd_data_array, can_rcv_data_array , numOfNodes , TIMEOUT);
 				if (cmd_error == 3 ){
 					Serial.println("  -- retried: daming repeating");
 					retry_because_repeating_cnt++;
@@ -186,11 +191,12 @@ void GET_DATA(char *columnPointer, int CMD){
 					Serial.print(" -- Retry limit reached. Kulang yung frames. "); Serial.println(retry_no_data_from_column_cnt);
 					// dapat galing sa sd yung ids
 					// EDIT NA LANG NUNG COMMAND TAPOS OKAY NA. :)
-					//Broadcast_CMD(can_snd_data_array, can_rcv_data_array , numOfNodes,TIMEOUT,t_unique_ids); // dapat GIDTable[x][1]
+					//broadcmd(can_snd_data_array, can_rcv_data_array , numOfNodes,TIMEOUT,t_unique_ids); // dapat GIDTable[x][1]
 					break;
 		
 				}
-			} 
+                            }
+			//} 
 		}
 		Serial.println("  Final temp_can_rcv_data_array");
 		printRX_Frame(temp_can_rcv_data_array,CanGetRcvArraySize(temp_can_rcv_data_array),1);
@@ -203,7 +209,91 @@ void GET_DATA(char *columnPointer, int CMD){
 		}
 }
 
-unsigned int Broadcast_CMD( TX_CAN_FRAME* toSend, RX_CAN_FRAME* canRcvDataArray ,unsigned int numOfnodes, unsigned long timeout, int id_array[]) {        
+
+//version 1 start//
+int Broadcast_CMD( TX_CAN_FRAME* toSend, RX_CAN_FRAME* canRcvDataArray, unsigned int numOfnodes, unsigned long timeout) {
+  if (PRINT_MODE == 1) {
+    Serial.println("  -- function: Broadcast_CMD() -- called");
+  }
+  RX_CAN_FRAME *dataptr, *c_dataptr;
+  TX_CAN_FRAME *txdataptr;
+  int ctrid, k = 0, x, retry = 0;;
+  unsigned int msgId;
+  int error;
+  unsigned int rx_error_cnt, tx_error_cnt ;
+  unsigned long msgHolder[8];
+  char *columnPointer = columnData;
+  bool ctimeout;
+  int r_f_count = 0; // repeating frame count
+  int first_frame = 1;
+  int repeating = 0;
+  int illegal_limit = 0;
+  //char temp[10];
+
+  //CAN.enable();
+  Turn_on_column();
+  error = 0;
+  dataptr = canRcvDataArray;
+
+  for (int i = 0; i < numOfNodes; i++) {
+    CAN.enable_interrupt(CAN_IER_MB0);
+    CAN.enable_interrupt(CAN_IER_MB1);
+    CAN.mailbox_set_id(1, GIDTable[i][1] * 8, false);                     //set MB1 transfer ID
+    CAN.mailbox_set_id(0, GIDTable[i][1] * 8, false);                     //MB0 receive ID
+    CAN.mailbox_set_databyte(1, 0, 0x00);
+    CAN.mailbox_set_databyte(1, 1, 0x00);
+    CAN.global_send_transfer_cmd(CAN_TCR_MB1); // Broadcast command
+
+    Serial.print(GIDTable[i][1]); Serial.println(" polled.");
+    //Serial1.print("ARQWAIT");
+    if (CanCheckTimeout(timeout) == true) {
+      if (PRINT_MODE == 1) {
+        Serial.print("      Timeout broadcast after receiving "); Serial.print(i); Serial.println(" messages");
+      }
+
+      //Serial1.print("ARQWAIT");
+      if ( retry < 2) {
+        retry++;
+        Serial.println(" CMD resent. ARQWAIT sent");
+        Serial1.print("ARQWAIT");
+        CAN.global_send_transfer_cmd(CAN_TCR_MB1);
+        delay(timeout);
+      } else {
+        retry = 0;
+        Serial.println(" retry limit reached. continuing.");
+        continue;
+      }
+    }
+    CAN.get_rx_buff(&incoming);
+    if ((incoming.id / 8) == GIDTable[i][1]) {
+      store_can_frame((incoming.id / 8), incoming.data[0], incoming.data[1], incoming.data[2], incoming.data[3], incoming.data[4], incoming.data[5], incoming.data[6], incoming.data[7]);
+      dataptr->id = (incoming.id / 8);
+      dataptr->data[0] = incoming.data[0];		dataptr->data[1] = incoming.data[1];
+      dataptr->data[2] = incoming.data[2];		dataptr->data[3] = incoming.data[3];
+      dataptr->data[4] = incoming.data[4];		dataptr->data[5] = incoming.data[5];
+      dataptr->data[6] = incoming.data[6];		dataptr->data[7] = incoming.data[7];
+      dataptr++;
+    } else {
+      i--;
+      Serial.print(" !@#$ id: "); Serial.print(incoming.id); Serial.print("_");
+      Serial.print(incoming.data[0]); Serial.print("_");
+      Serial.print(incoming.data[1]); Serial.print("_");
+      Serial.print(incoming.data[2]); Serial.print("_");
+      Serial.print(incoming.data[3]); Serial.print("_");
+      Serial.print(incoming.data[4]); Serial.print("_");
+      Serial.print(incoming.data[5]); Serial.print("_");
+      Serial.print(incoming.data[6]); Serial.print("_");
+      Serial.println(incoming.data[7]);
+    }
+  }
+  CAN.disable();
+  error = 0;
+  return error;
+}
+
+//version 1 end//
+
+unsigned int broadcmd( TX_CAN_FRAME* toSend, RX_CAN_FRAME* canRcvDataArray ,unsigned int numOfnodes, unsigned long timeout, int id_array[]) {        
 	RX_CAN_FRAME *dataptr,*c_dataptr;
 	TX_CAN_FRAME *txdataptr;
 	int ctrid, k=0,x;
@@ -219,7 +309,7 @@ unsigned int Broadcast_CMD( TX_CAN_FRAME* toSend, RX_CAN_FRAME* canRcvDataArray 
 	int uid = 0;
 	int retry = 0;
 	int wrongID = 0;
-	if (PRINT_MODE == 1) {Serial.println("function: Broadcast_CMD() -- called"); }	
+	if (PRINT_MODE == 1) {Serial.println("function: broadcmd() -- called"); }	
 	CAN.enable();
 	Turn_on_column();  
 	error = 0;
@@ -309,8 +399,8 @@ unsigned int Broadcast_CMD( TX_CAN_FRAME* toSend, RX_CAN_FRAME* canRcvDataArray 
 	return error;
 }
 
-int Broadcast_CMD( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray,unsigned int numOfnodes, unsigned long timeout) {    
-	if (PRINT_MODE == 1) {Serial.println("  -- function: Broadcast_CMD() -- called"); } 
+int broadcmd( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray,unsigned int numOfnodes, unsigned long timeout) {    
+	if (PRINT_MODE == 1) {Serial.println("  -- function: broadcmd() -- called"); } 
 	RX_CAN_FRAME *dataptr,*c_dataptr;
 	TX_CAN_FRAME *txdataptr;
 	int ctrid, k=0,x;
@@ -404,7 +494,7 @@ int Broadcast_CMD( TX_CAN_FRAME* toSend,RX_CAN_FRAME* canRcvDataArray,unsigned i
 		}
 
 		if (repeating == 1) {
-			if (PRINT_MODE == 1) {Serial.println("  -- function: Broadcast_CMD() -- called -- repeating frames found"); }
+			if (PRINT_MODE == 1) {Serial.println("  -- function: broadcmd() -- called -- repeating frames found"); }
 			r_f_count++;
 			Serial.print("  -- r_f_count : "); Serial.println(r_f_count); 
 			if (r_f_count == REPEATING_FRAMES_LIMIT){    

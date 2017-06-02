@@ -85,7 +85,7 @@ int t_unique_ids[40] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 char MASTERNAME[6] = "XXXXX";
 unsigned char ColumnCommand = 'T'; // unused? since command comes from ARQ/PMM 
 unsigned int numOfNodes = 11;
-int sensorVersion = 2;
+int sensorVersion = 1;
 int dataloggerVersion = 2;
 
 void setup() {
@@ -545,7 +545,8 @@ char *parser(char *raw, int cmd) {
 				break;
 			}
 			case 4: { // old format
-				if (i % 18 != 2 && i % 18 != 6 && i % 18 != 10) {
+				//if (i % 18 != 2 && i % 18 != 6 && i % 18 != 10) {
+                                  if (i%20 != 0 && i%20!= 1 && i%20 != 4 && i%20 != 8 && i%20 != 12){
 					strncat(pArray, raw, 1);
 				}
 				break;
