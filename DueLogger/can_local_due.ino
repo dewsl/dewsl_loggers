@@ -818,8 +818,7 @@ printCanData(can_rcv_data_array,numOfData);			  //print the data to serial
 @endcode
 
 */		
-void printCanData(RX_CAN_FRAME* canRcvDataArray,unsigned int numOfData)
-{  
+void printCanData(RX_CAN_FRAME* canRcvDataArray,unsigned int numOfData){  
 	if (PRINT_MODE == 1) {Serial.println("  -- function called: printCanData()"); }	
 	RX_CAN_FRAME* dataptr;
 	int ctrid;
@@ -828,58 +827,57 @@ void printCanData(RX_CAN_FRAME* canRcvDataArray,unsigned int numOfData)
 	if(numOfData < 1){ //error do nothing
 		return;
 	}
-	 if(SERIAL){
-		 char temp[10];
-		 int count;
-		 
-		 Serial.println("CAN messages received ");
-		 dataptr = canRcvDataArray;//point again at the start
-		 for(x=0;x<ctrid;x++)
-		 {	 
-			 sprintf(temp,"%02X",dataptr->id); //CHANGED TO SHOW DECIMAL
-			 Serial.print(temp);
-			 Serial.print("_");
-			 
-			 sprintf(temp,"%02X",dataptr->data[0]);
-			 Serial.print(temp);
-			 Serial.print("_");
-			 
-			 sprintf(temp,"%02X",dataptr->data[1]);
-			 Serial.print(temp);
-			 Serial.print("_");
-			 
-			 sprintf(temp,"%02X",dataptr->data[2]);
-			 Serial.print(temp);
-			 Serial.print("_");
-			 
-			 sprintf(temp,"%02X",dataptr->data[3]);
-			 Serial.print(temp);
-			 Serial.print("_");
-			 
-			 sprintf(temp,"%02X",dataptr->data[4]);
-			 Serial.print(temp);
-			 Serial.print("_");
-			 
-			 sprintf(temp,"%02X",dataptr->data[5]);
-			 Serial.print(temp);
-			 Serial.print("_");
-			 
-			 sprintf(temp,"%02X",dataptr->data[6]);
-			 Serial.print(temp);
-			 Serial.print("_");
-			 
-			 sprintf(temp,"%02X",dataptr->data[7]);
-			 Serial.print(temp);
-			 Serial.print("_");
+	if(SERIAL){
+		char temp[10];
+		int count;
 
-			 Serial.println("");
-			 dataptr++;
+		Serial.println("CAN messages received ");
+		dataptr = canRcvDataArray;//point again at the start
+		for(x=0;x<ctrid;x++)
+		{	 
+			sprintf(temp,"%02X",dataptr->id); //CHANGED TO SHOW DECIMAL
+			Serial.print(temp);
+			Serial.print("_");
+
+			sprintf(temp,"%02X",dataptr->data[0]);
+			Serial.print(temp);
+			Serial.print("_");
+
+			sprintf(temp,"%02X",dataptr->data[1]);
+			Serial.print(temp);
+			Serial.print("_");
+
+			sprintf(temp,"%02X",dataptr->data[2]);
+			Serial.print(temp);
+			Serial.print("_");
+
+			sprintf(temp,"%02X",dataptr->data[3]);
+			Serial.print(temp);
+			Serial.print("_");
+
+			sprintf(temp,"%02X",dataptr->data[4]);
+			Serial.print(temp);
+			Serial.print("_");
+
+			sprintf(temp,"%02X",dataptr->data[5]);
+			Serial.print(temp);
+			Serial.print("_");
+
+			sprintf(temp,"%02X",dataptr->data[6]);
+			Serial.print(temp);
+			Serial.print("_");
+
+			sprintf(temp,"%02X",dataptr->data[7]);
+			Serial.print(temp);
+			Serial.print("_");
+
+			Serial.println("");
+			dataptr++;
 
 			//if(dataptr->id == 0)
-                        if (dataptr->data[0] == 0)
-				break; 
-		 }
-	 }				
+			if (dataptr->data[0] == 0) break; 
+		}
+	}				
 }
 
 /**
@@ -920,8 +918,8 @@ unsigned int CanGetRcvArraySize(RX_CAN_FRAME* rcvDataArray){
 	RX_CAN_FRAME* dataptr;
 	dataptr = rcvDataArray;
 	msgnum = 0;
-        checksum = 1; // force code to enter loop
-        while(dataptr->id+dataptr->data[0]!= 0){
+	checksum = 1; // force code to enter loop
+	while(dataptr->id+dataptr->data[0]!= 0){
 		dataptr++;
 		msgnum++;
 		/*error checking if there is no zero in id */
@@ -941,16 +939,16 @@ Reads an CSV from the SD card and places the data there to the table
 */
 void generateGIDtable(void){
 	if (PRINT_MODE == 1) {Serial.println("function: generateGIDtable() -- called"); }
-	 for(int count = 0;count < CANARRAYMAXSIZE;count++){
+	for(int count = 0;count < CANARRAYMAXSIZE;count++){
 		GIDTable[count][0] = count+1;
-	 }	 
+	}	 
 }
  
 void generateSOMSspecificTable(void){
-   	if (PRINT_MODE == 1) {Serial.println("function: generateSOMSspecificTable() -- called"); }
-	  for(int count = 0;count < CANARRAYMAXSIZE;count++){
-		  SOMSNodeSpecificTable[count][0] = count+1;
-	 }
+	if (PRINT_MODE == 1) {Serial.println("function: generateSOMSspecificTable() -- called"); }
+	for(int count = 0;count < CANARRAYMAXSIZE;count++){
+		SOMSNodeSpecificTable[count][0] = count+1; //redundant???
+	}
 }
  
  /**

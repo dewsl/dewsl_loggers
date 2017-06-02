@@ -71,12 +71,13 @@ char loggerFileName[100];
 	//read number of columns
 	Serial.println("Finished Reading Configuration file");
 	
-  sdFile.close();
-//	SD.end();
+	sdFile.close();
+	SD.end();
 	Serial.println("after ending");
 	
         //make sure to disable the chip select pin
 	digitalWrite(chipSelect, HIGH);
+	// bakit nagdidisable ng chipSelect?
 	return 0;
 	 
  }
@@ -190,7 +191,6 @@ unsigned int processConfigLine(char *ptr){
 		return 0;
     }
     
-
 	else if(str.startsWith("column_command")){ //checks if the command is for column
 		indexOfValue =str.indexOf("=");
 	 	indexOfValue++; // get index of the number
@@ -214,8 +214,7 @@ unsigned int processConfigLine(char *ptr){
 	   	//sprintf(buff,"TURN_ON_DELAY Found. New value = %d",TURN_ON_DELAY);
 	   	//Serial.println(buff);
 	   	dueFlashStorage.write(17, value);
-        return 0;
-                   	   
+        return 0;                   	   
 	}
 
 	else if(str.startsWith("sampling_max_num_of_retry")){
@@ -228,7 +227,6 @@ unsigned int processConfigLine(char *ptr){
 		dueFlashStorage.write(8, value);
         //Serial.println(buff);
 		return 0;
-
 	}
 
     else if(str.startsWith("turn_on_delay")){
@@ -243,7 +241,6 @@ unsigned int processConfigLine(char *ptr){
 	   	dueFlashStorage.write(9, TURN_ON_DELAY);
                 TURN_ON_DELAY = TURN_ON_DELAY* 100;
                 return 0;
-                   	   
 	}
 	
 	else if(str.startsWith("repeating_frames_limit")){
@@ -257,8 +254,8 @@ unsigned int processConfigLine(char *ptr){
 		dueFlashStorage.write(11, REPEATING_FRAMES_LIMIT);
        // Serial.println(buff);
 		return 0;
-
 	}
+
 	else if(str.startsWith("repeating_retry_limit")){
 		indexOfValue =str.indexOf("=");
 		indexOfValue++; // get index of the number
@@ -270,9 +267,9 @@ unsigned int processConfigLine(char *ptr){
 		dueFlashStorage.write(14, REPEATING_FRAMES_RETRY_LIMIT);
        // Serial.println(buff);
 		return 0;
-
 	}
-        else if(str.startsWith("PIEZO")){
+
+    else if(str.startsWith("PIEZO")){
 			indexOfValue =str.indexOf("=");
 			indexOfValue++; // get index of the number
 			sptr = &str[indexOfValue];
@@ -284,6 +281,7 @@ unsigned int processConfigLine(char *ptr){
                         dueFlashStorage.write(18, PIEZO);
 			return 0;
 	}
+
 	else if(str.startsWith("print_mode")){
 		indexOfValue =str.indexOf("=");
 		indexOfValue++; // get index of the number
@@ -295,189 +293,19 @@ unsigned int processConfigLine(char *ptr){
 		dueFlashStorage.write(13, PRINT_MODE);
        // Serial.println(buff);
 		return 0;
-
 	}
 
 	else if(str.startsWith("ENDOFCONFIG")){ //checks if the command is for column
 		Serial.println("End of file found");
-		return 1;
-		
+		return 1;	
 	}
+
 	else{
 		//Serial.println("UnknownLine");
 		return 0;
 	}
   }
-//   unsigned int processConfigLine(char *ptr)
-//   {
-//	   String str,str2;
-//	   char *sptr;
-//	   char buff[64];
-//	   int indexOfValue,value;
-//	   
-//           //check if matches any of the commands
-//	   str = String(ptr);
-//	   
-//	   if(str.startsWith("numOfNodes")){
-//		   indexOfValue =str.indexOf("=");
-//		   indexOfValue++; // get index of the number
-//		   sptr = &str[indexOfValue];
-//		   str2 = String(sptr);
-//		   value = str2.toInt();
-//		   numOfNodes = value;
-//		   sprintf(buff,"numOfNodes Found. New value = %d",numOfNodes);
-//		   Serial.println(buff);
-//		   return 0;
-//
-//           }else if(str.startsWith("numOfNodesColumn1")){
-//		   indexOfValue =str.indexOf("=");
-//		   indexOfValue++; // get index of the number
-//		   sptr = &str[indexOfValue];
-//		   str2 = String(sptr);
-//		   value = str2.toInt();
-//		   numOfNodes = value;
-//		   sprintf(buff,"numOfNodes Found. New value = %d",numOfNodes);
-//		   Serial.println(buff);
-//		   return 0;
-//
-//           }else if(str.startsWith("TURN_ON_DELAY")){
-//		   indexOfValue =str.indexOf("=");
-//		   indexOfValue++; // get index of the number
-//		   sptr = &str[indexOfValue];
-//		   str2 = String(sptr);
-//		   value = str2.toInt();
-//		   TURN_ON_DELAY = value;
-//		   sprintf(buff,"TURN_ON_DELAY Found. New value = %d",TURN_ON_DELAY);
-//		   Serial.println(buff);
-//		   return 0;
-//
-//	    }else if(str.startsWith("column1")){
-//		   indexOfValue =str.indexOf("=");
-//		   indexOfValue++; // get index of the number
-//		   sptr = &str[indexOfValue];
-//		   //this part gets the id per member in the column
-//		   char *colptr;
-//		   colptr = strtok(sptr,",");
-//		   int x;
-//		   x = 0;
-//		   while((colptr != NULL)){
-//			   GIDTable[x][1] = atoi(colptr);
-//			   sprintf(buff,"column1 Found. New value = %d",GIDTable[x][1]);
-//			   Serial.println(buff);
-//			   colptr = strtok(NULL,",");
-//			   x++;
-//		   }
-//		   numOfNodes = x; // set number of nodes of column1
-//		   str2 = String(sptr);
-//		   value = str2.toInt();
-//		   column1 = value;
-//		   sprintf(buff,"column1 Found. New value = %d",column1);
-//		   Serial.println(buff);
-//		   return 0;
-//
-//              }else if(str.startsWith("columnIDs")){
-//		   indexOfValue =str.indexOf("=");
-//		   indexOfValue++; // get index of the number
-//		   sptr = &str[indexOfValue];
-//		   //this part gets the id per member in the column
-//		   char *colptr;
-//		   colptr = strtok(sptr,",");
-//		   int x;
-//		   x = 0;
-//		   while((colptr != NULL)){
-//			   GIDTable[x][1] = atoi(colptr);
-//			   sprintf(buff,"column1 Found. New value = %d",GIDTable[x][1]);
-//			   Serial.println(buff);
-//			   colptr = strtok(NULL,",");
-//			   x++;
-//		   }
-//		   numOfNodes = x; // set number of nodes of column1
-//		   str2 = String(sptr);
-//		   value = str2.toInt();
-//		   column1 = value;
-//		   sprintf(buff,"column1 Found. New value = %d",column1);
-//		   Serial.println(buff);
-//		   return 0;
-//		   
-//	  }else if(str.startsWith("ColumnCommand")){ //checks if the command is for column
-//		 indexOfValue =str.indexOf("=");
-//		 indexOfValue++; // get index of the number
-//		 while(str[indexOfValue] == ' ')
-//		 indexOfValue++;
-//		 sptr = &str[indexOfValue];
-//		 ColumnCommand = *sptr;
-//		 sprintf(buff,"ColumnCommand Found = %c",ColumnCommand);
-//		 Serial.println(buff);
-//		 return 0;
-//		 
-//	}else if(str.startsWith("MasterName")){ //checks if the command is for column
-//		
-//		indexOfValue =str.indexOf("=");
-//		indexOfValue++; // get index of the number
-//		while(str[indexOfValue] == ' ')
-//	        indexOfValue++;
-//		sptr = &str[indexOfValue];
-//		strncpy(MASTERNAME,sptr,5);
-//		sprintf(buff,"New MasterName = ");
-//		strncat(buff,MASTERNAME,5);
-//		strcat(buff,"\n");
-//		Serial.println(buff);
-//		return 0;
-//		
-//	}else if(str.startsWith("SamplingMaxNumOfRetry")){
-//			indexOfValue =str.indexOf("=");
-//			indexOfValue++; // get index of the number
-//			sptr = &str[indexOfValue];
-//			str2 = String(sptr);
-//			value = str2.toInt();
-//			NO_COLUMN_LIMIT = value;
-//			sprintf(buff,"NO_COLUMN_LIMIT = %d",NO_COLUMN_LIMIT);
-//			Serial.println(buff);
-//			return 0;
-//
-//	}else if(str.startsWith("REPEATING_FRAMES_LIMIT")){
-//			indexOfValue =str.indexOf("=");
-//			indexOfValue++; // get index of the number
-//			sptr = &str[indexOfValue];
-//			str2 = String(sptr);
-//			value = str2.toInt();
-//			REPEATING_FRAMES_LIMIT = value;
-//			sprintf(buff,"REPEATING_FRAMES_LIMIT = %d",REPEATING_FRAMES_LIMIT);
-//			Serial.println(buff);
-//			return 0;
-//
-//	}else if(str.startsWith("RepeatingRetryLimit")){
-//			indexOfValue =str.indexOf("=");
-//			indexOfValue++; // get index of the number
-//			sptr = &str[indexOfValue];
-//			str2 = String(sptr);
-//			value = str2.toInt();
-//			REPEATING_FRAMES_RETRY_LIMIT  = value;
-//			sprintf(buff,"REPEATING_FRAMES_RETRY_LIMIT = %d",REPEATING_FRAMES_RETRY_LIMIT );
-//			Serial.println(buff);
-//			return 0;
-//
-//	}else if(str.startsWith("PRINT_MODE")){
-//			indexOfValue =str.indexOf("=");
-//			indexOfValue++; // get index of the number
-//			sptr = &str[indexOfValue];
-//			str2 = String(sptr);
-//			value = str2.toInt();
-//			PRINT_MODE = value;
-//			sprintf(buff,"PRINT_MODE = %d",PRINT_MODE);
-//			Serial.println(buff);
-//			return 0;
-//	
-//	}else if(str.startsWith("ENDOFCONFIG")){ //checks if the command is for column
-//			
-//		Serial.println("End of file found");
-//		return 1;
-//		
-//	}else{
-//		Serial.println("UnknownLine");
-//		return 0;
-//	     }
-//  }
+
    
  
  void initGIDTable(void){
@@ -543,7 +371,6 @@ String ReadTimeDate(int *secp, int *minp, int *hrp){
       TimeDate[i]=a+b*10; 
       }
   }
-
 //2020-12-31 23:55:00
   temp.concat("20");
   temp.concat(TimeDate[6]); // YEAR
@@ -587,9 +414,9 @@ from MEGA to be written in the DUE */
 */
 int8_t initSD(void){
 	String timeString;
-        int sec1, min1, hr1, sec2, min2, hr2;
-  
-        File sdFile;
+	int sec1, min1, hr1, sec2, min2, hr2;
+
+	File sdFile;
 	unsigned int i,sentinel;
 	SPI.setDataMode(SPI_MODE0); // 
 
@@ -613,7 +440,7 @@ int8_t initSD(void){
         //write the current date and stuff
   	
 	sdFile.close();//close the file
-//	SD.end();	
+	SD.end();	
 	return 0;
 
 }
@@ -651,8 +478,8 @@ int8_t writeData(String data){
 	sdFile.print(TIMESTAMP);
 	sdFile.println();
 	sdFile.close();//close the file
-//	SD.end();
-	SPI.setDataMode(SPI_MODE3); // switch mode to clock
+	SD.end(); // WALANG SD.begin() so dapat walang SD.end?
+	SPI.setDataMode(SPI_MODE3); // switch mode to clock ??
 	Serial.println("writing to SD"); 
 }
 void getValuesfromEEPROM(){
@@ -703,50 +530,6 @@ void getValuesfromEEPROM(){
   
   PIEZO= (char)dueFlashStorage.read(18);
   Serial.print("PIEZO : "); Serial.println(PIEZO); 
-
-
-//  numOfNodes= 11;
-//  MASTERNAME[0]= 'K';
-//  MASTERNAME[1]= 'E';
-//  MASTERNAME[2]= 'N';
-//  MASTERNAME[3]= 'T';
-//  MASTERNAME[4]= 'A';
-//  MASTERNAME[5]= '\0'; 
-//  
-//  NO_COLUMN_LIMIT= 2;  
-//  
-//  TURN_ON_DELAY = 10;
-//  TURN_ON_DELAY= TURN_ON_DELAY * 100;
-//  
-//  enable_find_node_ids= 0;
-//  
-//  REPEATING_FRAMES_LIMIT= 2;
-//  
-//  ALLOWED_MISSING_NODES= 0;
-//  
-//  PRINT_MODE= 0;
-//  
-////  for (int i=0; i< numOfNodes; i++){
-////      int tempcolid= (((int)dueFlashStorage.read(20 + (i*2)))*100) + ((int)dueFlashStorage.read(21 + (i*2)));
-////      GIDTable[i][1] = tempcolid;		   
-////  }
-//  GIDTable[0][1] = 2267;
-//  GIDTable[1][1] = 2764;
-//  GIDTable[2][1] = 2898;
-//  GIDTable[3][1] = 2949;
-//  GIDTable[4][1] = 2918;
-//  GIDTable[5][1] = 2912; 
-//  GIDTable[6][1] = 3006;
-//  GIDTable[7][1] = 3086;
-//  GIDTable[8][1] = 3088;
-//  GIDTable[9][1] = 3129;
-//  GIDTable[10][1] = 2624;
-//
-//  COLUMN_COOL_OFF = 10 * 100;
-//
-//  sensorVersion = 2;
-//
-//  dataloggerVersion = 2;
  
 }
 
