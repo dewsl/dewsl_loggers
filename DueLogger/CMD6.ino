@@ -13,15 +13,14 @@ void getdataBroadcastNew(int mode,char readCode){
 
 		if (PRINT_MODE == 1) Serial.println("  --function: getdataBroadcastNew(), case T -- called");
 		if (sensorVersion == 1){
-                Serial1.print("ARQWAIT");   
-                String temp= "";
-                temp.toCharArray(columnData, 521);
-                Serial.println(columnData);
-                parsedData = parser(columnData,8);
-                Serial.println("Right after 1ST parsedData = parser(columnData,8);");
+		Serial1.print("ARQWAIT");
+                GET_DATA(columnData,PASS_AXEL1_ADC_CALIB_MINMAX); 
+		Serial.println(columnData);
+		parsedData = parser(columnData,4);
 		writeData(parsedData);													//write data to sdcard
+		Serial.println(columnData);
 		Serial.println(parsedData);
-		sprintf(allData,parsedData ,strlen(parsedData));                
+		sprintf(allData,parsedData ,strlen(parsedData));              
                 }else{
 
                 Serial1.print("ARQWAIT");        

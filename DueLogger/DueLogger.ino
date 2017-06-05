@@ -303,7 +303,11 @@ int checkCutoff(char idf){
 			break;
 		}
 		default: {
-			cutoff = 0;
+                        cutoff = 0;
+                        if (sensorVersion ==1){
+                        cutoff = 135;
+                        }
+			
 			break;
 		}
 	}
@@ -379,6 +383,7 @@ void printData(char *rawcolData, int mode ) {
 			int len = 0 ;
 			int notState = 0;
 			char *columnPointer = "";
+
 			strarray[i].toCharArray(tokenlen, 999);
 			columnPointer = tokenlen;
 			subpartnum = 0;
@@ -396,7 +401,7 @@ void printData(char *rawcolData, int mode ) {
 					}
 				} else {
 					len = strlen(columnPointer);
-					len = len + 20;
+					len = len + 20; 
 					if (len < 99 ) {
 						sprintf(subcolumnData, "0", 1);
 						sprintf(lenc, "%d", len);
@@ -418,17 +423,22 @@ void printData(char *rawcolData, int mode ) {
 			  sprintf(charnum, "%d", ((loopnum) / 10));
 			  strncat(subcolumnData, charnum, 1);
 			}
+
 			sprintf(charnum, "%d", loopnum - (((loopnum) / 10) * 10));
 			strncat(subcolumnData, charnum, 1);
 			strncat(subcolumnData, "#", 1);
 			strncat(subcolumnData, MASTERNAME, 5);
+                        if (sensorVersion == 1){
+                        strncat(subcolumnData, "DUE", 3);
+                        //continue;
+                        }
 			strncat(subcolumnData, "*", 1);
 			sprintf(charnum, "%c", idfier[i]);
 			strncat(subcolumnData, charnum, 1);
 			strncat(subcolumnData, "*", 1);
 			strncat(subcolumnData, columnPointer, cutoff[i]);
 			strncat(subcolumnData, "<<", 2);
-
+                        
 			columnPointer = columnPointer + cutoff[i];
 
 			if (partnum == 0) {

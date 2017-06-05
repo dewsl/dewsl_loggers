@@ -166,10 +166,14 @@ void GET_DATA(char *columnPointer, int CMD){
 			}
 		} else {
 			if (PRINT_MODE == 1) {Serial.println("  -- function called: GET_DATA( broadcast )");}
-	               // if (sensorVersion == 1){
-                       // Broadcast_CMD(can_snd_data_array, can_rcv_data_array , numOfNodes , TIMEOUT);
-                       //  }		
-                        //else{
+	                if (sensorVersion == 1){
+                          Serial.println("Version 1");
+                         // CanInitialize(40000, temp_can_rcv_data_array, numberofnodes);
+                          can_initialize();
+                          t_dataptr = temp_can_rcv_data_array;
+                          Broadcast_CMD(can_snd_data_array, can_rcv_data_array , numOfNodes , TIMEOUT);
+                           }		
+                        else{
         
                         cmd_error = 3; // force while condition
 			while( cmd_error >= 3 ) {
@@ -196,7 +200,7 @@ void GET_DATA(char *columnPointer, int CMD){
 		
 				}
                             }
-			//} 
+			} 
 		}
 		Serial.println("  Final temp_can_rcv_data_array");
 		printRX_Frame(temp_can_rcv_data_array,CanGetRcvArraySize(temp_can_rcv_data_array),1);
