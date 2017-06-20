@@ -450,7 +450,7 @@ int8_t writeData(String data){
 	char filename[100]= {};
 	String timeString;
 	int sec1, min1, hr1, sec2, min2, hr2;
-//  loggerFileName= {};
+ 	loggerFileName= {};
 	SPI.setDataMode(SPI_MODE0); // switch mode to SD
 	SPI.setBitOrder(LSBFIRST); 
 	Serial.println(TIMESTAMP);
