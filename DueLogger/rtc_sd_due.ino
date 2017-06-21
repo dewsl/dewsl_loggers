@@ -169,10 +169,18 @@ unsigned int processConfigLine(char *ptr){
                	colHI= {colptr[0],colptr[1], '\0'};
                 colLOW = {colptr[2],colptr[3], '\0'}; 
             }
-            else{
+            else if (GIDTable[x][1] > 99){
               	colHI= {colptr[0], '\0'};
-                colLOW= {colptr[1],colptr[2], '\0'};
+                colLOW= {colptr[1],colptr[2], '\0'}; 
             }
+            else if (GIDTable[x][1] > 9){
+              colLOW= {colptr[0],colptr[1], '\0'}; // FOR VERSION 1
+              
+              }
+            else{
+              colLOW= {colptr[0], '\0'}; // FOR VERSION 1
+              
+              }
                            
            // sprintf(buff,"column1 Found. New value = %d",GIDTable[x][1]);
             //Serial.println(buff);
@@ -191,7 +199,7 @@ unsigned int processConfigLine(char *ptr){
 		return 0;
     }
     
-	else if(str.startsWith("column_command")){ //checks if the command is for column
+	else if(str.startsWith("column_command") || str.startsWith("ColumnCommand")){ //checks if the command is for column
 		indexOfValue =str.indexOf("=");
 	 	indexOfValue++; // get index of the number
 	 	while(str[indexOfValue] == ' ')
@@ -204,7 +212,7 @@ unsigned int processConfigLine(char *ptr){
 	 	return 0;		 
 	}
 
-	else if(str.startsWith("column_cool_off") || str.startsWith("ColumnCommand")){
+	else if(str.startsWith("column_cool_off")){
 		indexOfValue =str.indexOf("=");
 		indexOfValue++; // get index of the number
 	  	sptr = &str[indexOfValue];
@@ -261,7 +269,7 @@ unsigned int processConfigLine(char *ptr){
 		indexOfValue++; // get index of the number
 		sptr = &str[indexOfValue];
 		str2 = String(sptr);
-		value = str2.toInt();
+		value = str2.toInt();a
 		REPEATING_FRAMES_RETRY_LIMIT  = value;
 		//sprintf(buff,"REPEATING_FRAMES_RETRY_LIMIT = %d",REPEATING_FRAMES_RETRY_LIMIT );
 		dueFlashStorage.write(14, REPEATING_FRAMES_RETRY_LIMIT);
