@@ -269,7 +269,7 @@ unsigned int processConfigLine(char *ptr){
 		indexOfValue++; // get index of the number
 		sptr = &str[indexOfValue];
 		str2 = String(sptr);
-		value = str2.toInt();a
+		value = str2.toInt();
 		REPEATING_FRAMES_RETRY_LIMIT  = value;
 		//sprintf(buff,"REPEATING_FRAMES_RETRY_LIMIT = %d",REPEATING_FRAMES_RETRY_LIMIT );
 		dueFlashStorage.write(14, REPEATING_FRAMES_RETRY_LIMIT);
