@@ -16,15 +16,19 @@
 #define ATSNDCAN    "ATSND"
 #define ATGETSENSORDATA    "ATGSDT"
 #define ATSNIFFCAN  "ATSNIFF"
+#define ATDUMP    "ATDUMP"
 #define OKSTR     "OK"
 #define ERRORSTR  "ERROR"
 
 #define RELAYPIN 44
-#define TIMEOUT 10000
+#define TIMEOUT 5000
 
 // Message variable to be send
 uint32_t CAN_MSG_1 = 0;
 
+char g_temp_dump[1000];
+
+String g_string;
 bool ate=true;
 
 void setup() {
@@ -90,6 +94,12 @@ void getATCommand(){
       Serial.println(OKSTR);
     }
   }
+  else if (command == ATDUMP){
+      Serial.print(g_string);
+      // Serial.print(g_temp_dump);
+      Serial.println(OKSTR);
+  }
+
   else{
     Serial.println(ERRORSTR);
   }

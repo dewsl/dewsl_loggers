@@ -1,27 +1,28 @@
 void init_can(){
   if (VERBOSE == 1) { Serial.println("init_can()"); }
-  Can0.begin(40000);
-  Can1.begin(40000);
-
-  // int filter;
-  // //extended
-  // for (filter = 0; filter < 3; filter++) {
-  //   Can0.setRXFilter(filter, 0, 0, true);
-  //   Can1.setRXFilter(filter, 0, 0, true);
-  // }  
-  // //standard
-  // for (int filter = 3; filter < 7; filter++) {
-  //   Can0.setRXFilter(filter, 0, 0, false);
-  //   Can1.setRXFilter(filter, 0, 0, false);
-  // }  
-
+  pinMode(50,OUTPUT); //Due Specific
+  if (Can0.begin(40000,50)){
+    if(VERBOSE == 1) {Serial.println("Can0 - initialization completed.");}
+  }
   Can0.watchFor();     // allow all can traffic through sabi sa quick guide.
+  Can0.mailbox_set_mode(0,CAN_MB_RX_MODE); // Set mailbox0 as receiver
+  Can0.mailbox_set_id(0, 0, true); //Set mailbox0 receive extendedID formats
+  Can0.mailbox_set_accept_mask(0,0,true); //receive everything. // aralin yung mask
+
+  Can0.mailbox_set_mode(1, CAN_MB_TX_MODE); // Set mailbox1 as transmitter
+  Can0.mailbox_set_id(1,1, true); // Set mailbox1 transfer ID to 1 extended id
 }
 
 void process_frame(CAN_FRAME incoming){
-  int id,d1,d2,d3,d4,d5,d6,d7,d8,priority;
+  interpret_frame(incoming);
+  write_frame_to_dump(incoming, g_temp_dump);
+  write_frame_to_string(incoming);
+}
+
+void interpret_frame(CAN_FRAME incoming){
+  int id,d1,d2,d3,d4,d5,d6,d7,d8,x,y,z;
+  // int x,y,z;
   if (VERBOSE == 1) { Serial.println("process_frame()"); }
-//  Can0.read(incoming);
   id = incoming.id;
   d1 = incoming.data.byte[0];
   d2 = incoming.data.byte[1];
@@ -30,44 +31,113 @@ void process_frame(CAN_FRAME incoming){
   d5 = incoming.data.byte[4];
   d6 = incoming.data.byte[5];
   d7 = incoming.data.byte[6];
-  d8 = incoming.data.byte[7];
-  Serial.print("id:");
-  Serial.print(id, HEX); Serial.print(" ");
-  Serial.print(priority, HEX); Serial.print("\t");
-  Serial.print(d1, HEX); Serial.print("_");
-  Serial.print(d2, HEX); Serial.print("_");
-  Serial.print(d3, HEX); Serial.print("_");
-  Serial.print(d4, HEX); Serial.print("_");
-  Serial.print(d5, HEX); Serial.print("_");
-  Serial.print(d6, HEX); Serial.print("_");
-  Serial.print(d7, HEX); Serial.print("_");
-  Serial.println(d8, HEX);
-
+  d8 = incoming.data.byte[7]; 
+  x = compute_axis(d2,d3);
+  y = compute_axis(d4,d5);
+  z = compute_axis(d6,d7);
+  Serial.print("\t");
+  Serial.print(id,HEX); Serial.print("\t");
+  Serial.print(x); //Serial.print("\t");
+  Serial.print("_"); Serial.print(y); //Serial.print("\t");
+  Serial.print("_"); Serial.println(z); //Serial.print("\t");
 }
 
-bool get_all_frames(int timeout_ms) {
-  // bool timeout_status = false;
+int compute_axis(int d1, int d2){
+  int value = 5000;
+  if (d2 >= 240) {
+    d2 = d2 - 240;
+    value = (d1 + (d2*256)) - 4095;
+  } else {
+    value = (d1 + (d2*256));
+  }
+  return value;
+}
+
+void get_all_frames(int timeout_ms) {
   int timestart = millis();
   CAN_FRAME incoming;
   if (VERBOSE == 1) { Serial.println("check_timeout()"); }
-
   do {
-    if (Can0.rx_avail()){
+     if (Can0.available()){
       Can0.read(incoming);
       process_frame(incoming);
-    }
+     }
   } while (millis() - timestart <= timeout_ms) ; 
-  // timeout_status = true;
-  return 1;                              
+  return;                              
 } 
 
+void write_frame_to_dump(CAN_FRAME incoming, char *dump){
+  char temp[5];
+  sprintf(temp,"%04X",incoming.id);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[0]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[1]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[2]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[3]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[4]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[5]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[6]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X\n",incoming.data.byte[7]);
+  strcat(dump,temp);
+
+
+  return;
+}
+
+void write_frame_to_string(CAN_FRAME incoming){
+  char temp[5];
+
+  sprintf(temp,"%04X",incoming.id);
+  g_string = String(g_string +  String(temp));
+
+  sprintf(temp,"%02X",incoming.data.byte[0]);
+  g_string = String(g_string +  String(temp));
+
+  sprintf(temp,"%02X",incoming.data.byte[1]);
+  g_string = String(g_string +  String(temp));
+
+  sprintf(temp,"%02X",incoming.data.byte[2]);
+  g_string = String(g_string +  String(temp));
+
+  sprintf(temp,"%02X",incoming.data.byte[3]);
+  g_string = String(g_string +  String(temp));
+
+  sprintf(temp,"%02X",incoming.data.byte[4]);
+  g_string = String(g_string +  String(temp));
+
+  sprintf(temp,"%02X",incoming.data.byte[5]);
+  g_string = String(g_string +  String(temp));
+
+  sprintf(temp,"%02X",incoming.data.byte[6]);
+  g_string = String(g_string +  String(temp));
+
+  sprintf(temp,"%02X\n",incoming.data.byte[7]);
+  g_string = String(g_string +  String(temp));
+
+  return;
+}
 
 void send_frame(){
   if (VERBOSE == 1) { Serial.println("send_frame()"); }
     // Prepare transmit ID, data and data length in CAN0 mailbox 0
   CAN_FRAME outgoing;
-  outgoing.id = 1;
   outgoing.extended = true;
+  outgoing.id = 1;
   outgoing.length = 8; //MAX_CAN_FRAME_DATA_LEN;
   outgoing.data.byte[0] = 0x0B;
   outgoing.data.byte[1] = 0x00;
