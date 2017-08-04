@@ -1,11 +1,7 @@
 #include "variant.h"
 #include <due_can.h>
-
-// #define TEST1_CAN_COMM_MB_IDX    0
-// #define TEST1_CAN_TRANSFER_ID    0x02
-// #define TEST1_CAN0_TX_PRIO       15
-// #define CAN_MSG_DUMMY_DATA       0x55AAEE22
-#define MAX_CAN_FRAME_DATA_LEN   8 // CAN frame max data length
+// #include <SPI.h>
+#include <SD.h>
 
 #define VERBOSE 0
 
@@ -19,20 +15,21 @@
 #define ATDUMP    "ATDUMP"
 #define OKSTR     "OK"
 #define ERRORSTR  "ERROR"
+#define ATSD      "ATSD"
 
 #define RELAYPIN 44
 #define TIMEOUT 5000
 
-// Message variable to be send
-uint32_t CAN_MSG_1 = 0;
-
+#define BAUDRATE 9600
 char g_temp_dump[1000];
-
 String g_string;
+
+// File g_file;
+
 bool ate=true;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(BAUDRATE);
   Serial.println("Receiving AT Command. . .");
   init_can();
   pinMode(RELAYPIN, OUTPUT);
@@ -47,7 +44,6 @@ void loop(){
 void getATCommand(){
   String serial_line, command;
   int i_equals = 0;
-  // CAN_FRAME outgoing;
   
   do{
     serial_line = Serial.readStringUntil('\r\n');
@@ -57,9 +53,7 @@ void getATCommand(){
 
   // echo command if ate is set, default true
   if (ate) Serial.println(serial_line);
-
-  // get characters before '='
-  i_equals = serial_line.indexOf('=');
+    i_equals = serial_line.indexOf('=');
   if (i_equals == -1) command = serial_line;
   else command = serial_line.substring(0,i_equals);
   
@@ -96,10 +90,17 @@ void getATCommand(){
   }
   else if (command == ATDUMP){
       Serial.print(g_string);
-      // Serial.print(g_temp_dump);
+      process_g_string();
       Serial.println(OKSTR);
   }
-
+  else if (command == ATSD){
+      String conf;
+      sd_init(SS3);
+      conf = open_config();
+      // Serial.println(conf);
+      process_config(conf);
+      Serial.println(OKSTR);
+  }
   else{
     Serial.println(ERRORSTR);
   }

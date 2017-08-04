@@ -15,8 +15,12 @@ void init_can(){
 
 void process_frame(CAN_FRAME incoming){
   interpret_frame(incoming);
-  write_frame_to_dump(incoming, g_temp_dump);
+  // write_frame_to_dump(incoming, g_temp_dump);
   write_frame_to_string(incoming);
+}
+
+void process_g_string(){
+  g_string = String("");
 }
 
 void interpret_frame(CAN_FRAME incoming){
@@ -42,6 +46,7 @@ void interpret_frame(CAN_FRAME incoming){
   Serial.print("_"); Serial.println(z); //Serial.print("\t");
 }
 
+// compute X Y or Z values given d1 as lowbyte and d2 as highbyte
 int compute_axis(int d1, int d2){
   int value = 5000;
   if (d2 >= 240) {
@@ -53,15 +58,29 @@ int compute_axis(int d1, int d2){
   return value;
 }
 
+void check_can_status(){
+  int rx_error_cnt=0,tx_error_cnt =0;
+  rx_error_cnt = Can0.get_rx_error_cnt();
+  tx_error_cnt = Can0.get_tx_error_cnt();
+  if (rx_error_cnt + tx_error_cnt != 0){ 
+    Serial.print("rx_error : ");
+    Serial.print(rx_error_cnt);
+    Serial.print("\t tx_error :");
+    Serial.println(tx_error_cnt);
+  }
+  return;
+}
+
 void get_all_frames(int timeout_ms) {
   int timestart = millis();
   CAN_FRAME incoming;
   if (VERBOSE == 1) { Serial.println("check_timeout()"); }
   do {
-     if (Can0.available()){
-      Can0.read(incoming);
-      process_frame(incoming);
-     }
+      check_can_status();
+      if (Can0.available()){
+        Can0.read(incoming);
+        process_frame(incoming);
+      }
   } while (millis() - timestart <= timeout_ms) ; 
   return;                              
 } 
