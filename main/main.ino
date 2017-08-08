@@ -1,7 +1,7 @@
 #include "variant.h"
 #include <due_can.h>
-// #include <SPI.h>
 #include <SD.h>
+// #include <avr/pgmspace.h>
 
 #define VERBOSE 0
 
@@ -21,10 +21,15 @@
 #define TIMEOUT 5000
 
 #define BAUDRATE 9600
+
+// SD-related
+int g_gids[40][2];
+int g_num_of_nodes = 40;
+
+// CAN-related
 char g_temp_dump[1000];
 String g_string;
 
-// File g_file;
 
 bool ate=true;
 
@@ -32,8 +37,8 @@ void setup() {
   Serial.begin(BAUDRATE);
   Serial.println("Receiving AT Command. . .");
   init_can();
+  init_gids();
   pinMode(RELAYPIN, OUTPUT);
-
 }
 
 void loop(){
@@ -96,9 +101,7 @@ void getATCommand(){
   else if (command == ATSD){
       String conf;
       sd_init(SS3);
-      conf = open_config();
-      // Serial.println(conf);
-      process_config(conf);
+      open_config();
       Serial.println(OKSTR);
   }
   else{

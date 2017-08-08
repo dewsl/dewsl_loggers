@@ -1,7 +1,7 @@
 void init_can(){
   if (VERBOSE == 1) { Serial.println("init_can()"); }
   pinMode(50,OUTPUT); //Due Specific
-  if (Can0.begin(40000,50)){
+  if (Can0.begin(40000,50)){ // also resets numBusError
     if(VERBOSE == 1) {Serial.println("Can0 - initialization completed.");}
   }
   Can0.watchFor();     // allow all can traffic through sabi sa quick guide.
