@@ -14,6 +14,8 @@ def get_arguments():
         help = "send messages stored in smsoutbox", action = 'store_true')
     parser.add_argument('-igm', "--initialize_gsm_module", 
         help = "initialize gsm module", action = 'store_true')
+    parser.add_argument('-dg', "--debug_gsm", 
+        help = "enter gsm AT mode", action = 'store_true')
     
     try:
         args = parser.parse_args()
@@ -55,6 +57,8 @@ def main():
         custom_sms_routine()
     if args.send_outbox_messages:
         send_unsent_msg_outbox()
+    if args.debug_gsm:
+        gsmio.gsm_debug()
 
 if __name__ == '__main__':
 ##    main()

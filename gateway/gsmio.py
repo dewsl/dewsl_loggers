@@ -3,7 +3,7 @@ from datetime import datetime as dt
 import dbio
 
 cfg = ConfigParser.ConfigParser()
-cfg.read('server_config.txt')
+cfg.read(sys.path[0] + '/' + 'server_config.txt')
 
 # Baudrate = cfg.getint('Serial', 'Baudrate')
 # Timeout = cfg.getint('Serial', 'Timeout')
@@ -19,6 +19,19 @@ class SmsItem:
 
 class CustomGSMResetException(Exception):
     pass
+
+def gsm_debug():
+    gsm = init_gsm_serial()
+    print '>> AT mode for GSM '
+    print '>> Keyboard interrupt to exit'
+    try:
+        while True:
+            cmd = raw_input("").strip()
+            reply = gsmcmd(cmd,gsm)
+            print reply.strip()
+
+    except KeyboardInterrupt:
+        print '>> Leaving AT mode ...'
 
 def reset_gsm():
     print ">> Resetting GSM Module ...",
@@ -51,13 +64,13 @@ def init_gsm_serial():
     gsm.baudrate = baudrate
     gsm.timeout = timeout
     if not gsm.isOpen():
-        print "opening gsm port"
+        # print "opening gsm port"
         gsm.open()
 
     return gsm
        
 def init_gsm():
-    print 'Connecting to GSM modem at', port
+    print 'Connecting to GSM modem'
     
     gsm = init_gsm_serial()
 
@@ -67,7 +80,7 @@ def init_gsm():
     time.sleep(0.5)    
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
     print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
-    mc = get_mc_server()
+    mc = dbio.get_mc_server()
     mc.set('init_gsm',True)
     
 def gsm_flush():
@@ -87,27 +100,39 @@ def gsm_flush():
         print "NO SERIAL COMMUNICATION (gsmflush)"
         RunSenslopeServer(gsm_network)
 
-def gsmcmd(cmd):
+def gsmcmd(cmd,gsm=None):
     """
     Sends a command 'cmd' to GSM Module
     Returns the reply of the module
     Usage: str = gsmcmd()
     """
-    gsm = init_gsm_serial()
+    if gsm is None:
+        gsm = init_gsm_serial()
+
     try:
         gsm.flushInput()
         gsm.flushOutput()
         a = ''
         now = time.time()
         gsm.write(cmd+'\r\n')
-        while a.find('OK')<0 and time.time()<now+30:
+        while True:
             #print cmd
             #gsm.write(cmd+'\r\n')
             a += gsm.read(gsm.inWaiting())
+
+            if a.find('OK')>=0:
+                break
+            elif a.find('ERROR')>=0:
+                break
+            elif time.time()>now+10:
+                break
+            # else:
+            #     print 'None'            
             #a += gsm.read()
             #print '+' + a
-            #print a
+            # print a
             time.sleep(0.5)
+            # print '.',
         if time.time()>now+10:  
             a = '>> Error: GSM Unresponsive'
             reset_gsm()
