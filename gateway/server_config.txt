@@ -1,0 +1,47 @@
+[LocalDB]
+username = root
+host = 127.0.0.1
+password = senslope
+dbname = senslopedb
+
+[Serial]
+baudrate = 57600
+sunport = 
+globeport = /dev/gsmusbport
+timeout = 5
+smartport = /dev/gsmusbport
+
+[simprefix]
+smart = 07,08,09,10,12,18,19,20,21,28,29,30,38,29,30,38,39,46,47,48,49,89,98,99,22,23,32,33,34,25,42,43
+globe = 05,06,15,16,17,18,25,26,27,35,36,35,37,94,96,97,77 
+
+[coordinfo]
+name = EVM
+
+[serverinfo]
+sendto = globe
+globe = 639176023735
+smart = 639988448687 
+
+[gsmio]
+port = /dev/gsmusbport
+baudrate = 9600
+timeout = 5
+sendretry = 10
+resetpin = 38
+
+[mysql]
+sentbuffersize = 15
+
+[user]
+pass = rpisenslope
+authnum = 639393094387,639176023735
+
+[sms]
+delsmsafterread = True
+
+[pwrmodio]
+port = /dev/pwrmodusbport
+baud = 9600
+timeout = 5
+
