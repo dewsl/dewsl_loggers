@@ -25,10 +25,12 @@
 // SD-related
 int g_gids[40][2];
 int g_num_of_nodes = 40;
+char g_mastername[6] = "XXXXX";
 
 // CAN-related
 char g_temp_dump[1000];
 String g_string;
+String g_string_proc;
 
 
 bool ate=true;
@@ -37,7 +39,10 @@ void setup() {
   Serial.begin(BAUDRATE);
   Serial.println("Receiving AT Command. . .");
   init_can();
+  init_strings();
   init_gids();
+  init_sd(SS3); 
+  open_config();
   pinMode(RELAYPIN, OUTPUT);
 }
 
@@ -94,15 +99,16 @@ void getATCommand(){
     }
   }
   else if (command == ATDUMP){
-      Serial.print(g_string);
+      Serial.println(g_string);
       process_g_string();
+      Serial.println(g_string_proc);
       Serial.println(OKSTR);
   }
   else if (command == ATSD){
       String conf;
-      sd_init(SS3);
+      init_sd(SS3);
       open_config();
-      Serial.println(OKSTR);
+      Serial.println(F(OKSTR));
   }
   else{
     Serial.println(ERRORSTR);

@@ -1,5 +1,14 @@
-
-int sd_init(int chip_select){
+/* 
+	Function: sd_init
+		Assert the chip_select pin for SD use.	
+	Parameters:
+		n/a
+	Returns:
+		-1 fail, 0 success.
+	See Also:
+		<main.ino/setup>
+*/
+int init_sd(int chip_select){
 	if (!SD.begin(chip_select)){
 		Serial.println("SD initialization failed!");
 		return -1;
@@ -7,6 +16,14 @@ int sd_init(int chip_select){
 	return 0;
 }
 
+void init_gids(){
+	if (VERBOSE == 1){Serial.println(F("init_uids()"));}
+	for (int i=0; i < g_num_of_nodes; i++ ){
+		g_gids[i][0] = 0;	// unique id
+		g_gids[i][1] = i+1; // geographic id ( 1- 40)
+	}
+	return;
+}
 /* 
 	Function: open_config
 		Open the CONFIG.txt file in the SD card and process
@@ -15,6 +32,8 @@ int sd_init(int chip_select){
 		n/a
 	Returns:
 		n/a
+	See Also:
+		<main.ino/getATCommand>
 */
 void open_config(){
 	File g_file;
@@ -46,7 +65,6 @@ void open_config(){
 	g_file.close();
 	return;
 }
-
 unsigned int process_config_line(char *one_line){
 	String str1;
 	str1 = String(one_line);
@@ -54,39 +72,14 @@ unsigned int process_config_line(char *one_line){
 		return 0;
 	} else if((str1.startsWith("endofconfig")) | (str1.startsWith("ENDOFCONFIG"))){
 		return 1;
-	} else if((str1.startsWith("columnIDs")) | (str1.startsWith("column1"))){
+	} else if((str1.startsWith("columnids")) | (str1.startsWith("column1")) 
+		| (str1.startsWith("columnIDs"))) {
 		g_num_of_nodes = process_column_ids(str1);
 		print_gids();
-		// Serial.print(g_num_of_nodes);
-		// Serial.println((" Unique IDs read from CONFIG.txt"));
 		return 0;
 	} else {
 		return 0;
 	}
-}
-
-void init_gids(){
-	if (VERBOSE == 1){Serial.println(F("init_uids()"));}
-	for (int i=0; i<40; i++ ){
-		g_gids[i][0] = 0;	// unique id
-		g_gids[i][1] = i+1; // geographic id ( 1- 40)
-	}
-	return;
-}
-void print_gids(){
-	char gid[2],uid[4];
-	Serial.println(F("================================="));
-	Serial.println(F("Geographic ID\t\tUnique ID"));
-	Serial.println(F("================================="));
-	for (int i = 0; i<g_num_of_nodes-1; i++){
-		sprintf(gid,"%2d",g_gids[i][1]);
-		sprintf(uid,"%4d",g_gids[i][0]);
-		Serial.print("\t");
-		Serial.print(gid);
-		Serial.print("\t\t");
-		Serial.println(uid);
-	}
-	Serial.println(F("================================="));
 }
 /* 
 	Function: process_column_ids
@@ -95,6 +88,8 @@ void print_gids(){
 		String line - String object containing ids
 	Returns:
 		The number of unique ids read.
+	See Also:
+		<process_config_line>
 */
 int process_column_ids(String line){
 	// Serial.println(line);
@@ -117,4 +112,29 @@ int process_column_ids(String line){
 			break;
 	}
 	return i+1;
+}
+/* 
+	Function: print_gids
+		Print in the gids and uids from the global g_gids.
+	Parameters:
+		n/a
+	Returns:
+		n/a
+	See Also:
+		<init_gids>
+*/
+void print_gids(){
+	char gid[2],uid[4];
+	Serial.println(F("================================="));
+	Serial.println(F("Geographic ID\t\tUnique ID"));
+	Serial.println(F("================================="));
+	for (int i = 0; i<g_num_of_nodes-1; i++){
+		sprintf(gid,"%2d",g_gids[i][1]);
+		sprintf(uid,"%4d",g_gids[i][0]);
+		Serial.print("\t");
+		Serial.print(gid);
+		Serial.print("\t\t");
+		Serial.println(uid);
+	}
+	Serial.println(F("================================="));
 }
