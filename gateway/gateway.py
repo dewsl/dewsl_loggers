@@ -2,6 +2,7 @@ import gsmio
 import argparse
 import dbio
 import sys, os
+import raindetect as rd
 
 sys.path.append(os.path.realpath('..'))
 
@@ -19,7 +20,11 @@ def get_arguments():
         help = "initialize gsm module", action = 'store_true')
     parser.add_argument('-dg', "--debug_gsm", 
         help = "enter gsm AT mode", action = 'store_true')
-    
+    parser.add_argument('-rd', "--rain_detect", 
+        help = "check current rain value", action = 'store_true')
+    parser.add_argument('-rs', "--reset_rain_value",
+        help = "set current rain value to zero", action = 'store_true')
+
     try:
         args = parser.parse_args()
         return args        
@@ -62,6 +67,10 @@ def main():
         send_unsent_msg_outbox()
     if args.debug_gsm:
         gsmio.gsm_debug()
+    if args.reset_rain_value:
+        rd.reset_rain_value()
+    if args.rain_detect:
+        rd.check_rain_value()
 
 if __name__ == '__main__':
 ##    main()
