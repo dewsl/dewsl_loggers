@@ -1,13 +1,15 @@
-import serial, datetime, ConfigParser, time, re, sys
+import serial, datetime, ConfigParser, time, re, sys, os
 from datetime import datetime as dt
 import dbio
+import common
+import RPi.GPIO as GPIO
 
-cfg = ConfigParser.ConfigParser()
-cfg.read(sys.path[0] + '/' + 'server_config.txt')
+# cfg = ConfigParser.ConfigParser()
+# cfg.read('server_config.txt')
 
-# Baudrate = cfg.getint('Serial', 'Baudrate')
-# Timeout = cfg.getint('Serial', 'Timeout')
-Namedb = cfg.get('LocalDB', 'DBName')
+# # Baudrate = cfg.getint('Serial', 'Baudrate')
+# # Timeout = cfg.getint('Serial', 'Timeout')
+# Namedb = cfg.get('LocalDB', 'DBName')
 # SaveToFile = cfg.get('I/O', 'savetofile')
 
 class SmsItem:
@@ -33,12 +35,40 @@ def gsm_debug():
     except KeyboardInterrupt:
         print '>> Leaving AT mode ...'
 
+def power_gsm(mode='ON'):
+    print ">> Power GSM", mode
+    # reset_pin = common.get_config_handle()['gsmio']['reset_pin']
+    reset_pin =38
+    stat_pin = 37
+
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(reset_pin, GPIO.OUT)
+    GPIO.setup(stat_pin, GPIO.IN)
+
+    if mode == 'ON':
+        exit_stat = 1
+    else:
+        exit_stat = 0
+
+    now = time.time()
+
+    while GPIO.input(stat_pin) != exit_stat and time.time()<now+10:
+        GPIO.output(reset_pin, True)
+        time.sleep(0.2)
+
+    GPIO.output(reset_pin, False)
+
+    if time.time()>10:
+        return False
+    else:
+        return True
+
 def reset_gsm():
     print ">> Resetting GSM Module ...",
-    reset_pin = cfg.getint('gsmio', 'resetpin')
+    # reset_pin = cfg.getint('gsmio', 'resetpin')
+    reset_pin = common.get_config_handle()['gsmio']['resetpin']
     # resetPin = 38
     try:
-        import RPi.GPIO as GPIO
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(reset_pin, GPIO.OUT)
 
@@ -56,9 +86,11 @@ def reset_gsm():
 def init_gsm_serial():
     gsm = serial.Serial()
 
-    port = cfg.get('gsmio', 'port')
-    baudrate = cfg.getint('gsmio', 'baudrate')
-    timeout = cfg.getint('gsmio', 'timeout')
+    s_conf = common.get_config_handle()
+
+    port = s_conf['gsmio']['port']
+    baudrate = s_conf['gsmio']['baudrate']
+    timeout = s_conf['gsmio']['timeout']
 
     gsm.port = port
     gsm.baudrate = baudrate
@@ -74,13 +106,16 @@ def init_gsm():
     
     gsm = init_gsm_serial()
 
+    power_gsm()
+
+    print "Initializing ..."
     gsm.write('AT\r\n')
     time.sleep(0.5)
     gsm.write('AT\r\n')
     time.sleep(0.5)    
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
     print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
-    mc = dbio.get_mc_server()
+    mc = common.get_mc_server()
     mc.set('init_gsm',True)
     
 def gsm_flush():

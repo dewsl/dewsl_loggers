@@ -1,6 +1,9 @@
 import gsmio
 import argparse
 import dbio
+import sys, os
+
+sys.path.append(os.path.realpath('..'))
 
 def get_arguments():
     parser = argparse.ArgumentParser(description = "Gateway debug [-options]")

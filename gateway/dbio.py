@@ -1,16 +1,14 @@
-import ConfigParser, MySQLdb, time, sys
+import ConfigParser, MySQLdb, time, sys, os
 from datetime import datetime as dt
 from ConfigParser import SafeConfigParser
 import memcache
 import gsmio
+import common
 
-#cfg = ConfigParser.ConfigParser()
-cfg = SafeConfigParser()
-cfg.read("server_config.txt")
+# cfg = SafeConfigParser()
+# cfg.read("server_config.txt")
 #cfg.read("/home/pi/rpiserver/senslope-server-config.txt")
 
-def get_mc_server():
-    return memcache.Client(['127.0.0.1:11211'],debug=0)
 
 class DbInstance:
     def __init__(self,name,host,user,password):
@@ -19,19 +17,17 @@ class DbInstance:
        self.user = user
        self.password = password
 
-local_db_instance = DbInstance(cfg.get('LocalDB', 'DBName'),
-    cfg.get('LocalDB', 'Host'),cfg.get('LocalDB', 'Username'),
-    cfg.get('LocalDB', 'Password'))
-# local_db_instance = dbInstance(cfg.get('GSMDB', 'DBName'),cfg.get('GSMDB', 'Host'),cfg.get('GSMDB', 'Username'),cfg.get('GSMDB', 'Password'))
-
-# def db_connect():
 # Definition: Connect to senslopedb in mysql
-def db_connect(instance=local_db_instance):
-    dbc = local_db_instance
+def db_connect():
+    s_conf = common.get_config_handle()
+
     while True:
         try:
-            db = MySQLdb.connect(host = dbc.host, user = dbc.user, 
-                passwd = dbc.password, db = dbc.name)
+            db = MySQLdb.connect(host = s_conf['localdb']['host'],
+                user = s_conf['localdb']['user'],
+                passwd = s_conf['localdb']['password'],
+                db = s_conf['localdb']['dbname']
+            )
             cur = db.cursor()
             return db, cur
         except MySQLdb.OperationalError:
@@ -159,11 +155,14 @@ def write_sms_to_outbox(sms_msg,pb_id=None,send_status=0):
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
+
     # default send to server if sim_num is empty
     if not pb_id:
-        mc = get_mc_server()
+        mc = common.get_mc_server()
+        s_conf = common.get_config_handle()
+
         pb_names = mc.get('pb_names')
-        sendto = cfg.get('serverinfo','sendto')
+        sendto = s_conf['serverinfo']['sendto']
 
         inv_pb_names = {v: k for k, v in pb_names.items()}
         print inv_pb_names
