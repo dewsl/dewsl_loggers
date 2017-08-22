@@ -8,9 +8,25 @@ from bisect import bisect
 mc = common.get_mc_server()
 
 def get_round_up_time(dt_start, interval = 15):
-    print dt_start
-    times = list(rrule(MINUTELY,interval=interval, dtstart=dt_start.date(),count=248))
+    # print dt_start
+    times = list(rrule(MINUTELY,interval=interval, dtstart=dt_start.date(),count=96))
+    # print times
     return times[bisect(times,dt_start)]
+
+def get_rain_tips_per_interval(reset_value=False):
+    rain_events = mc.get("rain_events")
+    report_events = []
+    
+    while len(rain_events) > 0:
+        event_min = rain_events.min()
+        dt_round_up = get_round_up_time(event_min)
+        report_events.append((dt_round_up,len(rain_events[rain_events<dt_round_up])))
+        rain_events = rain_events[rain_events>dt_round_up]
+
+    if reset_value:
+        reset_rain_value()
+
+    return report_events
 
 def check_rain_value():
     rain_events = mc.get("rain_events")
