@@ -23,20 +23,8 @@ def main():
     msgtosend += "0,000,000," + rainval + ","
     msgtosend += sysvol + ","
     msgtosend += csq
-    
-    # print msgtosend
-    sid = 0
-    num = cfg["serverinfo"][cfg["serverinfo"]["sendto"]]
-    msg = msgtosend
 
-    sms = gsmio.SmsItem(sid,num,msg,ts)
-
-    smsoutbox = mc.get("smsoutbox")
-    smsoutbox.append(sms)
-
-    mc.set("smsoutbox",smsoutbox)
-    
-    # senslopeServer.WriteOutboxMessageToDb(msgtosend, rpicfg.servernum)
+    common.save_sms_to_memory(msgtosend)
     
 if __name__=='__main__':
     try:
