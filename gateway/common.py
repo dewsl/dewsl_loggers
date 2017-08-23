@@ -73,10 +73,18 @@ def main():
 	# new server config
 	c = dewsl_server_config()
 	mc.set("server_config",c.config)
-	print mc.get("server_config")
-	# print c.config['gsmdb']['username']
 
-	return
+	smsoutbox = mc.get("smsoutbox")
+	if smsoutbox is None:
+		mc.set("smsoutbox",[])
+		print "set smsoutbox as empty list"
+	else:
+		print smsoutbox
+
+	cfg = mc.get("server_config")
+	for key in cfg.keys():
+		print key, cfg[key]
+	# print c.config['gsmdb']['username']
 
 if __name__ == "__main__":
     main()
