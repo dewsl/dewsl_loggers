@@ -3,6 +3,8 @@ import argparse
 import dbio
 import sys, os
 import raindetect as rd
+import pandas as pd
+import common
 
 sys.path.append(os.path.realpath('..'))
 
@@ -24,6 +26,8 @@ def get_arguments():
         help = "check current rain value", action = 'store_true')
     parser.add_argument('-rs', "--reset_rain_value",
         help = "set current rain value to zero", action = 'store_true')
+    parser.add_argument('-sm', "--send_smsoutbox_memory",
+        help = "send outbox messages in memory (RAM)", action = 'store_true')
 
     try:
         args = parser.parse_args()
@@ -33,6 +37,28 @@ def get_arguments():
         error = parser.format_help()
         print error
         sys.exit()
+
+def send_smsoutbox_memory():
+    print "Sending from memory ..."
+    mc = common.get_mc_server()
+    smsoutbox = mc.get("smsoutbox")
+
+    # print smsoutbox
+    phonebook = mc.get("phonebook")
+
+    smsoutbox_unsent = smsoutbox[smsoutbox["send_status"] == 0]
+
+    for index, row in smsoutbox_unsent.iterrows():
+        stat = gsmio.send_msg(row['sms_msg'], phonebook[row["user_id"]])
+        
+        if stat == 0:
+            smsoutbox.loc[index, 'send_status'] = 1
+        else:
+            print '>> Message sending fail'
+
+    print smsoutbox
+
+    mc.set("smsoutbox",smsoutbox)
 
 def custom_sms_routine():
     sms = raw_input("Custom message: ")
@@ -71,6 +97,9 @@ def main():
         rd.reset_rain_value()
     if args.rain_detect:
         rd.check_rain_value()
+    if args.send_smsoutbox_memory:
+        send_smsoutbox_memory()
+     
 
 if __name__ == '__main__':
 ##    main()

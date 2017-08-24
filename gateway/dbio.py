@@ -35,7 +35,7 @@ def db_connect():
             time.sleep(2)
             
 def create_table(table_name, type):
-    db, cur = db_connect('local')
+    db, cur = db_connect()
     # cur.execute("CREATE DATABASE IF NOT EXISTS %s" %Namedb)
     # cur.execute("USE %s"%Namedb)
     
@@ -67,7 +67,7 @@ def create_table(table_name, type):
     db.close()
     
 def set_read_status(read_status,sms_id_list):
-    db, cur = db_connect('gsm')
+    db, cur = db_connect()
     
     if len(sms_id_list) <= 0:
         return
@@ -78,7 +78,7 @@ def set_read_status(read_status,sms_id_list):
     commit_to_db(query,"setReadStatus", instance='GSM')
     
 def set_send_status(send_status,sms_id_list):
-    db, cur = db_connect('gsm')
+    db, cur = db_connect()
     
     if len(sms_id_list) <= 0:
         return
@@ -91,7 +91,7 @@ def set_send_status(send_status,sms_id_list):
     commit_to_db(query,"setSendStatus", instance='GSM')
 
 def query_database(query, identifier='', instance='local'):
-    db, cur = db_connect(instance)
+    db, cur = db_connect()
     a = ''
 
     # print query, identifier
@@ -175,7 +175,7 @@ def write_sms_to_outbox(sms_msg,pb_id=None,send_status=0):
     commit_to_db(query, "WriteOutboxMessageToDb")
     
 def get_db_inbox(read_status):
-    db, cur = db_connect('gsm')
+    db, cur = db_connect()
     
     while True:
         try:
@@ -219,7 +219,7 @@ def get_db_outbox(send_status=0):
     return all_msgs
 
 def commit_to_db(query, identifier, instance='local'):
-    db, cur = db_connect(instance)
+    db, cur = db_connect()
     
     try:
         retry = 0

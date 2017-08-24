@@ -203,15 +203,17 @@ def send_msg(msg, number):
         check_count += 1
 
     # resolve sim_num from number
-    mc = dbio.get_mc_server()
+    mc = common.get_mc_server()
     pb_numbers = mc.get('pb_numbers')
 
     try:
         if type(number) == int or type(number) == long:
             number = pb_numbers[number]
+        elif type(str):
+            pass
     except KeyError:
         print ">> No record for phonebook id:", number 
-        return
+        return -1
 
     gsm = init_gsm_serial()
 

@@ -3,12 +3,13 @@ import memcache
 import gsmio
 import pandas as pd
 from datetime import datetime as dt
+import dbio
 
 def get_mc_server():
     return memcache.Client(['127.0.0.1:11211'],debug=0)	
 
 mc = get_mc_server()
-smsoutbox_column_names = ["ts","sms_msg","user_id","read_status"]
+smsoutbox_column_names = ["ts","sms_msg","user_id","send_status"]
 
 def read_cfg_file():
 	cfg = ConfigParser.ConfigParser()
@@ -64,7 +65,17 @@ def reset_smsoutbox_memory():
 	mc.set("smsoutbox",smsoutbox)
 
 def print_smsoutbox_memory():
-	print mc.get("smsoutbox")	
+	print mc.get("smsoutbox")
+
+def save_phonebook_memory():
+	query = "select pb_id, sim_num from phonebook"
+	pb_result_set = dbio.query_database(query,"spm")
+	
+	phonebook = {}
+	for pb_id, sim_num in pb_result_set:
+		phonebook[pb_id] = sim_num
+
+	mc.set("phonebook",phonebook)
 
 def save_sms_to_memory(msg_str):
 	# read smsoutbox from memory
@@ -73,10 +84,12 @@ def save_sms_to_memory(msg_str):
 	# set to an empty df if empty
 	if smsoutbox is None:
 		reset_smsoutbox_memory()
+	# else:
+	# 	print smsoutbox
 
 	# prep the data to append
 	data = {"ts": [dt.today()],	"sms_msg": [msg_str], 
-	"user_id": [1], "read_status" : [0]}
+	"user_id": [3], "send_status" : [0]}
 
 	# append the data
 	smsoutbox = smsoutbox.append(pd.DataFrame(data), 
