@@ -11,9 +11,11 @@ mc = get_mc_server()
 smsoutbox_column_names = ["ts","sms_msg","user_id","read_status"]
 
 def read_cfg_file():
-    cfg = ConfigParser.ConfigParser()
-    cfg.read(cfile)
-    return cfg
+	cfg = ConfigParser.ConfigParser()
+	cfgfiletxt = 'server_config.txt'
+	cfile = os.path.dirname(os.path.realpath(__file__)) + '/' + cfgfiletxt
+	cfg.read(cfile)
+	return cfg
 
 def save_cfg_changes(cfg):
     with open(cfile, 'wb') as c:
