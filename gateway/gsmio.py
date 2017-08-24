@@ -202,6 +202,10 @@ def send_msg(msg, number):
         time.sleep(0.5)
         check_count += 1
 
+    if check_count >= 10:
+        print ">> No connection to network. Aborting ..."
+        return -1
+
     # resolve sim_num from number
     mc = common.get_mc_server()
     pb_numbers = mc.get('pb_numbers')
