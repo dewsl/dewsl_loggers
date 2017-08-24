@@ -77,6 +77,13 @@ def save_phonebook_memory():
 
 	mc.set("phonebook",phonebook)
 
+def purge_smsoutbox_memory():
+	mc = get_mc_server()
+	smsoutbox = mc.get("smsoutbox")
+
+	smsoutbox = smsoutbox[smsoutbox["send_status"] == 0]
+	mc.set("smsoutbox",smsoutbox)
+
 def save_sms_to_memory(msg_str):
 	# read smsoutbox from memory
 	smsoutbox = mc.get("smsoutbox")

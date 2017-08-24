@@ -28,6 +28,10 @@ def get_arguments():
         help = "set current rain value to zero", action = 'store_true')
     parser.add_argument('-sm', "--send_smsoutbox_memory",
         help = "send outbox messages in memory (RAM)", action = 'store_true')
+    parser.add_argument('-ps', "--print_smsoutbox_memory",
+        help = "print outbox messages in memory (RAM)", action = 'store_true')
+    parser.add_argument('-ug', "--purge_smsoutbox_memory",
+        help = "purge sent smsoutbox messages in memory (RAM)", action = 'store_true')
 
     try:
         args = parser.parse_args()
@@ -99,6 +103,10 @@ def main():
         rd.check_rain_value()
     if args.send_smsoutbox_memory:
         send_smsoutbox_memory()
+    if args.print_smsoutbox_memory:
+        common.print_smsoutbox_memory()
+    if args.purge_smsoutbox_memory:
+        common.purge_smsoutbox_memory()
      
 
 if __name__ == '__main__':
