@@ -18,20 +18,24 @@ def get_arguments():
         help = "write custom sms to smsoutbox", action = 'store_true')
     parser.add_argument('-som', "--send_outbox_messages", 
         help = "send messages stored in smsoutbox", action = 'store_true')
+    
     parser.add_argument('-igm', "--initialize_gsm_module", 
         help = "initialize gsm module", action = 'store_true')
     parser.add_argument('-dg', "--debug_gsm", 
         help = "enter gsm AT mode", action = 'store_true')
+
     parser.add_argument('-rd', "--rain_detect", 
         help = "check current rain value", action = 'store_true')
     parser.add_argument('-rs', "--reset_rain_value",
         help = "set current rain value to zero", action = 'store_true')
+
     parser.add_argument('-sm', "--send_smsoutbox_memory",
         help = "send outbox messages in memory (RAM)", action = 'store_true')
-    parser.add_argument('-ps', "--print_smsoutbox_memory",
-        help = "print outbox messages in memory (RAM)", action = 'store_true')
-    parser.add_argument('-ug', "--purge_smsoutbox_memory",
-        help = "purge sent smsoutbox messages in memory (RAM)", action = 'store_true')
+
+    parser.add_argument('-pm', "--print_memory", type = str,
+        help = "print value in memory (RAM)")
+    parser.add_argument('-um', "--purge_memory", type = str,
+        help = "purge value in memory (RAM)")
 
     try:
         args = parser.parse_args()
@@ -101,12 +105,13 @@ def main():
         rd.reset_rain_value()
     if args.rain_detect:
         rd.check_rain_value()
+
     if args.send_smsoutbox_memory:
         send_smsoutbox_memory()
-    if args.print_smsoutbox_memory:
-        common.print_smsoutbox_memory()
-    if args.purge_smsoutbox_memory:
-        common.purge_smsoutbox_memory()
+    if args.print_memory:
+        common.print_memory(args.print_memory)
+    if args.purge_memory:
+        common.purge_memory(args.purge_memory)
      
 
 if __name__ == '__main__':

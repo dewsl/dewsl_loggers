@@ -60,12 +60,18 @@ class dewsl_server_config:
 def get_config_handle():
 	return mc.get('server_config')
 
-def reset_smsoutbox_memory():
-	smsoutbox = pd.DataFrame(columns = storage_column_names)
-	mc.set("smsoutbox",smsoutbox)
+def reset_memory(valuestr):
+	value_pointer = mc.get(valuestr)
 
-def print_smsoutbox_memory():
-	print mc.get("smsoutbox")
+	if value_pointer is None:
+		value_pointer = pd.DataFrame(columns = storage_column_names)
+		mc.set(valuestr,value_pointer)		
+		print "set %s as empty object" % (valuestr)
+	else:
+		print value_pointer
+
+def print_memory(valuestr):
+	print mc.get(valuestr)
 
 def save_phonebook_memory():
 	query = "select pb_id, sim_num from phonebook"
@@ -77,11 +83,11 @@ def save_phonebook_memory():
 
 	mc.set("phonebook",phonebook)
 
-def purge_smsoutbox_memory():
-	smsoutbox = mc.get("smsoutbox")
+def purge_memory(valuestr):
+	value_pointer = mc.get(valuestr)
 
-	smsoutbox = smsoutbox[smsoutbox["send_status"] == 0]
-	mc.set("smsoutbox",smsoutbox)
+	value_pointer = value_pointer[value_pointer["stat"] == 0]
+	mc.set(valuestr,value_pointer)
 
 def save_sms_to_memory(msg_str):
 	# read smsoutbox from memory
@@ -109,12 +115,8 @@ def main():
 	c = dewsl_server_config()
 	mc.set("server_config",c.config)
 
-	smsoutbox = mc.get("smsoutbox")
-	if smsoutbox is None:
-		reset_smsoutbox_memory()
-		print "set smsoutbox as empty list"
-	else:
-		print smsoutbox
+	reset_memory("smsoutbox")
+	reset_memory("smsinbox")
 
 	cfg = mc.get("server_config")
 	for key in cfg.keys():
