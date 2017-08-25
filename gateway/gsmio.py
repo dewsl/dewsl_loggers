@@ -38,8 +38,9 @@ def gsm_debug():
 def power_gsm(mode='ON'):
     print ">> Power GSM", mode
     # reset_pin = common.get_config_handle()['gsmio']['reset_pin']
-    reset_pin =38
-    stat_pin = 37
+    sconf = common.get_config_handle()
+    reset_pin = sconf['gsmio']['resetpin']
+    stat_pin = sconf['gsmio']['statpin']
 
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(reset_pin, GPIO.OUT)
@@ -299,7 +300,7 @@ def count_msg():
             logError(b)
             # return -2   
 
-def get_sms_from_sim(network):
+def get_sms_from_sim():
     allmsgs = 'd' + gsmcmd('AT+CMGL="ALL"')
     allmsgs = allmsgs.replace("\r\nOK\r\n",'').split("+CMGL")[1:]
     # if allmsgs:
@@ -337,9 +338,9 @@ def get_sms_from_sim(network):
         except:
             print "Error in date time conversion"
                 
-        smsItem = sms(txtnum, sender, msg[1], txtdatetimeStr)
+        sms = SmsItem(txtnum, sender, msg[1], txtdatetimeStr)
         
-        msglist.append(smsItem)
+        msglist.append(sms)
         
     
     return msglist

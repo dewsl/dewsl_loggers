@@ -29,6 +29,8 @@ baudrate = 9600
 timeout = 5
 sendretry = 10
 resetpin = 38
+statpin = 37
+ripin = 21
 
 [mysql]
 sentbuffersize = 15
