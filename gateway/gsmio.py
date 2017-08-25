@@ -171,7 +171,8 @@ def gsmcmd(cmd,gsm=None):
             # print '.',
         if time.time()>now+10:  
             a = '>> Error: GSM Unresponsive'
-            reset_gsm()
+            # reset_gsm()
+            return None
         return a
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (gsmcmd)"
@@ -262,7 +263,6 @@ def send_msg(msg, number):
             
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (sendmsg)"
-        RunSenslopeServer(gsm_network)	
         
 def log_error(log):
     nowdate = dt.today().strftime("%A, %B %d, %Y, %X")

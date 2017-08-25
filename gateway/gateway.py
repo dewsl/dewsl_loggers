@@ -5,6 +5,7 @@ import sys, os
 import raindetect as rd
 import pandas as pd
 import common
+import lockscript
 
 sys.path.append(os.path.realpath('..'))
 
@@ -47,6 +48,8 @@ def get_arguments():
         sys.exit()
 
 def send_smsoutbox_memory():
+    lockscript.get_lock('gsm')
+
     print "Sending from memory ..."
     mc = common.get_mc_server()
     smsoutbox = mc.get("smsoutbox")
