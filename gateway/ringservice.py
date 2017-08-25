@@ -26,7 +26,7 @@ def main():
     GPIO.add_event_detect(ri_pin, GPIO.FALLING, callback=ring_isr, bouncetime=100)
 
     while True:
-        pass
+        time.sleep(100000)
 
 if __name__=='__main__':
     try:

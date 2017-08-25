@@ -302,7 +302,7 @@ def count_msg():
             print '>> ValueError:'
             print b
             print '>> Retryring message reading'
-            logError(b)
+            # logError(b)
             # return -2   
 
 def get_sms_from_sim():
@@ -326,7 +326,7 @@ def get_sms_from_sim():
         except AttributeError:
             # particular msg may be some extra strip of string 
             print ">> Error: message may not have correct construction", msg[0]
-            logError("wrong construction\n"+msg[0])
+            # logError("wrong construction\n"+msg[0])
             continue
         
         try:

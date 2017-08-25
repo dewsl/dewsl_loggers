@@ -4,6 +4,7 @@ import common
 import pandas as pd
 from dateutil.rrule import rrule, MINUTELY
 from bisect import bisect
+import time
 
 mc = common.get_mc_server()
 
@@ -51,7 +52,7 @@ def main():
     reset_rain_value()
 
     while True:
-        pass
+        time.sleep(100000)
 
     GPIO.cleanup()
 
