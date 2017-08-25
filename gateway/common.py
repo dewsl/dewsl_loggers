@@ -78,7 +78,6 @@ def save_phonebook_memory():
 	mc.set("phonebook",phonebook)
 
 def purge_smsoutbox_memory():
-	mc = get_mc_server()
 	smsoutbox = mc.get("smsoutbox")
 
 	smsoutbox = smsoutbox[smsoutbox["send_status"] == 0]
@@ -89,7 +88,7 @@ def save_sms_to_memory(msg_str):
 	smsoutbox = mc.get("smsoutbox")
 
 	# set to an empty df if empty
-	if smsoutbox is None:
+	if len(smsoutbox) == 0:
 		reset_smsoutbox_memory()
 	# else:
 	# 	print smsoutbox
@@ -106,15 +105,13 @@ def save_sms_to_memory(msg_str):
 	mc.set("smsoutbox",smsoutbox)
 
 def main():
-	mc = get_mc_server()
-	
 	# new server config
 	c = dewsl_server_config()
 	mc.set("server_config",c.config)
 
 	smsoutbox = mc.get("smsoutbox")
-	if smsoutbox is None:
-		mc.set("smsoutbox",[])
+	if len(smsoutbox) == 0:
+		reset_smsoutbox_memory()
 		print "set smsoutbox as empty list"
 	else:
 		print smsoutbox
@@ -123,6 +120,8 @@ def main():
 	for key in cfg.keys():
 		print key, cfg[key]
 	# print c.config['gsmdb']['username']
+
+	save_phonebook_memory()
 
 if __name__ == "__main__":
     main()
