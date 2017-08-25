@@ -50,13 +50,13 @@ def send_smsoutbox_memory():
     # print smsoutbox
     phonebook = mc.get("phonebook")
 
-    smsoutbox_unsent = smsoutbox[smsoutbox["send_status"] == 0]
+    smsoutbox_unsent = smsoutbox[smsoutbox["stat"] == 0]
 
     for index, row in smsoutbox_unsent.iterrows():
-        stat = gsmio.send_msg(row['sms_msg'], phonebook[row["user_id"]])
+        stat = gsmio.send_msg(row['msg'], phonebook[row["contact_id"]])
         
         if stat == 0:
-            smsoutbox.loc[index, 'send_status'] = 1
+            smsoutbox.loc[index, 'stat'] = 1
         else:
             print '>> Message sending fail'
 

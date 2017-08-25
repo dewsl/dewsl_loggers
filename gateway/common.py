@@ -9,7 +9,7 @@ def get_mc_server():
     return memcache.Client(['127.0.0.1:11211'],debug=0)	
 
 mc = get_mc_server()
-smsoutbox_column_names = ["ts","sms_msg","user_id","send_status"]
+storage_column_names = ["ts","msg","contact_id","stat"]
 
 def read_cfg_file():
 	cfg = ConfigParser.ConfigParser()
@@ -61,7 +61,7 @@ def get_config_handle():
 	return mc.get('server_config')
 
 def reset_smsoutbox_memory():
-	smsoutbox = pd.DataFrame(columns = smsoutbox_column_names)
+	smsoutbox = pd.DataFrame(columns = storage_column_names)
 	mc.set("smsoutbox",smsoutbox)
 
 def print_smsoutbox_memory():
@@ -88,14 +88,14 @@ def save_sms_to_memory(msg_str):
 	smsoutbox = mc.get("smsoutbox")
 
 	# set to an empty df if empty
-	if len(smsoutbox) == 0:
+	if smsoutbox is None:
 		reset_smsoutbox_memory()
 	# else:
 	# 	print smsoutbox
 
 	# prep the data to append
-	data = {"ts": [dt.today()],	"sms_msg": [msg_str], 
-	"user_id": [3], "send_status" : [0]}
+	data = {"ts": [dt.today()],	"msg": [msg_str], 
+	"contact_id": [3], "stat" : [0]}
 
 	# append the data
 	smsoutbox = smsoutbox.append(pd.DataFrame(data), 
@@ -110,7 +110,7 @@ def main():
 	mc.set("server_config",c.config)
 
 	smsoutbox = mc.get("smsoutbox")
-	if len(smsoutbox) == 0:
+	if smsoutbox is None:
 		reset_smsoutbox_memory()
 		print "set smsoutbox as empty list"
 	else:
