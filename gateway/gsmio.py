@@ -269,6 +269,11 @@ def log_error(log):
     f = open("errorLog.txt","a")
     f.write(nowdate+','+log.replace('\r','%').replace('\n','%') + '\n')
     f.close()
+
+def delete_read_messages():
+    print '>> Deleting read messages ...',
+    print gsmcmd('AT+CMGD=0,2').strip()
+    print 'done'
     
 def count_msg():
     """
@@ -334,11 +339,11 @@ def get_sms_from_sim():
             txtdatetimeStr = re.search(r'\d\d/\d\d/\d\d,\d\d:\d\d:\d\d',
                 msg[0]).group(0)
             txtdatetime = dt.strptime(txtdatetimeStr,'%y/%m/%d,%H:%M:%S')
-            txtdatetime = txtdatetime.strftime('%Y-%m-%d %H:%M:00')
+            # txtdatetime = txtdatetime.strftime('%Y-%m-%d %H:%M:00')
         except:
             print "Error in date time conversion"
                 
-        sms = SmsItem(txtnum, sender, msg[1], txtdatetimeStr)
+        sms = SmsItem(txtnum, sender, msg[1], txtdatetime)
         
         msglist.append(sms)
         

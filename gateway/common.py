@@ -73,6 +73,24 @@ def reset_memory(valuestr):
 def print_memory(valuestr):
 	print mc.get(valuestr)
 
+def save_smsinbox_to_memory():
+	allmsgs = gsmio.get_sms_from_sim()
+
+	phonebook_inv = mc.get("phonebook_inv")
+	smsinbox = mc.get("smsinbox")
+
+	print phonebook_inv
+
+	for m in allmsgs:
+		data = {"ts": [m.ts], "msg": [m.msg], 
+		"contact_id": [phonebook_inv[m.simnum]], "stat" : [0]}
+
+		smsinbox = smsinbox.append(pd.DataFrame(data), 
+		ignore_index = True)
+
+	mc.set("smsinbox",smsinbox)
+	gsmio.delete_read_messages()
+
 def save_phonebook_memory():
 	query = "select pb_id, sim_num from phonebook"
 	pb_result_set = dbio.query_database(query,"spm")
@@ -81,7 +99,12 @@ def save_phonebook_memory():
 	for pb_id, sim_num in pb_result_set:
 		phonebook[pb_id] = sim_num
 
+	phonebook_inv = {}
+	for pb_id, sim_num in pb_result_set:
+		phonebook_inv[sim_num] = pb_id
+
 	mc.set("phonebook",phonebook)
+	mc.set("phonebook_inv",phonebook_inv)
 
 def purge_memory(valuestr):
 	value_pointer = mc.get(valuestr)

@@ -3,6 +3,7 @@ import RPi.GPIO as GPIO
 from datetime import datetime as dt
 import time
 import gsmio
+import gateway as gw
 
 def ring_isr(channel):
 	print dt.now()
@@ -14,7 +15,7 @@ def ring_isr(channel):
 		gsmio.gsmcmd("ATH")
 		print 'done'
 	else:
-		print gsmio.get_sms_from_sim()
+		common.save_smsinbox_to_memory()
 
     
 def main():
@@ -22,7 +23,7 @@ def main():
     ri_pin = sconf['gsmio']['ripin']
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(ri_pin, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-    GPIO.add_event_detect(ri_pin, GPIO.FALLING, callback=ring_isr, bouncetime=80)
+    GPIO.add_event_detect(ri_pin, GPIO.FALLING, callback=ring_isr, bouncetime=100)
 
     while True:
         pass

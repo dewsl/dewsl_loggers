@@ -131,7 +131,7 @@ def get_phonebook_numbers():
     print pb_numbers
     print pb_names
 
-    mc = get_mc_server()
+    mc = common.get_mc_server()
     mc.set('pb_numbers',pb_numbers)
     mc.set('pb_names',pb_names)
 
