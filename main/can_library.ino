@@ -72,6 +72,9 @@ int string_to_int(String id_string){
 
 int convert_uid_to_gid(int uid){
   int gid = 0;
+  if (uid == 0){
+    return 0;
+  }
   for (int i=0; i< g_num_of_nodes;i++){
     if (g_gids[i][0] == uid){
       return g_gids[i][1];
@@ -116,6 +119,8 @@ int process_g_string(){
     Serial.print(id); Serial.print("\t"); Serial.println(gid);
     if (gid == -1){
       g_string_proc = String(g_string_proc + delim + id + data); 
+    } else if (gid == 0){
+      break;
     } else {
       temp[0] = '\0';
       sprintf(temp,"%04X",gid); 
