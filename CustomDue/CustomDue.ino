@@ -1,5 +1,10 @@
-// error kapag walang name
+// 	error kapag walang name
+// 	SD features
+//	EEPROM features
 
+
+
+//free memory	 
 #define ATCMD 		"AT"
 #define ATECMDTRUE	"ATE"
 #define ATECMDFALSE	"ATE0"
@@ -30,6 +35,44 @@ void setup(){
 		columnDataVar[i] = '\0';
 	}
 }
+
+void pollData(){
+	readDataFromColumn(columnDataVar, 1);
+	cdCounter = strlen(columnDataVar);
+	Serial.println(columnDataVar);
+	removeExtraCharacters(columnDataVar,1 );
+	columnDataVar =	columnDataVar + cdCounter;
+	Serial.println(OKSTR);
+
+	char** tokens= {};
+	tokens = (char**)malloc(5*sizeof(char*));
+  	for(int i=0; i<5; i++)
+    	(tokens)[i] = (char*)malloc(200*sizeof(char));
+
+	//--> outputs stringssss depende sa data_type
+    Serial.println("by data type");
+	tokenizeDatabyDataType(tokens, columnDataVar, true);
+	for (int i = 0; i < 5; i++) {
+		Serial.println(tokens[i]);
+
+		char** message = {};
+		
+		int x= strlen(columnDataVar);
+		int token_count= x/20;
+		
+		Serial.println(token_count);
+		message = (char**)malloc(token_count*sizeof(char*));
+		for(int i=0; i<token_count; i++)
+    		(message)[i] = (char*)malloc(20*sizeof(char));
+			tokenizeDatabyMessage(message,columnDataVar, 20, token_count);
+		
+		for (int i = 0; i < token_count; i++) {
+
+			Serial.println(message[i]);
+		}
+	}	
+}
+
 
 void loop(){
 
@@ -110,9 +153,6 @@ void getATCommand(){
   		for(int i=0; i<5; i++)
     		(tokens)[i] = (char*)malloc(200*sizeof(char));
 
-
-		// = (String**)malloc(3000*sizeof(char));
-
 		tokenizeDatabyDataType(tokens, columnDataVar, true);
 		// tokenizeDatabyDataType( columnDataVar, true);
 		Serial.println("sa labas");
@@ -124,22 +164,30 @@ void getATCommand(){
 
 	else if (command == "AT+TOKENSBYMSG"){
 		readDataFromColumn(columnDataVar, 1);
+		char** message = {};
 		
-		int x= strlen(data_token);
-		int token_count= x/cutoff_length;
+		int x= strlen(columnDataVar);
+		int token_count= x/20;
+		
+		Serial.println(token_count);
+		message = (char**)malloc(token_count*sizeof(char*));
 		for(int i=0; i<token_count; i++)
-    		(tokens)[i] = (char*)malloc(cutoff_length*sizeof(char));
+    		(message)[i] = (char*)malloc(20*sizeof(char));
 
-		tokenizeDatabyMessage(char** message,columnDataVar, int cutoff_length)
+		tokenizeDatabyMessage(message,columnDataVar, 20, token_count);
 		
+		for (int i = 0; i < token_count; i++) {
+
+			Serial.println(message[i]);
+		}
 	}
 
-
+	else if (command == "AT+POLLDATA"){
+		pollData();
+	}
 	else if (command == "AT+PRINTDATA"){
 		// sendData(true, "try lang");
 	}
-
-
 
 	else{
 		Serial.println(ERRORSTR);
@@ -226,19 +274,8 @@ void removeExtraCharacters(char* columnData, int cmd){
 	sprintf(columnData, pArray,strlen(pArray));
 }
 
-// void ewanKopa(){
-// 	readDataFromColumn(); --> outputs char array
-// 	removeExtraCharacters();--> outputs parsed data
-// 	String* dasda= tokenizeDatabyDataType(columnData, isDebug); --> outputs stringssss depende sa data_type
-// 	for loop:
-// 		messageContentParameters(dasda [i]) --> totalToken, identifier, cutoff_length
-					
-
-// }
-
 
 void tokenizeDatabyDataType(char** tokens, char* columnData, bool isDebug){
-
 	char *token;
 	const char delimiter[2] = "+";
 
@@ -258,22 +295,23 @@ void tokenizeDatabyDataType(char** tokens, char* columnData, bool isDebug){
 	for (j; j < 5; j++) {
 		tokens[j]= '\0';
 	}
-	for (int i = 0; i < 5; i++) {
-		Serial.println(tokens[i]);
-	}	
+	// for (int i = 0; i < 5; i++) {
+	// 	Serial.println(tokens[i]);
+	// }	
 }
 
 
-void tokenizeDatabyMessage(char** message,char* data_token, int cutoff_length){
+void tokenizeDatabyMessage(char** message,char* data_token, int cutoff_length, int token_count){
 
-	// char** message= {};
+	for (int i = 0; i < token_count; i++) {
+		strncpy(message[i], data_token, cutoff_length);
+		message[i][cutoff_length] = '\0';
+		data_token= data_token + cutoff_length;
+	}
 
-	message = (char**)malloc(token_count*sizeof(char*));
-	
-
-	for (int i = 0; i < tokens_count; i++) {
-		sprintf(message[i], data_token, cutoff_length);
-	}	
+	// for (int i = 0; i < token_count; i++) {
+	// 	Serial.println(message[i]);
+	// }		
 
 }
 
@@ -302,7 +340,7 @@ void messageContentParameters(int* parameters, String token){
 
 	int retValues[3]= {0,0,0};
 	retValues= {tokens_count, identifier, cutoff_length};
-	return retValues;
+	// return retValues;
 }
 
 
