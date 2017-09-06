@@ -19,19 +19,27 @@
 
 #define RELAYPIN 44
 #define TIMEOUT 5000
-
 #define BAUDRATE 9600
 
-// SD-related
+#define CAN_ARRAY_BUFFER_SIZE 100
+
+// SD-related / CONFIG-related
 int g_gids[40][2];
 int g_num_of_nodes = 40;
 char g_mastername[6] = "XXXXX";
+char g_timestamp[19];
+int g_chip_select = SS3;
+int g_turn_on_delay = 10; // in centi seconds ( ie. 100 centiseconds = 1 sec) 
+int g_sensor_version = 3;
+int g_datalogger_version = 2;
+
 
 // CAN-related
 char g_temp_dump[1000];
 String g_string;
 String g_string_proc;
-
+int g_sampling_max_retry = 3;
+CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
 
 bool ate=true;
 
@@ -41,14 +49,14 @@ void setup() {
   init_can();
   init_strings();
   init_gids();
-  init_sd(SS3); 
+  init_sd(); 
   open_config();
+  print_stored_config();
   pinMode(RELAYPIN, OUTPUT);
 }
 
 void loop(){
   getATCommand();
-
 }
 
 void getATCommand(){
@@ -86,10 +94,8 @@ void getATCommand(){
     Serial.println(OKSTR);
   }
   else if (command == ATGETSENSORDATA){
-    turn_on_column();
-    send_frame();
-    get_all_frames(TIMEOUT);
-    turn_off_column();
+    get_data(11,1);
+    get_data(12,1);
     Serial.println(OKSTR);
   }
   else if (command == ATSNIFFCAN){
@@ -106,7 +112,7 @@ void getATCommand(){
   }
   else if (command == ATSD){
       String conf;
-      init_sd(SS3);
+      init_sd();
       open_config();
       Serial.println(F(OKSTR));
   }

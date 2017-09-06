@@ -8,8 +8,8 @@
 	See Also:
 		<main.ino/setup>
 */
-int init_sd(int chip_select){
-	if (!SD.begin(chip_select)){
+int init_sd(){
+	if (!SD.begin(g_chip_select)){
 		Serial.println("SD initialization failed!");
 		return -1;
 	}
@@ -46,7 +46,6 @@ void open_config(){
 		Serial.println("CONFIG.txt not found.");
 		return;
 	} 
-
 	memset(one_line,0,sizeof(one_line));
 	temp = one_line; 						// temp starts at address of one_line
 	while((*temp = g_file.peek())!= -1){  	// para may paglalagyan ng result ng .peek()
@@ -65,18 +64,39 @@ void open_config(){
 	g_file.close();
 	return;
 }
+
 unsigned int process_config_line(char *one_line){
 	String str1;
 	str1 = String(one_line);
 	if ( (str1.startsWith("mastername")) | (str1.startsWith("MasterName")) ){
+		get_value_from_line(str1).toCharArray(g_mastername,6);
 		return 0;
-	} else if((str1.startsWith("endofconfig")) | (str1.startsWith("ENDOFCONFIG"))){
-		return 1;
-	} else if((str1.startsWith("columnids")) | (str1.startsWith("column1")) 
+
+	} else if(str1.startsWith("turn_on_delay")){
+		g_turn_on_delay = get_value_from_line(str1).toInt();
+		return 0;
+
+	} else if(str1.startsWith("dataloggerVersion")){
+		g_datalogger_version = get_value_from_line(str1).toInt();
+		return 0;
+
+	} else if(str1.startsWith("sensorVersion")){
+		g_sensor_version = get_value_from_line(str1).toInt();
+		return 0;
+
+	} else if( (str1.startsWith("sampling_max_retry")) | 
+		(str1.startsWith("sampling_max_num_of_retry")) ){
+		g_sampling_max_retry = get_value_from_line(str1).toInt();
+		return 0;
+
+	}else if((str1.startsWith("columnids")) | (str1.startsWith("column1")) 
 		| (str1.startsWith("columnIDs"))) {
 		g_num_of_nodes = process_column_ids(str1);
-		print_gids();
 		return 0;
+
+	} else if((str1.startsWith("endofconfig")) | (str1.startsWith("ENDOFCONFIG"))){
+		return 1;
+
 	} else {
 		return 0;
 	}
@@ -111,11 +131,12 @@ int process_column_ids(String line){
 		if (i1 == -1)
 			break;
 	}
-	return i+1;
+	return i; // dating i+1
 }
 /* 
-	Function: print_gids
-		Print in the gids and uids from the global g_gids.
+	Function: print_stored_config
+		Print in the gids and uids from the global g_gids and,
+		other variables read from CONFIG.txt
 	Parameters:
 		n/a
 	Returns:
@@ -123,8 +144,8 @@ int process_column_ids(String line){
 	See Also:
 		<init_gids>
 */
-void print_gids(){
-	char gid[2],uid[4];
+void print_stored_config(){
+	char gid[2],uid[4],desc[25];
 	Serial.println(F("================================="));
 	Serial.println(F("Geographic ID\t\tUnique ID"));
 	Serial.println(F("================================="));
@@ -137,4 +158,81 @@ void print_gids(){
 		Serial.println(uid);
 	}
 	Serial.println(F("================================="));
+	sprintf(desc,"%-24s","Master Name:"); Serial.print(desc); 
+	Serial.println(g_mastername);
+	sprintf(desc,"%-24s","Number of Nodes"); Serial.print(desc); 
+	Serial.println(g_num_of_nodes);
+	sprintf(desc,"%-24s","Datalogger Version: "); Serial.print(desc); 
+	Serial.println(g_datalogger_version);
+	sprintf(desc,"%-24s","Sensor Version: "); Serial.print(desc); 
+	Serial.println(g_sensor_version);
+	sprintf(desc,"%-24s","Sampling Max Retry: "); Serial.print(desc); 
+	Serial.println(g_sampling_max_retry);
+	sprintf(desc,"%-24s","Turn On Delay: "); Serial.print(desc); 
+	Serial.println(g_turn_on_delay);
+
+	Serial.println(F("================================="));
+}
+/* 
+	Function: get_value_from_line
+		Extract the value from current line of the config.
+	Parameters:
+		String line - one line read from config 
+	Returns:
+		String after "=" stripped of spaces
+	See Also:
+		<process_config_line>
+*/
+String get_value_from_line(String line){
+	String delim = "=";
+	String other_chars = " "; 
+	int index,i;
+	while ((i=line.indexOf(other_chars)) != -1){
+		line.remove(i,1);		
+	}
+	index = line.lastIndexOf(delim);
+	return line.substring(index+1);
+}
+
+/* 
+	Function: writeData
+		Write data to sd card. Copied from rtc_sd_due ( Duelogger )
+	Parameters:
+		String data -  data to be written
+	Returns:
+		-1 for failure
+	See Also:
+		<>
+*/
+int8_t writeData(String data){
+	File sdFile;
+	char filename[100]= {};
+	char logger_file_name[7] = {};
+	String timeString;
+	Serial.println(g_timestamp);
+
+	if (!SD.begin(6,g_chip_select)) {
+		Serial.println(" SD.begin() Failed!");
+		return -1;
+	}
+	delay(20);
+	for(int i=0; i<6 ; i++){
+		logger_file_name[i]= g_timestamp[i];
+	}
+	strcpy(filename,logger_file_name);
+	strcat(filename,".TXT");
+	Serial.println(filename);
+	sdFile = SD.open(filename,FILE_WRITE);
+	if(!sdFile){
+		Serial.println("Can't Write to file");
+		return -1;
+	}
+	sdFile.print(g_mastername);
+	sdFile.print(",");
+	sdFile.print(data);
+	sdFile.print(",");
+	sdFile.print(g_timestamp);
+	sdFile.println();
+	sdFile.close();//close the file
+	Serial.println("writing to SD"); 
 }
