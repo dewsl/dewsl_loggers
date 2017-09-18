@@ -1,12 +1,19 @@
 /* 
 	Function: sd_init
-		Assert the chip_select pin for SD use.	
+
+		Assert the chip_select pin for SD use.
+
 	Parameters:
+
 		n/a
+
 	Returns:
+
 		-1 fail, 0 success.
+
 	See Also:
-		<main.ino/setup>
+
+		<setup>
 */
 int init_sd(){
 	if (!SD.begin(g_chip_select)){
@@ -15,6 +22,28 @@ int init_sd(){
 	}
 	return 0;
 }
+
+/* 
+	Function: init_gids
+		
+		*g_gids[i][0]* - *uids*
+		*g_gids[i][1]* - *gids*
+
+		- Set the uids to 0s.
+		- Set the gids to the numbers: 1 - 40.
+
+	Parameters:
+
+		n/a
+
+	Returns:
+
+		n/a
+
+	See Also:
+	
+		<setup>
+*/
 
 void init_gids(){
 	if (VERBOSE == 1){Serial.println(F("init_uids()"));}
@@ -26,18 +55,26 @@ void init_gids(){
 }
 /* 
 	Function: open_config
+
 		Open the CONFIG.txt file in the SD card and process
 		each line.	
+
 	Parameters:
+
 		n/a
+
 	Returns:
+
 		n/a
+
 	See Also:
-		<main.ino/getATCommand>
+	
+		<getATCommand>
 */
 void open_config(){
 	File g_file;
-	char *temp; 							// address for a character
+	// address for a character
+	char *temp; 							
 	int max_char_per_line = 1000;
 	char one_line[max_char_per_line];
 	g_file = SD.open("CONFIG.txt");
@@ -47,9 +84,12 @@ void open_config(){
 		return;
 	} 
 	memset(one_line,0,sizeof(one_line));
-	temp = one_line; 						// temp starts at address of one_line
-	while((*temp = g_file.peek())!= -1){  	// para may paglalagyan ng result ng .peek()
-		temp = one_line; 					// start ulit sa address ng one_line
+	// temp starts at address of one_line
+	temp = one_line; 
+	// para may paglalagyan ng result ng .peek()						
+	while((*temp = g_file.peek())!= -1){  
+		// start ulit sa address ng one_line	
+		temp = one_line; 					
 		while(((*temp = g_file.read()) != '\n')) {
 			temp++;
 			if(*temp == -1)
@@ -65,6 +105,24 @@ void open_config(){
 	return;
 }
 
+/* 
+	Function: process_config_line
+
+		Reads one line config and interprets accordingly.
+
+	Parameters:
+
+		*one_line - pointer to a char array that contains the current line of Config being processed.
+
+	Returns:
+
+		0 - successful read of Config line
+		1 - reached the end of Config
+
+	See Also:
+	
+		<open_config>
+*/
 unsigned int process_config_line(char *one_line){
 	String str1;
 	str1 = String(one_line);
@@ -103,16 +161,21 @@ unsigned int process_config_line(char *one_line){
 }
 /* 
 	Function: process_column_ids
-		Find the unique ids from string and place in g_gids	
+
+		Find the unique ids from string and place in g_gids
+
 	Parameters:
-		String line - String object containing ids
+
+		line - String object containing ids
+
 	Returns:
+
 		The number of unique ids read.
+
 	See Also:
 		<process_config_line>
 */
 int process_column_ids(String line){
-	// Serial.println(line);
 	String delim = ",";
 	int i,i0,i1,i2,ilast,id;
 	i = 0;
@@ -135,13 +198,20 @@ int process_column_ids(String line){
 }
 /* 
 	Function: print_stored_config
+
 		Print in the gids and uids from the global g_gids and,
 		other variables read from CONFIG.txt
+
 	Parameters:
+
 		n/a
+
 	Returns:
+
 		n/a
+
 	See Also:
+
 		<init_gids>
 */
 void print_stored_config(){
@@ -149,7 +219,7 @@ void print_stored_config(){
 	Serial.println(F("================================="));
 	Serial.println(F("Geographic ID\t\tUnique ID"));
 	Serial.println(F("================================="));
-	for (int i = 0; i<g_num_of_nodes-1; i++){
+	for (int i = 0; i<g_num_of_nodes; i++){
 		sprintf(gid,"%2d",g_gids[i][1]);
 		sprintf(uid,"%4d",g_gids[i][0]);
 		Serial.print("\t");
@@ -175,12 +245,19 @@ void print_stored_config(){
 }
 /* 
 	Function: get_value_from_line
+
 		Extract the value from current line of the config.
+
 	Parameters:
-		String line - one line read from config 
+
+		line - String of one line read from config 
+
 	Returns:
+
 		String after "=" stripped of spaces
+
 	See Also:
+
 		<process_config_line>
 */
 String get_value_from_line(String line){
@@ -196,11 +273,17 @@ String get_value_from_line(String line){
 
 /* 
 	Function: writeData
+
 		Write data to sd card. Copied from rtc_sd_due ( Duelogger )
+
 	Parameters:
-		String data -  data to be written
+
+		data -  String data to be written
+
 	Returns:
-		-1 for failure
+
+		-1 - for failure
+
 	See Also:
 		<>
 */

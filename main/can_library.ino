@@ -1,17 +1,29 @@
 /* 
   Function: init_can
-    Assert the enable pin for can transceiver (pin 50).
-    Set Can0 to allow all can trafic
-    Set mailbox0 as receiver
-    Set mailbox0 to receive extendedID formats
-    Set mailbox1 as transmitter
-    Set mailbox1 transferID to 1 (extendedID)
+
+    - Assert the enable pin for can transceiver (pin 50).
+
+    - Set Can0 to allow all can trafic.
+
+    - Set mailbox0 as receiver.
+
+    - Set mailbox0 to receive extendedID formats.
+
+    - Set mailbox1 as transmitter.
+
+    - Set mailbox1 transferID to 1 (extendedID).
+
   Parameters:
+    
     n/a
+
   Returns:
+    
     n/a
+  
   See Also:
-    <main.ino/setup>
+
+    <setup>
 */
 void init_can(){
   if (VERBOSE == 1) { Serial.println("init_can()"); }
@@ -30,26 +42,77 @@ void init_can(){
 
 /* 
   Function: init_strings
+
     Clear the global strings used for storage 
+  
   Parameters:
+  
     n/a
+  
   Returns:
+  
     n/a
+  
   See Also:
-    <main.ino>
+  
+    <setup>
 */
 void init_strings(){
   g_string = "";
   g_string_proc = ""; 
 }
 
+/* 
+  Function: clear_can_buffer
+
+    Clear the can buffer array.
+
+  Returns:
+  
+    n/a
+  
+  See Also:
+  
+    <get_data>
+  
+  Parameters:
+  
+    can_buffer - CAN_FRAME structure
+  
+*/
+void clear_can_buffer(CAN_FRAME can_buffer[]){
+  for(int i = 0; i< CAN_ARRAY_BUFFER_SIZE; i++){
+    can_buffer[i] = {}; // clear all elements in buffer?
+  }
+}
+
+/* 
+  Function: get_data
+
+    Clear the global strings used for storage 
+
+  Parameters:
+
+    cmd - msgid
+    transmit_id - id of the transmitted frame
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <getATcommand>
+
+*/
 void get_data(int cmd, int transmit_id){
   int retry_count = 0,respondents = 0;
+  int count;
   for (retry_count = 0; retry_count < g_sampling_max_retry; retry_count++){
     turn_on_column();
     send_command(cmd,transmit_id);
     if( (respondents = get_all_frames(TIMEOUT)) == g_num_of_nodes){
-      // indicate na kumpleto na yung frames
+      Serial.println("Complete frames! :) ");
       turn_off_column();
       break;
     } else {
@@ -58,9 +121,47 @@ void get_data(int cmd, int transmit_id){
     }
     turn_off_column();
   }
+
+  count = count_frames(g_can_buffer);
+  // write frames to String or char array
+  for (int i = 0;i<count;i++){
+    if (g_can_buffer[i].id != 0){
+      write_frame_to_dump(g_can_buffer[i],g_temp_dump);
+    }
+  }
+  // add delimiter "+"
+  strcat(g_temp_dump,"+");
+  Serial.print("g_temp_dump: ");
+  Serial.println(g_temp_dump);
+  process_g_temp_dump(g_temp_dump);
+  g_temp_dump[0] = '\0';
+
+  clear_can_buffer(g_can_buffer);
   Serial.println(F("================================="));
 }
 
+/* 
+  Function: get_all_frames
+
+    - Receive all the incoming frames.
+    
+    - Place the frames in a CAN_FRAME array.
+    
+    - Process the frames in the buffer <process_all_frames>
+
+  Parameters:
+  
+    timeout_ms - int timeout in milliseconds
+
+  Returns:
+
+    integer count of frames in the buffer
+
+  See Also:
+
+    <get_data>
+
+*/
 int get_all_frames(int timeout_ms) {
   int timestart = millis();
   int i = 0, a = 0;
@@ -82,22 +183,59 @@ int get_all_frames(int timeout_ms) {
         i++;
       }
   } while (millis() - timestart <= timeout_ms) ; 
-
-  // dapat sa process_each_frame ito pero testing lang
-  delete_repeating_frames(g_can_buffer);
-
-  for (a=0 ;a < i;a++){
-    process_each_frame(g_can_buffer[a]); 
-  }
-  
+  process_all_frames(g_can_buffer);
   return count_frames(g_can_buffer);                              
 } 
 
-void process_each_frame(CAN_FRAME incoming){ // dapat magreturn ito ng number of processed frames
-  // lagyan ng filter sa pagidentify ng unique frames
-  write_frame_to_string(incoming);
+/* 
+  Function: process_all_frames
+
+    - Facilitates the processing of CAN Frames stored in the can_buffer[] array.
+    
+    - Processes include:
+      
+        - Deletion of repeating frames.
+        
+        - Deletion of out of magnitude range frames??
+
+  Parameters:
+
+    can_buffer - array of CAN_FRAME struct
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <get_all_frames>
+*/
+void process_all_frames(CAN_FRAME can_buffer[]){
+  int count,i;
+  count = count_frames(can_buffer);
+  // repeating frames filter
+  delete_repeating_frames(can_buffer);
+  // magnitude filter? i.e. kuha ulit data kapag bagsak sa magnitude?
 }
 
+
+/* 
+  Function: count_frames
+
+    Count the non-zero ids in the can_buffer[]
+  
+  Parameters:
+  
+    can_buffer - CAN_FRAME structure array
+  
+  Returns:
+  
+    count - integer number of non-zero ids in the can_bufer[]
+  
+  See Also:
+  
+    <get_data,delete_repeating_frames,>
+*/
 int count_frames(CAN_FRAME can_buffer[]){
   int i = 0,count = 0;
   for (i=0; i< CAN_ARRAY_BUFFER_SIZE; i++){
@@ -108,115 +246,218 @@ int count_frames(CAN_FRAME can_buffer[]){
   return count;
 }
 
+/* 
+  Function: delete_repeating_frames
+
+    Replaces the values inside the CAN_FRAME struct with 0s
+    if an id is not unique within the CAN_FRAME array.
+    0s the 2nd instance. The first is retained. 
+
+  Parameters:
+
+    can_buffer - array of the CAN_FRAME struct
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <process_all_frames>
+*/
 void delete_repeating_frames(CAN_FRAME can_buffer[]){
   int i0 = 0, i1 = 0;
   int frame_count,i;
   frame_count = count_frames(can_buffer);
-
   for (i0 = 0; i0 < frame_count; i0++){
     for (i1 = 0; i1 < frame_count; i1++) {
       if ( (can_buffer[i0].id == can_buffer[i1].id) && (i0 != i1) ){
-        can_buffer[i1].id = 0;
-        for (i = 0; i < 8; i++){
-          can_buffer[i1].data.byte[i] = 0;
-        }
+        can_buffer[i1] = {}; // clears the CAN_FRAME struct
       }
     }
   }
 }
 
 /* 
-  Function: string_to_int
-    Converts a 4 character String(arduino class) to int
-  Parameters:
-    String id_string - 4 character String
-  Returns:
-    int id_int - integer equivalent of id_string when read as hex
-  See Also:
-    <process_g_string>
-*/
-int string_to_int(String id_string){
-  char *id_c_add,*last_char;
-  char idchar[id_string.length()+1];
-  int id_int;
-  id_c_add = idchar;                                     // point id_c_add to idchar
-  id_string.toCharArray(idchar,id_string.length()+1);    // hardcoded 4 char conversion
-  id_int = strtol(id_c_add,&last_char,16);
-  // Serial.println(id_int);
-  return id_int;
-}
-
-/* 
   Function: convert_uid_to_gid
+
     Converts the uid (universal id) to the gid (geographic id)
+
   Parameters:
-    int uid - universal id
+
+    uid - integer universal id
+
   Returns:
-    int gid - geographic id of given universal id according sd card config
+
+    gid - integer geographic id of given universal id according sd card config
+    0 -  non existent uids
+    -1 - for erroneous uids
+
   See Also:
-    <process_g_string/init_gids>
+
+    <process_g_string,>
 */
 int convert_uid_to_gid(int uid){
   int gid = 0;
-  if (uid == 0){
-    return 0;
+  if ((uid == 0) | (uid == -1)){
+    return -1;
   }
   for (int i=0; i< g_num_of_nodes;i++){
     if (g_gids[i][0] == uid){
       return g_gids[i][1];
     }
   }
-  return -1;
+  return 0;
 }
 
-int process_g_string(){
+
+// Group: Char array based operations
+/* 
+  Function: write_frame_to_dump
+
+    Convert the frames into one char array.
+    id 
+
+  Parameters:
+
+    incoming- CAN_FRAME struct to be written in dump
+    dump - pointer to char buffer
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <process_g_temp_dump>
+*/
+void write_frame_to_dump(CAN_FRAME incoming, char* dump){
   char temp[5];
-  int num_of_proc_data = 0;
-  int i1=0, i2=0;
-  int id_int,gid,ip;
-  long int uid;
-  String id,data;
-  String delim = "-";
-  String type_delim = "+";
-  
-  ip = g_string.indexOf(type_delim);
+  sprintf(temp,"%04X",incoming.id);
+  strcat(dump,temp);
 
-  i1 = g_string.indexOf(delim);
+  sprintf(temp,"%02X",incoming.data.byte[0]);
+  strcat(dump,temp);
 
-  id = g_string.substring(0,4);
-  data = g_string.substring(4,i1);
-  uid = string_to_int(id);
-  gid = convert_uid_to_gid(uid);
-  //Serial.print(id); Serial.print("\t"); Serial.println(gid);
+  sprintf(temp,"%02X",incoming.data.byte[1]);
+  strcat(dump,temp);
 
-  if (gid == -1){
-    g_string_proc = String(g_string_proc + delim + id + data); 
-  } else {
-    temp[0] = '\0';
-    sprintf(temp,"%04X",gid); 
-    g_string_proc = String(String(temp) + data + delim + g_string_proc); 
-  }
-  
-  while (i2 != -1){
-    i2 = g_string.indexOf(delim,i1+1);
-    id = g_string.substring(i1+1,i1+5); // 4 chars for id
-    data = g_string.substring(i1+5,i2);
-    uid = string_to_int(id);
-    gid = convert_uid_to_gid(uid);
-    //Serial.print(id); Serial.print("\t"); Serial.println(gid);
-    if (gid == -1){
-      g_string_proc = String(g_string_proc + delim + id + data); 
-    } else if (gid == 0){
-      break;
-    } else {
-      temp[0] = '\0';
-      sprintf(temp,"%04X",gid); 
-      g_string_proc = String(String(temp) + data + delim + g_string_proc); 
-    }
-    i1 = i2;
-  }
-  return 1;
+  sprintf(temp,"%02X",incoming.data.byte[2]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[3]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[4]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[5]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X",incoming.data.byte[6]);
+  strcat(dump,temp);
+
+  sprintf(temp,"%02X-",incoming.data.byte[7]);
+  strcat(dump,temp);
+
+  return;
 }
+
+/* 
+  Function: process_g_temp_dump
+
+    Process g_string:
+
+    - Separate the main string by the delimiter "+".
+
+    - Convert the uid ( universal id ) to the gid ( geographic id ).
+
+    - Successful conversion of uid to gid : delimiter "-"
+
+    - Failed conversion of uid to gid : delimiter "="
+
+    - Write in g_final_dump
+
+        Format of data in g_string_proc:
+    
+        delimiter - 1 char
+        gids - 4 chars
+        data - 16 chars
+
+        *[delimiter][gids][data]*
+
+  Parameters:
+
+    n/a
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <get_data>
+*/
+
+void process_g_temp_dump(char* dump){
+  char *token,*last_char;
+  char temp_id[5],temp_gid[5],temp_data[17];
+  int id_int,gid;
+  token = strtok(dump, "-");
+
+  while(token != NULL){
+    // get gid
+    strncpy(temp_id,token,4);
+    id_int = strtol(temp_id,&last_char,16);
+    gid = convert_uid_to_gid(id_int);
+
+    if ( (gid != 0) & (gid != -1) ){
+      sprintf(temp_gid,"%04X",gid);
+      strncpy(temp_data,token+4,16);
+      strncat(g_final_dump,"-",1);
+      strncat(g_final_dump,temp_gid,4);
+      strncat(g_final_dump,temp_data,16);
+      
+    } else if (gid == 0) {
+      strncat(g_final_dump,"=",1);
+      strncat(g_final_dump,token,20);
+    }
+    token = strtok(NULL,"-");
+  } 
+  strncat(g_final_dump,"+",1); // add delimiterfor different data type
+}
+
+//Group: Serial Display Functions
+
+/* 
+  Function: interpret_frame
+
+    Displays the following given a CAN frame:
+
+      id - HEX extended id 
+
+      id - integer extended id
+
+      gid - integer geographic id
+
+      x - integer x value 
+
+      y -  integer y value
+
+      z - integer z value
+
+  Parameters:
+
+    incoming - CAN_FRAME struct
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <write_frame_to_dump>
+*/
 
 void interpret_frame(CAN_FRAME incoming){
   int id,d1,d2,d3,d4,d5,d6,d7,d8,x,y,z;
@@ -248,6 +489,25 @@ void interpret_frame(CAN_FRAME incoming){
   Serial.print(" "); Serial.println(temp);
 }
 
+/* 
+  Function: compute_axis
+
+    Computes the X, Y or Z axis given it's high and low value.
+
+  Parameters:
+
+    d1 - integer low byte
+
+    d2 - integer high byte
+
+  Returns:
+
+    value - integer converted value
+
+  See Also:
+
+    <interpret_frame>
+*/
 int compute_axis(int d1, int d2){
   int value = 5000;
   if (d2 >= 240) {
@@ -259,6 +519,23 @@ int compute_axis(int d1, int d2){
   return value;
 }
 
+/* 
+  Function: check_can_status
+
+    Displays the current rx and tx error count given their sum is *not* zero.
+
+  Parameters:
+
+    n/a
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <get_all_frames>
+*/
 void check_can_status(){
   int rx_error_cnt=0,tx_error_cnt =0;
   rx_error_cnt = Can0.get_rx_error_cnt();
@@ -272,39 +549,64 @@ void check_can_status(){
   return;
 }
 
-void write_frame_to_dump(CAN_FRAME incoming, char *dump){
-  char temp[5];
-  sprintf(temp,"%04X",incoming.id);
-  strcat(dump,temp);
+/* 
+  Function: send_command
 
-  sprintf(temp,"%02X",incoming.data.byte[0]);
-  strcat(dump,temp);
+    Populates an outgoing frame with a command and transmit id then broadcasts the frame.
 
-  sprintf(temp,"%02X",incoming.data.byte[1]);
-  strcat(dump,temp);
+  Parameters:
 
-  sprintf(temp,"%02X",incoming.data.byte[2]);
-  strcat(dump,temp);
+    command - integer message id ( msgid )
 
-  sprintf(temp,"%02X",incoming.data.byte[3]);
-  strcat(dump,temp);
+    transmit_id - integer id of frame to be broadcast. ( useful for Version 1 Sensors )
 
-  sprintf(temp,"%02X",incoming.data.byte[4]);
-  strcat(dump,temp);
+  Returns:
 
-  sprintf(temp,"%02X",incoming.data.byte[5]);
-  strcat(dump,temp);
+    n/a
 
-  sprintf(temp,"%02X",incoming.data.byte[6]);
-  strcat(dump,temp);
+  See Also:
 
-  sprintf(temp,"%02X\n",incoming.data.byte[7]);
-  strcat(dump,temp);
-
-
-  return;
+    <get_all_frames>
+*/
+void send_command(int command,int transmit_id){
+  if (VERBOSE == 1) { Serial.println("send_frame()"); }
+  CAN_FRAME outgoing;
+  outgoing.extended = true;
+  outgoing.id = transmit_id;
+  outgoing.length = 1;
+  outgoing.data.byte[0] = command;
+  Can0.sendFrame(outgoing);
 }
 
+void turn_on_column(){
+  digitalWrite(RELAYPIN, HIGH);
+  delay(g_turn_on_delay);
+}
+
+void turn_off_column(){
+  digitalWrite(RELAYPIN, LOW);
+  delay(1000);
+}
+
+
+//Group: String-based functions.
+/* 
+  Function: write_frame_to_string
+
+    Convert the frames into one String.
+
+  Parameters:
+
+    incoming- CAN_FRAME struct to be written in g_string.
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <process_g_string>
+*/
 void write_frame_to_string(CAN_FRAME incoming){
   char temp[5];
 
@@ -340,34 +642,139 @@ void write_frame_to_string(CAN_FRAME incoming){
   return;
 }
 
-void send_command(int command,int transmit_id){
-  if (VERBOSE == 1) { Serial.println("send_frame()"); }
-  CAN_FRAME outgoing;
-  outgoing.extended = true;
-  outgoing.id = transmit_id;
-  outgoing.length = 1;
-  outgoing.data.byte[0] = command;
-  Can0.sendFrame(outgoing);
+/* 
+  Function: string_to_int
+
+    Converts a 4 character String(arduino class) to int
+
+  Parameters:
+
+    id_string - 4 character String
+
+  Returns:
+
+    id_int - integer equivalent of id_string when read as hex
+    -1 - when id_string length is less than 4 chars
+
+  See Also:
+
+    <process_g_string>
+*/
+int string_to_int(String id_string){
+  char *id_c_add,*last_char;
+  char idchar[id_string.length()+1];
+  int id_int;
+  if ( id_string.length() < 4 ){
+    return -1;
+  }
+  // point id_c_add to idchar
+  id_c_add = idchar;       
+  // hardcoded 4 char conversion                              
+  id_string.toCharArray(idchar,id_string.length()+1);    
+  id_int = strtol(id_c_add,&last_char,16);
+  return id_int;
 }
 
-void send_frame(){
-  if (VERBOSE == 1) { Serial.println("send_frame()"); }
-    // Prepare transmit ID, data and data length in CAN0 mailbox 0
-  CAN_FRAME outgoing;
-  outgoing.extended = true;
-  outgoing.id = 1;
-  outgoing.length = 1; //MAX_CAN_FRAME_DATA_LEN;
-  outgoing.data.byte[0] = 0x0B;
-  Can0.sendFrame(outgoing);
+/* 
+  Function: process_g_string
+
+    Process g_string:
+
+    1. Separate the main string by the delimiter "+".
+    2. Convert the uid ( universal id ) to the gid ( geographic id ).
+    3. Retain uids of nodes with no corresponding gids.
+    4. Add a delimiter at the beginning of the String "-".
+    5. Write in g_string_proc
+
+    Format of data in g_string_proc:
+    
+    delimiter - 1 char
+    gids - 4 chars
+    data - 16 chars
+
+    [delimiter][gids][data]
+
+    or
+
+    [uids][data][delimiter]
+
+  Parameters:
+
+    n/a
+
+  Returns:
+
+    1 - successful operation
+
+  See Also:
+
+    <separate_gids_and_uids>
+*/
+int process_g_string(){
+  int num_of_proc_data = 0;
+  int i1=0, i2=0;
+  int id_int,gid,ip0,ip1;
+  long int uid;
+  String id,data,big_string;
+
+  String type_delim = "+";
+  
+  ip0 = g_string.indexOf(type_delim);
+  big_string = g_string.substring(0,ip0);
+  // Serial.println(big_string);
+  g_string_proc = String(g_string_proc + separate_gids_and_uids(big_string));
+  //dito magrearrange ng string na gagamitin
+
+  while (ip0 != -1){
+    ip1 = g_string.indexOf(type_delim,ip0+1);
+    big_string = g_string.substring(ip0,ip1);
+    separate_gids_and_uids(big_string);
+    // Serial.println(big_string);
+    g_string_proc = String(g_string_proc + separate_gids_and_uids(big_string));
+    ip0 = ip1;
+  }
+  return 1;
 }
 
-void turn_on_column(){
-  digitalWrite(RELAYPIN, HIGH);
-  delay(g_turn_on_delay);
-}
+String separate_gids_and_uids(String source_string){
+  char temp[5];
+  int i1,i2,gid;
+  long int uid;
+  String delim = "-";
+  String id,data,processed_string;
 
-void turn_off_column(){
-  digitalWrite(RELAYPIN, LOW);
-  delay(1000);
-}
+  i1 = source_string.indexOf(delim);
+  id = source_string.substring(0,4);
+  data = source_string.substring(4,i1);
+  uid = string_to_int(id);
+  gid = convert_uid_to_gid(uid);
+  //Serial.print(id); Serial.print("\t"); Serial.println(gid);
 
+  if (gid == 0){
+    processed_string = String(delim + id + data + processed_string); 
+  } else if ( (gid != -1) | (gid != 0) ){
+    temp[0] = '\0';
+    sprintf(temp,"%04X",gid); 
+    processed_string = String(processed_string + String(temp) + data + delim); 
+  }
+
+  while (i2 != -1){
+    i2 = source_string.indexOf(delim,i1+1);
+    id = source_string.substring(i1+1,i1+5); // 4 chars for id
+    data = source_string.substring(i1+5,i2);
+    uid = string_to_int(id);
+    gid = convert_uid_to_gid(uid);
+    //Serial.print(id); Serial.print("\t"); Serial.println(gid);
+    if (gid == 0){
+      processed_string = String(delim + id + data + processed_string);  
+    } else if (gid == -1){
+      break;
+    } else {
+      temp[0] = '\0';
+      sprintf(temp,"%04X",gid); 
+      processed_string = String(processed_string + String(temp) + data + delim);  
+    }
+    i1 = i2;
+  }
+  return processed_string;
+}

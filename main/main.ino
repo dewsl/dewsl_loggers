@@ -36,6 +36,7 @@ int g_datalogger_version = 2;
 
 // CAN-related
 char g_temp_dump[1000];
+char g_final_dump[1500];
 String g_string;
 String g_string_proc;
 int g_sampling_max_retry = 3;
@@ -43,6 +44,37 @@ CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
 
 bool ate=true;
 
+/* 
+  Function: setup
+    
+    - Sets the baudrate for the Serial communications.
+
+    - Initializes the CAN-related functions.
+
+    - Initializes the global Strings objects used to compile data.
+
+    - Initialize the gids ( geographic ids ) array before use. 
+
+    - Initializes the SD-related functions.
+
+    - Open the CONFIG.txt file, read and load to ram.
+
+    - Display the settings read from CONFIG.txt.
+
+    - Set the GPIO RELAYPIN to output.
+
+  Parameters:
+    
+    n/a
+
+  Returns:
+    
+    n/a
+  
+  See Also:
+
+    <init_can> <init_strings> <init_gids> <init_sd> <open_config>
+*/
 void setup() {
   Serial.begin(BAUDRATE);
   Serial.println("Receiving AT Command. . .");
@@ -54,11 +86,13 @@ void setup() {
   print_stored_config();
   pinMode(RELAYPIN, OUTPUT);
 }
-
+//Function: loop
+// Run the <getATcommand in loop.
 void loop(){
   getATCommand();
 }
-
+//Function: getATCommand
+// Take in-line serial input and execute AT command 
 void getATCommand(){
   String serial_line, command;
   int i_equals = 0;
@@ -105,10 +139,9 @@ void getATCommand(){
     }
   }
   else if (command == ATDUMP){
-      Serial.println(g_string);
-      process_g_string();
-      Serial.println(g_string_proc);
-      Serial.println(OKSTR);
+    Serial.print("g_final_dump: ");
+    Serial.println(g_final_dump);
+    Serial.println(OKSTR);
   }
   else if (command == ATSD){
       String conf;
@@ -121,6 +154,8 @@ void getATCommand(){
   }
 }
 
+//Function: getArguments
+// Read in-line serial AT command.
 void getArguments(String at_cmd, String *arguments){
   int i_from = 0, i_to = 0, i_arg = 0;
   bool f_exit = true;
@@ -141,4 +176,18 @@ void getArguments(String at_cmd, String *arguments){
     i_arg += 1;
 
   } while(f_exit);
+}
+
+//Function: turn_on_column
+// Assert GPIO ( defined by RELAYPIN ) high to turn on sensor column.
+void turn_on_column(){
+  digitalWrite(RELAYPIN, HIGH);
+  delay(g_turn_on_delay);
+}
+
+//Function: turn_off_column
+// Assert GPIO ( defined by RELAYPIN ) low to turn off sensor column.
+void turn_off_column(){
+  digitalWrite(RELAYPIN, LOW);
+  delay(1000);
 }
