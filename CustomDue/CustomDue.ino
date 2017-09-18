@@ -17,11 +17,11 @@
 #include <SD.h>
 #include <SPI.h>
 
-char *columnDataVar = {};
+char *column_data_var = {};
 
 bool ate = true;
-int sensorVersion = 1;
-int cdCounter = 0;
+int sensor_version = 1;
+int cd_counter = 0;
  
 int timestart = 0;
 int timenow = 0;
@@ -30,18 +30,18 @@ char master_name[6] = "ZEYTA";
 
 void setup(){
 	Serial.begin(9600);
-	columnDataVar = (char *)malloc(2500*sizeof(char));
+	column_data_var = (char *)malloc(2500*sizeof(char));
 	for (int i = 0; i < 2500; i++) {
-		columnDataVar[i] = '\0';
+		column_data_var[i] = '\0';
 	}
 }
 
-void pollData(){
-	readDataFromColumn(columnDataVar, 1);
-	cdCounter = strlen(columnDataVar);
-	Serial.println(columnDataVar);
-	removeExtraCharacters(columnDataVar,1 );
-	columnDataVar =	columnDataVar + cdCounter;
+void poll_data(){
+	read_data_from_column(column_data_var, 1);
+	cd_counter = strlen(column_data_var);
+	Serial.println(column_data_var);
+	remove_extra_characters(column_data_var,1 );
+	column_data_var =	column_data_var + cd_counter;
 	Serial.println(OKSTR);
 
 	char** tokens= {};
@@ -51,20 +51,20 @@ void pollData(){
 
 	//--> outputs stringssss depende sa data_type
     Serial.println("by data type");
-	tokenizeDatabyDataType(tokens, columnDataVar, true);
+	tokenize_data_by_data_type(tokens, column_data_var, true);
 	for (int i = 0; i < 5; i++) {
 		Serial.println(tokens[i]);
 
 		char** message = {};
 		
-		int x= strlen(columnDataVar);
+		int x= strlen(column_data_var);
 		int token_count= x/20;
 		
 		Serial.println(token_count);
 		message = (char**)malloc(token_count*sizeof(char*));
 		for(int i=0; i<token_count; i++)
     		(message)[i] = (char*)malloc(20*sizeof(char));
-			tokenizeDatabyMessage(message,columnDataVar, 20, token_count);
+			tokenize_data_by_message(message,column_data_var, 20, token_count);
 		
 		for (int i = 0; i < token_count; i++) {
 
@@ -76,7 +76,7 @@ void pollData(){
 
 void loop(){
 
-	getATCommand();
+	get_at_command();
 }
 
 void getATCommand(){
@@ -224,9 +224,9 @@ void getATCommand(){
 
 
 void readDataFromColumn(char* columnData, int sensorVersion){
-	// merong char array tapo*s lalagyan ng laman dito, dapat ay void lang 
+	// merong char array tapo*s lalagya"abcdefghijklmnopqrst+abcdefghijklmnopqrstabcn ng laman dito, dapat ay void lang 
 	char* column = "";
-	column = "abcdefghijklmnopqrst+abcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijklmnopqrst+abcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijklmnopqrst";
+	column = "defghijklmnopqrstabcdefghijklmnopqrst+abcdefghijklmnopqrstabcdefghijklmnopqrstabcdefghijklmnopqrst";
 	strncpy(columnData, column, strlen(column));
 }
 
@@ -458,9 +458,6 @@ void appendInfo(char* columnData, int sensorVersion, int numerator, int denomina
 	strncat(appendedArray, int_to_charArr, strlen(int_to_charArr));
 	strncat(appendedArray, "/", 1);
 
-
-
-
 	if (denominator < 10){
 		strncat(appendedArray, "0", 1);
 	}
@@ -568,3 +565,91 @@ void sendData(bool isDebug, char* columnData){
 // }
 
 // void operation(){}
+
+void sendThruXB() {
+	// altserial.listen();
+	delay(500);
+  
+	// delay(4000);
+	Serial.println(F("Start"));
+	length=strlen(streamBuffer);
+	
+	exc=length%PAYLEN;
+	parts=length/PAYLEN;
+	Serial.print(F("length="));
+	Serial.println(length);
+	Serial.print(F("parts="));
+	Serial.println(parts);
+	Serial.print(F("excess="));
+	Serial.println(exc);
+	datalen = 0;
+      
+	for (i=0;i<parts+1;i++){
+		for (j=0;j<XBLEN+1;j++) payload[j]=0x00;
+
+		delay(500);
+     
+		for (j=0;j<PAYLEN;j++){
+			payload[j]=(uint8_t)streamBuffer[datalen];
+			datalen++;
+		}
+
+		Serial.println(datalen);
+ 
+      
+		Serial.println(F("sending before xbee.send"));
+    
+		xbee.send(zbTx);
+		Serial.println(F("sending"));
+      
+      
+		//ERROR CHECKS
+		Serial.println(F("Packet sent"));
+
+		// after sending a tx request, we expect a status response
+		// wait up to half second for the status response
+		//altserial.listen();
+		if (xbee.readPacket(1000)) {
+			// got a response!
+			Serial.println(F("Got a response!"));
+			// should be a znet tx status               
+			if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
+				xbee.getResponse().getZBTxStatusResponse(txStatus);
+
+				// get the delivery status, the fifth byte
+				if (txStatus.getDeliveryStatus() == SUCCESS) {
+					Serial.println(F("Success!"));
+					//success means nareceive ni coordinator
+					if (verify_send[i] == 0){
+						count_success=count_success+1;
+						verify_send[i]=1;
+						if (count_success==parts+1){
+						}
+					}	
+				} 
+				else {
+					// the remote XBee did not receive our packet. is it powered on?
+					Serial.println(F("myb no pwr"));
+				}
+			} 
+			else{
+			}
+
+		} 
+		else if (xbee.getResponse().isError()) {
+			Serial.println(F("Error1"));
+		} 
+		else {
+			// local XBee did not provide a timely TX Status Response -- should not happen
+			// but happens because 	
+			Serial.println(F("Error2"));
+		}
+
+	}
+	Serial.println(F("exit send"));
+
+	delay(1000);
+	return;
+}
+
+
