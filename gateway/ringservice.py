@@ -16,6 +16,10 @@ def ring_isr(channel):
 		print 'done'
 	else:
 		common.save_smsinbox_to_memory()
+        print "spawning process ...", 
+        # common.spawn_process("sudo python /home/pi/gateway/command.py > /home/pi/gateway/command_out.txt 2>&1")
+        common.spawn_process("python /home/pi/gateway/command.py")
+        print "done"
 
     
 def main():
@@ -23,7 +27,7 @@ def main():
     ri_pin = sconf['gsmio']['ripin']
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(ri_pin, GPIO.IN, pull_up_down = GPIO.PUD_UP)
-    GPIO.add_event_detect(ri_pin, GPIO.FALLING, callback=ring_isr, bouncetime=100)
+    GPIO.add_event_detect(ri_pin, GPIO.FALLING, callback=ring_isr, bouncetime=3000)
 
     while True:
         time.sleep(100000)

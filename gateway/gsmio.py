@@ -35,7 +35,9 @@ def gsm_debug():
     except KeyboardInterrupt:
         print '>> Leaving AT mode ...'
 
-def power_gsm(mode='ON'):
+    gsm.close()
+
+def power_gsm(mode="ON"):
     print ">> Power GSM", mode
     # reset_pin = common.get_config_handle()['gsmio']['reset_pin']
     sconf = common.get_config_handle()
@@ -46,41 +48,39 @@ def power_gsm(mode='ON'):
     GPIO.setup(reset_pin, GPIO.OUT)
     GPIO.setup(stat_pin, GPIO.IN)
 
-    if mode == 'ON':
+    if mode == "ON":
         exit_stat = 1
     else:
         exit_stat = 0
 
+    print exit_stat, GPIO.input(stat_pin)
+
     now = time.time()
 
-    while GPIO.input(stat_pin) != exit_stat and time.time()<now+10:
-        GPIO.output(reset_pin, True)
-        time.sleep(0.2)
-
-    GPIO.output(reset_pin, False)
-
-    if time.time()>10:
-        return False
-    else:
+    if GPIO.input(stat_pin) == exit_stat:
+        print 'already in %s mode' % (mode)
         return True
+    else:
+        GPIO.output(reset_pin, True)
+        while GPIO.input(stat_pin) != exit_stat and time.time()<now+10:
+            time.sleep(0.2)
+
+        GPIO.output(reset_pin, False)
+
+        if time.time()>10:
+            return False
+        else:
+            return True
 
 def reset_gsm():
-    print ">> Resetting GSM Module ...",
-    # reset_pin = cfg.getint('gsmio', 'resetpin')
-    reset_pin = common.get_config_handle()['gsmio']['resetpin']
-    # resetPin = 38
-    try:
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(reset_pin, GPIO.OUT)
+    print ">> Resetting GSM Module"
 
-        GPIO.output(reset_pin, True)
+    try:
+        power_gsm("OFF")
         time.sleep(1)
-        GPIO.output(reset_pin, False)
-        # time.sleep(5)
-        # GPIO.output(resetPin, True)
+        power_gsm("ON")
         print 'done'
-        raise CustomGSMResetException((">> Raising exception to reset code "
-            "from GSM module reset"))
+
     except ImportError:
         return
 
@@ -96,9 +96,18 @@ def init_gsm_serial():
     gsm.port = port
     gsm.baudrate = baudrate
     gsm.timeout = timeout
-    if not gsm.isOpen():
-        # print "opening gsm port"
-        gsm.open()
+
+    count = 0
+    while gsm.isOpen():
+        print 'GSM is busy...'
+        time.sleep(10)
+        count += 1
+        if count == 10:
+            print 'Force close gsm serial'
+            gsm.close()
+            break
+
+    gsm.open()
 
     return gsm
        
@@ -107,7 +116,7 @@ def init_gsm():
     
     gsm = init_gsm_serial()
 
-    power_gsm()
+    reset_gsm()
 
     print "Initializing ..."
     gsm.write('AT\r\n')
@@ -118,6 +127,8 @@ def init_gsm():
     print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
     mc = common.get_mc_server()
     mc.set('init_gsm',True)
+
+    gsm.close()
     
 def gsm_flush():
     """Removes any pending inputs from the GSM modem and checks if it is alive."""
@@ -135,6 +146,8 @@ def gsm_flush():
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (gsmflush)"
         RunSenslopeServer(gsm_network)
+    finally:
+        gsm.close()
 
 def gsmcmd(cmd,gsm=None):
     """
@@ -149,11 +162,11 @@ def gsmcmd(cmd,gsm=None):
         gsm.flushInput()
         gsm.flushOutput()
         a = ''
+
         now = time.time()
         gsm.write(cmd+'\r\n')
+
         while True:
-            #print cmd
-            #gsm.write(cmd+'\r\n')
             a += gsm.read(gsm.inWaiting())
 
             if a.find('OK')>=0:
@@ -161,22 +174,18 @@ def gsmcmd(cmd,gsm=None):
             elif a.find('ERROR')>=0:
                 break
             elif time.time()>now+10:
-                break
-            # else:
-            #     print 'None'            
-            #a += gsm.read()
-            #print '+' + a
-            # print a
+                a = '>> Error: GSM Unresponsive'
+                print a
+                raise CustomGSMResetException
+
             time.sleep(0.5)
             # print '.',
-        if time.time()>now+10:  
-            a = '>> Error: GSM Unresponsive'
-            # reset_gsm()
-            return None
         return a
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (gsmcmd)"
         reset_gsm()
+    finally:
+        gsm.close()
 
 def check_csq():
     csq_reply = gsmcmd('AT+CSQ')
@@ -186,6 +195,8 @@ def check_csq():
         csq_val = int(re.search("(?<=: )\d{1,2}(?=,)",csq_reply).group(0))
         return csq_val
     except ValueError, AttributeError:
+        return 0
+    except TypeError:
         return 0
 
 def send_msg(msg, number):
@@ -199,6 +210,7 @@ def send_msg(msg, number):
 
     check_count = 0
     csq = 0
+    print '>> Check csq ...'
     while check_count < 10 and csq < 10:
         csq = check_csq()
         time.sleep(0.5)
@@ -206,7 +218,7 @@ def send_msg(msg, number):
 
     if check_count >= 10:
         print ">> No connection to network. Aborting ..."
-        return -1
+        raise CustomGSMResetException
 
     # resolve sim_num from number
     mc = common.get_mc_server()
@@ -255,14 +267,16 @@ def send_msg(msg, number):
             print '>> Error: timeout reached'
             return -1
         elif a.find('ERROR')>-1:
-            print '>> Error: GSM reported ERROR in SMS reading'
+            print '>> Error: GSM reported ERROR in SMS sending'
             return -1
         else:
             print ">> Message sent!"
             return 0
-            
+
     except serial.SerialException:
         print "NO SERIAL COMMUNICATION (sendmsg)"
+    finally:
+        gsm.close()
         
 def log_error(log):
     nowdate = dt.today().strftime("%A, %B %d, %Y, %X")

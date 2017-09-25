@@ -24,6 +24,8 @@ def get_arguments():
         help = "initialize gsm module", action = 'store_true')
     parser.add_argument('-dg', "--debug_gsm", 
         help = "enter gsm AT mode", action = 'store_true')
+    parser.add_argument('-rg', "--reset_gsm", 
+        help = "reset gsm module", action = 'store_true')
 
     parser.add_argument('-rd', "--rain_detect", 
         help = "check current rain value", action = 'store_true')
@@ -48,7 +50,7 @@ def get_arguments():
         sys.exit()
 
 def send_smsoutbox_memory():
-    lockscript.get_lock('gsm')
+    # lockscript.get_lock('gsm')
 
     print "Sending from memory ..."
     mc = common.get_mc_server()
@@ -57,15 +59,24 @@ def send_smsoutbox_memory():
     # print smsoutbox
     phonebook = mc.get("phonebook")
 
-    smsoutbox_unsent = smsoutbox[smsoutbox["stat"] == 0]
+    smsoutbox_unsent = smsoutbox[smsoutbox["stat"] < 5]
+    print smsoutbox_unsent
 
     for index, row in smsoutbox_unsent.iterrows():
-        stat = gsmio.send_msg(row['msg'], phonebook[row["contact_id"]])
+        sms_msg = row['msg']
+        sim_num = phonebook[row["contact_id"]]
+        stat = gsmio.send_msg(sms_msg, sim_num)
         
-        if stat == 0:
-            smsoutbox.loc[index, 'stat'] = 1
+        if stat == 0: 
+            smsoutbox.loc[index, 'stat'] = 5
+            '>> Message sent'
         else:
-            print '>> Message sending fail'
+            print '>> Message sending failed'
+            print '>> Writing to mysql for sending later'
+            smsoutbox.loc[index, 'stat'] += 1
+
+            if smsoutbox.loc[index, 'stat'] >= 5:
+                dbio.write_sms_to_inbox(sms_msg, sim_num)
 
     print smsoutbox
 
@@ -104,6 +115,9 @@ def main():
         send_unsent_msg_outbox()
     if args.debug_gsm:
         gsmio.gsm_debug()
+    if args.reset_gsm:
+        gsmio.reset_gsm()
+
     if args.reset_rain_value:
         rd.reset_rain_value()
     if args.rain_detect:
@@ -119,6 +133,7 @@ def main():
 
 if __name__ == '__main__':
 ##    main()
+    retry_count = 0
     while True:
         try:
             main()
@@ -130,4 +145,9 @@ if __name__ == '__main__':
             print time.asctime()
             print "Unexpected error:", sys.exc_info()[0]
         except gsmio.CustomGSMResetException:
+            retry_count += 1
             print 'Will try again...'
+
+        if retry_count >= 10:
+            print '>> Critical failure in GSM comms'
+            sys.exit()

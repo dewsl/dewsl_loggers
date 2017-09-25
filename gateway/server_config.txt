@@ -16,12 +16,13 @@ smart = 07,08,09,10,12,18,19,20,21,28,29,30,38,29,30,38,39,46,47,48,49,89,98,99,
 globe = 05,06,15,16,17,18,25,26,27,35,36,35,37,94,96,97,77 
 
 [coordinfo]
-name = EVM
+name = BTO
 
 [serverinfo]
-sendto = globe
-globe = 639176023735
-smart = 639988448687 
+simnum = 639176023735
+#sendto = globe
+#simnum = 639176321023
+#smart = 639988448687 
 
 [gsmio]
 port = /dev/gsmusbport
@@ -30,7 +31,7 @@ timeout = 5
 sendretry = 10
 resetpin = 38
 statpin = 37
-ripin = 21
+ripin = 35
 
 [mysql]
 sentbuffersize = 15
@@ -46,4 +47,8 @@ delsmsafterread = True
 port = /dev/pwrmodusbport
 baud = 9600
 timeout = 5
+
+[xbee]
+port = /dev/xbeeusbport
+baud = 9600 
 

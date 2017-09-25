@@ -39,6 +39,7 @@ def main():
     msgtosend += csq
 
     if not args.read_only:
+        print msgtosend
         common.save_sms_to_memory(msgtosend)
     
 if __name__=='__main__':
@@ -46,4 +47,4 @@ if __name__=='__main__':
         main()
     except KeyboardInterrupt:
         print "Aborting ..."
-        gsmClosePortAndHandle()
+        # gsmClosePortAndHandle()
