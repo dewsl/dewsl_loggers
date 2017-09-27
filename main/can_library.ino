@@ -63,6 +63,43 @@ void init_strings(){
 }
 
 /* 
+  Function: init_char_arrays
+
+    Clear the global char arrays used for storage 
+  
+  Parameters:
+  
+    n/a
+  
+  Returns:
+  
+    n/a
+  
+  See Also:
+  
+    <setup>
+*/
+void init_char_arrays(){
+  for (int i = 0; i < 1250; i++){
+    g_temp_dump[i] = '\0';
+  }
+  for (int a = 0; a < 2500; a++){
+    g_final_dump[a] = '\0';
+  }
+  for (int b = 0; b < 1250; b++){
+    g_no_gids_dump[b] = '\0';
+  }
+  // g_temp_dump = (char *)malloc(1250*sizeof(char));
+  // for (int i = 0; i < 1250; i++) {
+  //   g_temp_dump[i] = '\0';
+  // }
+
+  // g_final_dump = (char *)malloc(2500*sizeof(char));
+  // for (int i = 0; i < 2500; i++) {
+  //   g_final_dump[i] = '\0';
+  // }
+}
+/* 
   Function: clear_can_buffer
 
     Clear the can buffer array.
@@ -89,7 +126,8 @@ void clear_can_buffer(CAN_FRAME can_buffer[]){
 /* 
   Function: get_data
 
-    Clear the global strings used for storage 
+    Clear the global strings used for storage.
+    *Modifies the global char array g_no_gids_dump.*
 
   Parameters:
 
@@ -105,13 +143,13 @@ void clear_can_buffer(CAN_FRAME can_buffer[]){
     <getATcommand>
 
 */
-void get_data(int cmd, int transmit_id){
+void get_data(int cmd, int transmit_id, char* final_dump){
   int retry_count = 0,respondents = 0;
   int count;
   for (retry_count = 0; retry_count < g_sampling_max_retry; retry_count++){
     turn_on_column();
     send_command(cmd,transmit_id);
-    if( (respondents = get_all_frames(TIMEOUT)) == g_num_of_nodes){
+    if( (respondents = get_all_frames(TIMEOUT,g_can_buffer)) == g_num_of_nodes){
       Serial.println("Complete frames! :) ");
       turn_off_column();
       break;
@@ -131,9 +169,10 @@ void get_data(int cmd, int transmit_id){
   }
   // add delimiter "+"
   strcat(g_temp_dump,"+");
+  strcat(g_temp_dump, '\0');
   Serial.print("g_temp_dump: ");
   Serial.println(g_temp_dump);
-  process_g_temp_dump(g_temp_dump);
+  process_g_temp_dump(g_temp_dump,final_dump,g_no_gids_dump);
   g_temp_dump[0] = '\0';
 
   clear_can_buffer(g_can_buffer);
@@ -153,6 +192,8 @@ void get_data(int cmd, int transmit_id){
   
     timeout_ms - int timeout in milliseconds
 
+    can_buffer[] - CAN_FRAME struct array
+
   Returns:
 
     integer count of frames in the buffer
@@ -162,7 +203,7 @@ void get_data(int cmd, int transmit_id){
     <get_data>
 
 */
-int get_all_frames(int timeout_ms) {
+int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[]) {
   int timestart = millis();
   int i = 0, a = 0;
   CAN_FRAME incoming;
@@ -171,15 +212,15 @@ int get_all_frames(int timeout_ms) {
       check_can_status();
       if (Can0.available()){
         Can0.read(incoming);
-        g_can_buffer[i].id = incoming.id;
-        g_can_buffer[i].data.byte[0] = incoming.data.byte[0];
-        g_can_buffer[i].data.byte[1] = incoming.data.byte[1];
-        g_can_buffer[i].data.byte[2] = incoming.data.byte[2];
-        g_can_buffer[i].data.byte[3] = incoming.data.byte[3];
-        g_can_buffer[i].data.byte[4] = incoming.data.byte[4];
-        g_can_buffer[i].data.byte[5] = incoming.data.byte[5];
-        g_can_buffer[i].data.byte[6] = incoming.data.byte[6];
-        g_can_buffer[i].data.byte[7] = incoming.data.byte[7];
+        can_buffer[i].id = incoming.id;
+        can_buffer[i].data.byte[0] = incoming.data.byte[0];
+        can_buffer[i].data.byte[1] = incoming.data.byte[1];
+        can_buffer[i].data.byte[2] = incoming.data.byte[2];
+        can_buffer[i].data.byte[3] = incoming.data.byte[3];
+        can_buffer[i].data.byte[4] = incoming.data.byte[4];
+        can_buffer[i].data.byte[5] = incoming.data.byte[5];
+        can_buffer[i].data.byte[6] = incoming.data.byte[6];
+        can_buffer[i].data.byte[7] = incoming.data.byte[7];
         i++;
       }
   } while (millis() - timestart <= timeout_ms) ; 
@@ -388,7 +429,9 @@ void write_frame_to_dump(CAN_FRAME incoming, char* dump){
 
   Parameters:
 
-    n/a
+    dump - pointer to source char array to be processed.
+
+    final_dump - pointer to char array where to write the processed char array.
 
   Returns:
 
@@ -399,7 +442,7 @@ void write_frame_to_dump(CAN_FRAME incoming, char* dump){
     <get_data>
 */
 
-void process_g_temp_dump(char* dump){
+void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
   char *token,*last_char;
   char temp_id[5],temp_gid[5],temp_data[17];
   int id_int,gid;
@@ -414,17 +457,17 @@ void process_g_temp_dump(char* dump){
     if ( (gid != 0) & (gid != -1) ){
       sprintf(temp_gid,"%04X",gid);
       strncpy(temp_data,token+4,16);
-      strncat(g_final_dump,"-",1);
-      strncat(g_final_dump,temp_gid,4);
-      strncat(g_final_dump,temp_data,16);
+      // strncat(final_dump,"-",1);
+      strncat(final_dump,temp_gid,4);
+      strncat(final_dump,temp_data,16);
       
     } else if (gid == 0) {
-      strncat(g_final_dump,"=",1);
-      strncat(g_final_dump,token,20);
+      strncat(no_gids_dump,"=",1);
+      strncat(no_gids_dump,token,20);
     }
     token = strtok(NULL,"-");
   } 
-  strncat(g_final_dump,"+",1); // add delimiterfor different data type
+  strncat(final_dump,"+",1); // add delimiterfor different data type
 }
 
 //Group: Serial Display Functions
@@ -578,15 +621,7 @@ void send_command(int command,int transmit_id){
   Can0.sendFrame(outgoing);
 }
 
-void turn_on_column(){
-  digitalWrite(RELAYPIN, HIGH);
-  delay(g_turn_on_delay);
-}
 
-void turn_off_column(){
-  digitalWrite(RELAYPIN, LOW);
-  delay(1000);
-}
 
 
 //Group: String-based functions.
