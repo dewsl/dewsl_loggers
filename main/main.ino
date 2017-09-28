@@ -208,7 +208,46 @@ void read_data_from_column(char* column_data, int sensor_version){
     get_data(11,1,column_data);
     get_data(12,1,column_data);
 }
+/* 
+  Function: poll_data
 
+    * Gets data from the sensor column via 
+    <read_data_from_column>.
+
+    * Splits the data by data type via 
+    <tokenize_data_by_data_type>.
+
+    * Generate the text message related parameters via 
+    <message_content_parameters>. _Note: message_params[1]
+    is an integer representing the ascii equivalent character.
+    Hence the typecasting (char)._
+
+    * Remove unnecessary characters from each message via 
+    <remove_extra_characters>.
+
+    * Arrange the messages into an array for easier access via 
+    <tokenize_data_by_message>.
+
+  Parameters:
+  
+    n/a
+  
+  Returns:
+  
+    n/a
+  
+  See Also:
+  
+    - <read_data_from_column>
+    
+    - <tokenize_data_by_data_type>
+    
+    - <message_content_parameters>
+    
+    - <remove_extra_characters>
+    
+    - <tokenize_data_by_message>
+*/
 void poll_data(){
   int message_params[4];
   read_data_from_column(g_final_dump, 1);
@@ -221,16 +260,15 @@ void poll_data(){
     (tokens_by_dtype)[i] = (char*)malloc(1250*sizeof(char));
   }
 
-  Serial.println("by data type");
   tokenize_data_by_data_type(tokens_by_dtype, g_final_dump, true);
 
   for (int k = 0; k < t_num_message_type; k++){
     message_content_parameters(message_params, tokens_by_dtype[k]);
     remove_extra_characters(tokens_by_dtype[k],1);
     Serial.println(tokens_by_dtype[k]);
-    Serial.print("tokens_count:"); Serial.println(message_params[0]);
-    Serial.print("identifier:"); Serial.println((char)message_params[1]);
-    Serial.print("cutoff_length:"); Serial.println(message_params[2]);
+    // Serial.print("tokens_count:"); Serial.println(message_params[0]);
+    // Serial.print("identifier:"); Serial.println((char)message_params[1]);
+    // Serial.print("cutoff_length:"); Serial.println(message_params[2]);
 
     char** message = {};
     message = (char**)malloc(message_params[0]*sizeof(char*));
@@ -238,15 +276,33 @@ void poll_data(){
         (message)[i] = (char*)malloc(message_params[2]*sizeof(char));
     }
     tokenize_data_by_message(message, tokens_by_dtype[k], message_params[2], message_params[0]);
-    for (int i = 0; i < message_params[0]; i++) {
-      Serial.print("message[");
-      Serial.print(i);
-      Serial.print("]:");
-      Serial.println(message[i]);
-    }
+    // for (int i = 0; i < message_params[0]; i++) {
+    //   Serial.print("message[");
+    //   Serial.print(i);
+    //   Serial.print("]:");
+    //   Serial.println(message[i]);
+    // }
   }
 }
 
+/* 
+  Function: remove_extra_characters
+
+    Remove specific characters unnecessary for data interpretation.
+  
+  Parameters:
+  
+    columnData - char array that contains data split by datatype.
+    cmd - integer that determines which format is executed
+  
+  Returns:
+  
+    n/a
+  
+  See Also:
+  
+    <poll_data>
+*/
 void remove_extra_characters(char* columnData, int cmd){
   int i = 0;
   char pArray[2500] = "";
@@ -299,11 +355,32 @@ void remove_extra_characters(char* columnData, int cmd){
   sprintf(columnData, pArray,strlen(pArray));
 }
 
-void tokenize_data_by_data_type(char** tokens, char* columnData, bool isDebug){
+/* 
+  Function: tokenize_data_by_data_type
+
+    Remove specific characters unnecessary for data interpretation.
+  
+  Parameters:
+  
+    tokens - two dimensional char array that will contain the data split by data type.
+
+    source - char array that contains the data that will be split.
+
+    isDebug - boolean
+  
+  Returns:
+  
+    n/a
+  
+  See Also:
+  
+    <poll_data>
+*/
+void tokenize_data_by_data_type(char** tokens, char* source, bool isDebug){
   char *token;
   const char delimiter[2] = "+";
   int j=0;
-  token = strtok(columnData, delimiter);
+  token = strtok(source, delimiter);
   strncat(token, "\0", 2);
   while (token != NULL) {
     sprintf(tokens[j], token, strlen(token));
@@ -318,22 +395,76 @@ void tokenize_data_by_data_type(char** tokens, char* columnData, bool isDebug){
   }
 }
 
-void tokenize_data_by_message(char** message,char* data_token, int cutoff_length, int token_count){
+/* 
+  Function: tokenize_data_by_message
 
-  for (int i = 0; i < token_count; i++) {
-    strncpy(message[i], data_token, cutoff_length);
-    message[i][cutoff_length] = '\0';
-    data_token= data_token + cutoff_length;
+    Arrange the split data into a two dimensional array for convenient access.
+  
+  Parameters:
+  
+    message_array - two dimensional char array that will contain the data split by 
+    cutoff_length. This will be the data in each text message.
+
+    source - char array that contains the data that will be split.
+
+    message_count - integer count of messages per data type.
+  
+  Returns:
+  
+    n/a
+  
+  See Also:
+  
+    <poll_data>
+*/
+void tokenize_data_by_message(char** message_array,char* source, int cutoff_length, int message_count){
+
+  for (int i = 0; i < message_count; i++) {
+    strncpy(message_array[i], source, cutoff_length);
+    message_array[i][cutoff_length] = '\0';
+    source = source + cutoff_length;
   } 
 }
 
-void message_content_parameters(int* parameters, char* token){
+/* 
+  Function: message_content_parameters
+
+    Determine the following:
+
+    * number of messages to be sent for each data type
+
+    * identifier for each message to be sent
+
+    * number of characters for each message to be sent 
+    depending on the data type
+  
+  Parameters:
+  
+    parameters - integer array that contains the number of messages to be sent,
+    ascii symbol number corresponding to the identifier, and the number of
+    characters for a given message
+
+    source_by_dtype - char array of data to be sent split by data type.
+  
+  Returns:
+  
+    n/a
+  
+  See Also:
+  
+    - <poll_data>
+
+    - <check_identifier>
+
+    - <check_cutoff>
+*/
+void message_content_parameters(int* parameters, char* source_by_dtype){
   int token_length = strlen(token);
   char identifier = 'c';
   int cutoff_length = 0;
   int tokens_count = 0;
 
-  identifier= check_identifier(token,4);
+  identifier= check_identifier(source_by_dtype,4);
   cutoff_length= check_cutoff(identifier);
   
   if (token_length == 0) {
@@ -350,6 +481,27 @@ void message_content_parameters(int* parameters, char* token){
   parameters[2] = cutoff_length;
 }
 
+/* 
+  Function: check_identifier
+
+    Determine the identifier based on the message id of the message. 
+    The starting position of the message id is determined by the index_msgid.
+  
+  Parameters:
+  
+    token - char array containing the data split by data type.
+
+    index_msgid - integer index of the start of the message id.
+  
+  Returns:
+  
+    idfier - char identifier
+  
+  See Also:
+  
+    - <message_content_parameters>
+
+*/
 char check_identifier(char* token, int index_msgid){
   char idfier = '0';
   switch (token[index_msgid]) {
@@ -390,6 +542,24 @@ char check_identifier(char* token, int index_msgid){
   return idfier;
 }
 
+/* 
+  Function: check_cutoff
+
+    Determine the number of characters depending on the identifier
+  
+  Parameters:
+  
+    idf - char identifier
+  
+  Returns:
+  
+    cutoff - integer number of characters per message
+  
+  See Also:
+  
+    - <message_content_parameters>
+
+*/
 int check_cutoff(char idf){
   int cutoff=0;
   switch (idf) {

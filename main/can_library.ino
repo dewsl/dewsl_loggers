@@ -275,7 +275,9 @@ void process_all_frames(CAN_FRAME can_buffer[]){
   
   See Also:
   
-    <get_data,delete_repeating_frames,>
+    - <get_data>
+
+   - <delete_repeating_frames>
 */
 int count_frames(CAN_FRAME can_buffer[]){
   int i = 0,count = 0;
