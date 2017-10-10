@@ -44,7 +44,6 @@ int init_sd(){
 	
 		<setup>
 */
-
 void init_gids(){
 	if (VERBOSE == 1){Serial.println(F("init_uids()"));}
 	for (int i=0; i < g_num_of_nodes; i++ ){
@@ -294,10 +293,10 @@ int8_t writeData(String data){
 	String timeString;
 	Serial.println(g_timestamp);
 
-	if (!SD.begin(6,g_chip_select)) {
-		Serial.println(" SD.begin() Failed!");
-		return -1;
-	}
+	// if (!SD.begin(6,g_chip_select)) {
+	// 	Serial.println(" SD.begin() Failed!");
+	// 	return -1;
+	// }
 	delay(20);
 	for(int i=0; i<6 ; i++){
 		logger_file_name[i]= g_timestamp[i];

@@ -141,25 +141,42 @@ void clear_can_buffer(CAN_FRAME can_buffer[]){
   See Also:
 
     <getATcommand>
-
 */
 void get_data(int cmd, int transmit_id, char* final_dump){
   int retry_count = 0,respondents = 0;
-  int count;
-  for (retry_count = 0; retry_count < g_sampling_max_retry; retry_count++){
-    turn_on_column();
-    send_command(cmd,transmit_id);
-    if( (respondents = get_all_frames(TIMEOUT,g_can_buffer)) == g_num_of_nodes){
-      Serial.println("Complete frames! :) ");
+  int count,uid,ic;
+  if (cmd < 100){
+    for (retry_count = 0; retry_count < g_sampling_max_retry; retry_count++){
+      turn_on_column();
+      send_command(cmd,transmit_id);
+      if( (respondents = get_all_frames(TIMEOUT,g_can_buffer,g_num_of_nodes)) == g_num_of_nodes){
+        Serial.println("Complete frames! :) ");
+        turn_off_column();
+        break;
+      } else {
+        Serial.print(respondents); Serial.print(" / ");
+        Serial.print(g_num_of_nodes); Serial.println(" received / expected frames.");
+      }
       turn_off_column();
-      break;
-    } else {
-      Serial.print(respondents); Serial.print(" / ");
-      Serial.print(g_num_of_nodes); Serial.println(" received / expected frames.");
     }
-    turn_off_column();
+  } else {
+    for (int i = 0; i < g_num_of_nodes; i++){
+      turn_on_column();
+      uid = g_gids[i][0];
+      poll_command(cmd,uid);
+      Serial.print(F("Polling UID: "));
+      Serial.print(uid);
+      for (retry_count=0; retry_count < g_sampling_max_retry; retry_count++){
+        Serial.print(" .");
+        ic = count_frames(g_can_buffer);
+        if (get_all_frames(POLL_TIMEOUT, g_can_buffer, 1) > ic ){
+          Serial.println(" OK");
+          break;
+        }
+      }
+      Serial.println(" ");
+    }
   }
-
   count = count_frames(g_can_buffer);
   // write frames to String or char array
   for (int i = 0;i<count;i++){
@@ -201,11 +218,10 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   See Also:
 
     <get_data>
-
 */
-int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[]) {
+int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) {
   int timestart = millis();
-  int i = 0, a = 0;
+  int a = 0, i = 0;
   CAN_FRAME incoming;
   if (VERBOSE == 1) { Serial.println("get_all_frames()"); }
   do {
@@ -222,8 +238,16 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[]) {
         can_buffer[i].data.byte[6] = incoming.data.byte[6];
         can_buffer[i].data.byte[7] = incoming.data.byte[7];
         i++;
+        if (i == expected_frames){
+          process_all_frames(g_can_buffer);
+          i = count_frames(g_can_buffer);
+          if (i == expected_frames){
+            return i;
+            break;
+          }
+        }
       }
-  } while (millis() - timestart <= timeout_ms) ; 
+  } while ((millis() - timestart <= timeout_ms)); 
   process_all_frames(g_can_buffer);
   return count_frames(g_can_buffer);                              
 } 
@@ -259,7 +283,6 @@ void process_all_frames(CAN_FRAME can_buffer[]){
   // magnitude filter? i.e. kuha ulit data kapag bagsak sa magnitude?
 }
 
-
 /* 
   Function: count_frames
 
@@ -277,7 +300,7 @@ void process_all_frames(CAN_FRAME can_buffer[]){
   
     - <get_data>
 
-   - <delete_repeating_frames>
+    - <delete_repeating_frames>
 */
 int count_frames(CAN_FRAME can_buffer[]){
   int i = 0,count = 0;
@@ -623,6 +646,18 @@ void send_command(int command,int transmit_id){
   Can0.sendFrame(outgoing);
 }
 
+void poll_command(int command,int uid){
+  if (VERBOSE == 1) { Serial.println("send_frame()"); }
+  CAN_FRAME outgoing;
+  outgoing.extended = true;
+  outgoing.id = 1;
+  outgoing.length = 3;
+  outgoing.data.byte[0] = command;
+  outgoing.data.byte[1] = uid >> 8;
+  outgoing.data.byte[2] = uid & 0xFF;
+  Can0.sendFrame(outgoing);
+}
+
 
 
 
@@ -766,7 +801,6 @@ int process_g_string(){
     ip1 = g_string.indexOf(type_delim,ip0+1);
     big_string = g_string.substring(ip0,ip1);
     separate_gids_and_uids(big_string);
-    // Serial.println(big_string);
     g_string_proc = String(g_string_proc + separate_gids_and_uids(big_string));
     ip0 = ip1;
   }

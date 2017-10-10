@@ -18,8 +18,11 @@
 #define ATSD      "ATSD"
 
 #define RELAYPIN 44
-#define TIMEOUT 5000
+#define TIMEOUT 2500
+#define POLL_TIMEOUT 1500
 #define BAUDRATE 9600
+
+#define DATALOGGER Serial1
 
 #define CAN_ARRAY_BUFFER_SIZE 100
 
@@ -27,7 +30,7 @@
 int g_gids[40][2];
 int g_num_of_nodes = 40;
 char g_mastername[6] = "XXXXX";
-char g_timestamp[19];
+char g_timestamp[19] = "171009";
 int g_chip_select = SS3;
 int g_turn_on_delay = 10; // in centi seconds ( ie. 100 centiseconds = 1 sec) 
 int g_sensor_version = 3;
@@ -41,14 +44,15 @@ int g_cd_counter = 0;
 char g_temp_dump[1250];
 char g_final_dump[2500];
 char g_no_gids_dump[2500];
+char text_message[5000];
 String g_string;
 String g_string_proc;
 int g_sampling_max_retry = 3;
 CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
 
 // Text message related 
-int t_num_message_type = 5; // 5 - ilang klase ng text messages ang gagawin
-  // i.e. x - axel 1 , y - accel 2, b - raw soms , c - calib soms, ff - piezo
+int t_num_message_type = 6; // 5 - ilang klase ng text messages ang gagawin
+  // i.e. x - axel 1 , y - accel 2, b - raw soms , c - calib soms, ff - piezo, d - diagnostics
 
 
 
@@ -86,7 +90,6 @@ bool ate=true;
     <init_can> <init_strings> <init_gids> <init_sd> <open_config>
 */
 void setup() {
-  delay(5000);
   Serial.begin(BAUDRATE);
   Serial.println("setup");
   pinMode(RELAYPIN, OUTPUT);
@@ -133,7 +136,6 @@ void getATCommand(){
     Serial.println(OKSTR);
   }
   else if (command == ATRCVCAN){
-    // get_all_frames(TIMEOUT);
     Serial.println(OKSTR);
   }
   else if (command == ATGETSENSORDATA){
@@ -141,12 +143,12 @@ void getATCommand(){
     Serial.println(OKSTR);
   }
   else if (command == "AT+POLL"){
-    poll_data();
+    read_data_from_column(g_final_dump, 1);
+    build_txt_msgs(g_final_dump, text_message);
     Serial.println(OKSTR);
   }
   else if (command == ATSNIFFCAN){
     while (true){
-      // get_all_frames(TIMEOUT);
       Serial.println(OKSTR);
     }
   }
@@ -156,11 +158,21 @@ void getATCommand(){
     Serial.println(OKSTR);
   }
   else if (command == ATSD){
-      String conf;
-      init_sd();
-      open_config();
-      Serial.println(F(OKSTR));
+    String conf;
+    init_sd();
+    open_config();
+    Serial.println(F(OKSTR));
   }
+  else if (command == "AT+SEND"){
+    char *token1 = strtok(text_message,"+");
+    while (token1 != NULL){
+      send_data(false, token1);
+      token1 = strtok(NULL, "+");
+    }
+  }
+  // else if (command == "AT+SAVE"){
+
+  // }
   else{
     Serial.println(ERRORSTR);
   }
@@ -207,30 +219,54 @@ void turn_off_column(){
 void read_data_from_column(char* column_data, int sensor_version){
     get_data(11,1,column_data);
     get_data(12,1,column_data);
+    // get_data(110,1,column_data);
+    // get_data(113,1,column_data);
+    get_data(22,1,column_data);
+    // get_data(113,1,column_data);
 }
+
 /* 
-  Function: poll_data
+  Function: build_txt_msgs
 
-    * Gets data from the sensor column via 
-    <read_data_from_column>.
+    Build the text messages to be sent.
 
-    * Splits the data by data type via 
-    <tokenize_data_by_data_type>.
+    * Splits the data though the delimiter "+"
 
-    * Generate the text message related parameters via 
-    <message_content_parameters>. _Note: message_params[1]
-    is an integer representing the ascii equivalent character.
-    Hence the typecasting (char)._
+    * The identifier, and cutoff are identified based on the type of data.
 
-    * Remove unnecessary characters from each message via 
-    <remove_extra_characters>.
+    * Extra characters are removed via <remove_extra_characters>.
 
-    * Arrange the messages into an array for easier access via 
-    <tokenize_data_by_message>.
+    * Data is stored in SD card via <writeData>.
+
+    * The following are appended to the data split as text messages to be sent:
+
+        * delimiters
+        
+        * mastername
+
+        * padding for the numerator /  denominator
+
+        * identifier
+
+        * timestamp
+
+    * The delimiter is a "+"
+
+    * The appended data is copied per character to a temporary buffer.
+
+    * The temporary buffer is split per message.
+
+    * The pads are overwritten with the proper text message length,
+    numerator and denominator.
+  
+    * These are then stored to the *destination* variable.
 
   Parameters:
   
-    n/a
+    source - char array that contains the aggregated data
+
+    destination - char array that will contain the text messages to be sent separated by
+    the delimiter "+"
   
   Returns:
   
@@ -238,50 +274,89 @@ void read_data_from_column(char* column_data, int sensor_version){
   
   See Also:
   
-    - <read_data_from_column>
-    
-    - <tokenize_data_by_data_type>
-    
-    - <message_content_parameters>
+    - <check_cutoff>
     
     - <remove_extra_characters>
     
-    - <tokenize_data_by_message>
+    - <writeData>
 */
-void poll_data(){
-  int message_params[4];
-  read_data_from_column(g_final_dump, 1);
-  g_cd_counter = strlen(g_final_dump);
 
-  char** tokens_by_dtype = {};
-  tokens_by_dtype = (char**)malloc(t_num_message_type*sizeof(char*));
 
-  for(int i=0; i<t_num_message_type; i++){
-    (tokens_by_dtype)[i] = (char*)malloc(1250*sizeof(char));
+void build_txt_msgs(char* source, char* destination){
+  char *token1,*token2;
+  char dest[5000] = {};
+  char idf = '0';
+  char identifier[2] = {};
+  char temp[6];
+  char pad[12] = "___________";
+  char master_name[8] = "";
+  int cutoff = 0, num_text_to_send = 0, num_text_per_dtype = 0;
+  int name_len = 0,char_cnt = 0,c=0;
+  int i,j;
+  int token_length = 0;
+  token1 = strtok(source, "+");
+  while ( token1 != NULL){
+    c=0;
+    idf = check_identifier(token1,4);
+    identifier[0] = idf;
+    identifier[1] = '\0';
+    cutoff = check_cutoff(idf);
+    remove_extra_characters(token1, idf);
+    writeData(String(token1));
+    num_text_per_dtype = ( strlen(token1) / cutoff );
+    if ((strlen(token1) % cutoff) != 0){
+      num_text_per_dtype++;
+    }
+    if (g_sensor_version == 1){
+      name_len = 8;
+      strncpy(master_name,g_mastername,4);
+      strncat(master_name,"DUE",4);
+    } else {
+      name_len = 6;
+      strncpy(master_name,g_mastername,6);
+    }
+    token_length = strlen(token1); 
+    for (i = 0; i < num_text_per_dtype; i++){
+      strncat(dest,pad,11);
+      strncat(dest,master_name, name_len);
+      strncat(dest,"*", 2);
+      strncat(dest,identifier,2);
+      strncat(dest,"*", 2);
+      for (j=0; j < (cutoff); j++ ){
+        strncat(dest,token1,1);
+        c++;
+        token1++;
+        if (c == (token_length)){
+          // Serial.println("copied enough characters.");
+          break;
+        }
+      }
+      strncat(dest,"*",1);
+      strncat(dest,"__timestamp_",12);
+      strncat(dest,"+",1);
+    }
+    num_text_to_send = num_text_to_send + num_text_per_dtype;
+    token1 = strtok(NULL, "+");
   }
 
-  tokenize_data_by_data_type(tokens_by_dtype, g_final_dump, true);
-
-  for (int k = 0; k < t_num_message_type; k++){
-    message_content_parameters(message_params, tokens_by_dtype[k]);
-    remove_extra_characters(tokens_by_dtype[k],1);
-    Serial.println(tokens_by_dtype[k]);
-    // Serial.print("tokens_count:"); Serial.println(message_params[0]);
-    // Serial.print("identifier:"); Serial.println((char)message_params[1]);
-    // Serial.print("cutoff_length:"); Serial.println(message_params[2]);
-
-    char** message = {};
-    message = (char**)malloc(message_params[0]*sizeof(char*));
-    for(int i=0; i<message_params[0]; i++){
-        (message)[i] = (char*)malloc(message_params[2]*sizeof(char));
-    }
-    tokenize_data_by_message(message, tokens_by_dtype[k], message_params[2], message_params[0]);
-    // for (int i = 0; i < message_params[0]; i++) {
-    //   Serial.print("message[");
-    //   Serial.print(i);
-    //   Serial.print("]:");
-    //   Serial.println(message[i]);
-    // }
+  token2 = strtok(dest, "+");
+  c=0;
+  while( token2 != NULL ){
+    c++;
+    char_cnt = strlen(token2) + name_len - 24;
+    idf = check_identifier(token1,2);
+    identifier[0] = idf;
+    identifier[1] = '\0';
+    sprintf(pad, "%02d", char_cnt);
+    strncat(pad,">>",3);
+    sprintf(temp, "%02d/", c);
+    strncat(pad,temp,4);
+    sprintf(temp,"%02d#",num_text_to_send);
+    strncat(pad,temp,4);
+    strncpy(token2,pad,11);
+    strncat(destination,token2, strlen(token2));
+    strncat(destination, "+", 2);
+    token2 = strtok(NULL, "+");
   }
 }
 
@@ -303,17 +378,24 @@ void poll_data(){
   
     <poll_data>
 */
-void remove_extra_characters(char* columnData, int cmd){
-  int i = 0;
+void remove_extra_characters(char* columnData, char idf){
+  int i = 0,cmd = 1;
   char pArray[2500] = "";
   int initlen = strlen(columnData);
   char *start_pointer = columnData;
 
+  // dagdagan kapag kailangan
+  if (idf == 'd'){
+    cmd = 9;
+  } else if ( (idf == 'x' ) || (idf == 'y') ){
+    cmd = 1;
+  } 
+
   for (i = 0; i < initlen; i++, columnData++) {
   // for (i = 0; i < 23; i++,) {
     switch (cmd) {
-      case 1: {// axel data //13
-        if (i % 20 != 0 && i % 20 != 1 && i % 20 != 4 && i % 20 != 5 && i % 20 != 8 && i % 20 != 12 && i % 20 != 16 ) {
+      case 1: {// axel data //15
+        if (i % 20 != 0 && i % 20 != 1  && i % 20 != 8 && i % 20 != 12 && i % 20 != 16 ) {
           strncat(pArray, columnData, 1);
         }
         break;
@@ -338,6 +420,12 @@ void remove_extra_characters(char* columnData, int cmd){
       }
       case 8: { // old axel /for 15
         if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 != 12 && i % 20 != 16 ) {
+          strncat(pArray, columnData, 1);
+        }
+        break;
+      }
+      case 9: {  // diagnostics for v3 sensors
+        if (i % 20 != 0 && i % 20 != 1 && i % 20 != 6 && i % 20 != 7 && i % 20 != 8 && i % 20 != 9 && i % 20 != 14 && i % 20 != 15 && i % 20 != 16 && i % 20 != 17 && i % 20 != 18 && i % 20 != 19 ) {
           strncat(pArray, columnData, 1);
         }
         break;
@@ -459,26 +547,33 @@ void tokenize_data_by_message(char** message_array,char* source, int cutoff_leng
     - <check_cutoff>
 */
 void message_content_parameters(int* parameters, char* source_by_dtype){
-  int token_length = strlen(token);
   char identifier = 'c';
   int cutoff_length = 0;
-  int tokens_count = 0;
+  int remove_extra_characters_cmd = 1; // by default
 
   identifier= check_identifier(source_by_dtype,4);
-  cutoff_length= check_cutoff(identifier);
-  
+  cutoff_length = check_cutoff(identifier);
+  if (identifier == 'd'){
+    remove_extra_characters_cmd = 9;
+  }
+  parameters[1] = identifier;
+  parameters[2] = cutoff_length;
+  parameters[3] = remove_extra_characters_cmd;
+}
+
+
+void message_counter(int* parameters, char* source_by_dtype){
+  int tokens_count = 0;
+  int token_length = strlen(source_by_dtype);
   if (token_length == 0) {
     tokens_count = 0;
   } else {
-    tokens_count = (token_length / cutoff_length);
-    if (token_length % cutoff_length!= 0) {
+    tokens_count = (token_length / parameters[2]);
+    if (token_length % parameters[2] != 0) {
       tokens_count ++;
     }
   } 
-
   parameters[0] = tokens_count;
-  parameters[1] = identifier;
-  parameters[2] = cutoff_length;
 }
 
 /* 
@@ -500,7 +595,6 @@ void message_content_parameters(int* parameters, char* source_by_dtype){
   See Also:
   
     - <message_content_parameters>
-
 */
 char check_identifier(char* token, int index_msgid){
   char idfier = '0';
@@ -511,6 +605,9 @@ char check_identifier(char* token, int index_msgid){
       }
       else if (token[index_msgid+1] == 'A') {
         idfier = 'c';
+      }
+      else if (token[index_msgid+1] == '6') {
+        idfier = 'd';
       }
       break;
     } case '0': {
@@ -533,7 +630,7 @@ char check_identifier(char* token, int index_msgid){
     } case '7': {
       idfier = 'c';
       break;
-    }
+    } 
     default: {
       idfier = '0';
       break;
@@ -558,7 +655,6 @@ char check_identifier(char* token, int index_msgid){
   See Also:
   
     - <message_content_parameters>
-
 */
 int check_cutoff(char idf){
   int cutoff=0;
@@ -579,6 +675,11 @@ int check_cutoff(char idf){
       cutoff = 133;  //15 chars only for axel
       break;
     }
+    case 'd': {
+      cutoff = 144;  //15 chars only for axel
+      break;
+    }
+
     default: {
             cutoff = 0;
             if (g_sensor_version ==1){
@@ -590,3 +691,64 @@ int check_cutoff(char idf){
   return cutoff;
 }
 
+void no_data_parsed(char* message){
+  
+  sprintf(message, "040>>1/1#", 3);
+  strncat(message, g_mastername, 5);
+  strncat(message, "*0*ERROR: no data parsed<<", 26);
+}
+
+
+void send_data(bool isDebug, char* columnData){
+  int timestart = millis();
+  int timenow = millis();
+  bool OKFlag = false;
+  Serial.println("nasa send");
+  if (isDebug == true){
+    Serial.println("debug is true");
+    Serial.println(columnData);
+
+    do{
+      timestart = millis();
+      timenow = millis();
+      while (!Serial.available()){
+        while ( timenow - timestart < 9000 ) {
+          timenow = millis();
+        }
+        Serial.println("Time out...");
+        break;
+      }
+      if (Serial.find("OK")){
+        OKFlag = true;
+        Serial.println("moving on");
+      } else{
+        Serial.println(columnData);       
+      }
+    } while (OKFlag == false);
+  }
+  else {
+    do{   
+      DATALOGGER.println(columnData);
+      timestart = millis();
+      timenow = millis();
+
+      while (!DATALOGGER.available()){
+        while ( timenow - timestart < 9000 ) {
+          timenow = millis();
+        }
+        DATALOGGER.println("Time out...");
+        break;
+      }
+
+      if (DATALOGGER.find("OK")){
+        OKFlag = true;
+      }
+      else{
+        DATALOGGER.println(columnData);       
+      }
+
+    } while (OKFlag == false);
+
+  }
+
+} 
