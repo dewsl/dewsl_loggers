@@ -248,7 +248,7 @@ char checkIdentifier(char* token){
 		} case '0': {
 			if (token[4] == 'B')
 				idfier = 'x';
-			else if (token[3] == 'C')
+			else if (token[4] == 'C')
 				idfier = 'y';
 			break;
 		} case '2': {
