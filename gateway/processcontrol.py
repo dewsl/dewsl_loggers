@@ -17,6 +17,23 @@ def change_version(cron,ver):
 
 	cron.write()
 
+def change_report_interval(job_name, rep_int, cron=None):
+	if not cron:
+		cron = CronTab(user='pi')
+
+	if job_name not in ['health','xbee']:
+		print '>> Error: unknown job', job_name
+		return 'ERROR: unknown job %s' % (job_name)
+
+	job_list = cron.find_command(job_name)
+
+	for j in job_list:
+		j.minute.every(int(rep_int))
+
+	cron.write()
+
+	return 'CRON job %s changed to %s min report interval' % (job_name, rep_int)
+
 
 def main():
 

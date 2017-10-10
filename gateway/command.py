@@ -92,6 +92,36 @@ def cycle_gsm(row):
     reply = 'Reset GSM success'
     common.save_sms_to_memory(reply, row["contact_id"])
 
+def change_report_interval(row):
+    """
+    crontab order
+    0 reserved
+    1 sendmsgfromfiles.py   routinemsg
+    2 , xbeesampling
+    3 sendweatherinfo.py    weather
+    4 setSystemTime.py      changerpitime
+    5 getCmdFromSms.py      getsmscommands
+    6 raindetect.py         detectrain
+    """
+
+    msg_arguments = row['msg'].split(" ")
+
+    try:
+        job_name = msg_arguments[2]
+    except IndexError:
+        reply_message = "ERROR: job name"
+        print "No report interval in message"
+        common.save_sms_to_memory(reply_message,row['contact_id'])
+
+    try:
+        interval = msg_arguments[3]
+    except IndexError:
+        common.save_sms_to_memory(reply_message,row['contact_id'])
+        return
+    
+    reply_message = pctrl.change_report_interval(job_name,interval)
+    common.save_sms_to_memory(reply_message,row['contact_id'])
+
 def main():
     
     # allmsgs = senslopedbio.getAllSmsFromDb("UNREAD")
@@ -162,10 +192,10 @@ def main():
         elif cmd == 'sensorpoll':
             ts = dt.today().strftime("%c")
             cmd_reply = "USER initiated sensorpoll at %s" % (ts)
+            common.save_sms_to_memory(cmd_reply, row['contact_id'])
             subprocess.Popen(["python","/home/pi/gateway/xbeegate.py -s"])                
-    #         else:
-    #             print ">> Error: Unknown command", args[1]
-    #             read_fail = True
+        elif cmd == 'interval':
+            change_report_interval(row)
         else:
             # read_fail = True
             print ">> Command not recognized", cmd
