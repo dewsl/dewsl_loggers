@@ -25,8 +25,8 @@ void getdataBroadcastNew(int mode,char readCode){
         } else{
 			Serial1.print("ARQWAIT");        
 			GET_DATA(columnData,PASS_AXEL1_ADC_CALIB_MINMAX); 
-			String temp= "";
-			temp.toCharArray(columnData, 521);
+			//String temp= "";
+			//temp.toCharArray(columnData, 521);
 			Serial.println(columnData);
 			parsedData = parser(columnData,8);
 			// Serial.println("Right after 1ST parsedData = parser(columnData,8);");
@@ -36,7 +36,7 @@ void getdataBroadcastNew(int mode,char readCode){
 
 			Serial1.print("ARQWAIT");                
 			GET_DATA(columnData,PASS_AXEL2_ADC_CALIB_MINMAX);
-			temp.toCharArray(columnData, 521);
+			//temp.toCharArray(columnData, 521);
 			Serial.println(columnData);
 			parsedData = parser(columnData,8);
 			// Serial.println("Right after 2ND parsedData = parser(columnData,8);");
