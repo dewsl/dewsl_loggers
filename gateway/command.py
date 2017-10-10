@@ -101,6 +101,7 @@ def main():
     print dt.now()
 
     exit_flag = False
+    reboot_system = False
 
     if len(smsinbox) <= 0:
         print '>> No message to process'
@@ -152,12 +153,16 @@ def main():
             # exit_flag = True
     #             # sendMsgWRetry("RESET successful", msg.simnum)
     #             senslopeServer.WriteOutboxMessageToDb("RESET successful", msg.simnum)
-    #         elif cmd == 'resetrpi':
-    #             ts = dt.today().strftime("%c")
-    #             senslopeServer.WriteOutboxMessageToDb("USER RESET initiated at %s" % (ts), "%s,%s" % (getcfg.servernum,msg.simnum))
-    #             reset_system = True
-    #         elif cmd == 'sensorpoll':
-    #             subprocess.Popen(["python","/home/pi/Server/routine.py"])                
+        elif cmd == 'reboot':
+            print ">> Setting reboot command for 2 mins"
+            ts = dt.today().strftime("%c")
+            reboot_message = "USER REBOOT initiated at %s" % (ts)
+            common.save_sms_to_memory(reboot_message, row['contact_id'])
+            reboot_system = True
+        elif cmd == 'sensorpoll':
+            ts = dt.today().strftime("%c")
+            cmd_reply = "USER initiated sensorpoll at %s" % (ts)
+            subprocess.Popen(["python","/home/pi/gateway/xbeegate.py -s"])                
     #         else:
     #             print ">> Error: Unknown command", args[1]
     #             read_fail = True
@@ -178,8 +183,10 @@ def main():
     # setReadStatus("READ-SUCCESS",read_success_list)
     # setReadStatus("READ-FAIL",read_fail_list)
     
-    # if reset_system:
-    #     os.system('sudo reboot')
+    if reboot_system:
+        # reboot after 2 mins
+        os.system('sudo shutdown -r +2')
+        sys.exit()
 
 def is_sms_valid(sms):
     args = sms.split(" ")

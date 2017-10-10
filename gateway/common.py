@@ -121,16 +121,20 @@ def save_phonebook_memory():
 	mc.set("phonebook_inv",phonebook_inv)
 
 def purge_memory(valuestr):
+	print ">> Purging %s ..." % (valuestr),
 	value_pointer = mc.get(valuestr)
+	sc = mc.get('server_config')
+	resend_limit = sc['gsmio']['sendretry']
 
 	if valuestr == 'smsoutbox':
 		value_pointer = value_pointer[(value_pointer['ts'] > 
-			(dt.now() - td(minutes=120))) | (value_pointer['stat'] < 5)]
+			(dt.now() - td(minutes=120))) | (value_pointer['stat'] < resend_limit)]
 
 	elif valuestr == 'smsinbox':
 		value_pointer = value_pointer[value_pointer["stat"] == 0]
 
 	mc.set(valuestr,value_pointer)
+	print 'done'
 
 def save_sms_to_memory(msg_str, contact_id = None):
 	# read smsoutbox from memory
@@ -165,6 +169,7 @@ def save_sms_to_memory(msg_str, contact_id = None):
 def main():
 	# new server config
 	c = dewsl_server_config()
+	print c.config.keys()
 	mc.set("server_config",c.config)
 
 	reset_memory("smsoutbox")

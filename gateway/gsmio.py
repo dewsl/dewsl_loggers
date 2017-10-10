@@ -29,7 +29,7 @@ def gsm_debug():
     try:
         while True:
             cmd = raw_input("").strip()
-            reply = gsmcmd(cmd,gsm)
+            reply = gsmcmd(cmd)
             print reply.strip()
 
     except KeyboardInterrupt:
@@ -199,6 +199,18 @@ def check_csq():
     except TypeError:
         return 0
 
+def check_network():
+    network_reply = gsmcmd('AT+COPS?')
+    print network_reply
+
+    try:
+        network_val = re.search("(globe)|(smart)",csq_reply.lower()).group(0)
+        return 1
+    except ValueError, AttributeError:
+        return 0
+    except TypeError:
+        return 0
+
 def send_msg(msg, number):
     """
     Sends a command 'cmd' to GSM Module
@@ -268,6 +280,12 @@ def send_msg(msg, number):
             return -1
         elif a.find('ERROR')>-1:
             print '>> Error: GSM reported ERROR in SMS sending'
+
+            network_stat = check_network()
+            if network_stat == 0:
+                # no network connection (AT+COPS?)
+                raise CustomGSMResetException
+
             return -1
         else:
             print ">> Message sent!"

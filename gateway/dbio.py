@@ -207,6 +207,9 @@ def get_db_outbox(send_status=0):
             out = cur.fetchall()
             db.close()
             break
+        else:
+            print '>> No message to send'
+            return
         # return out
 
     all_msgs = []

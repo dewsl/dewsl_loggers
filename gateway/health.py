@@ -25,7 +25,11 @@ def main():
     ts = dt.today()
     ts_str = ts.strftime("%x,%X,")
 
-    csq = str(gsmio.check_csq())
+    try:
+        csq = str(gsmio.check_csq())
+    except AttributeError:
+        print ">> Error reading GSM CSQ. Setting CSQ to error value"
+        csq = "98"
 
     mc = common.get_mc_server()
     cfg = mc.get("server_config")
