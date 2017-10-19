@@ -6,6 +6,7 @@ import powermon as pmon
 import gsmio
 import common
 import argparse
+import raindetect as rd
 
 def main():
 
@@ -34,7 +35,9 @@ def main():
     mc = common.get_mc_server()
     cfg = mc.get("server_config")
 
-    rainval = "0"
+    mmpertip = float(cfg['rain']['mmpertip'])
+
+    rainval = "%0.2f" % (rd.check_rain_value(reset_rain = True) * 0.5) 
     sysvol = "%0.2f" % (pmon.read()["bus_voltage"])
     
     msgtosend = cfg["coordinfo"]["name"] + "W," + ts_str

@@ -29,10 +29,14 @@ def get_rain_tips_per_interval(reset_value=False):
 
     return report_events
 
-def check_rain_value():
+def check_rain_value(reset_rain = False):
     rain_events = mc.get("rain_events")
     print rain_events
     print "Tips:", len(rain_events)
+    tips = len(rain_events)
+    if reset_rain:
+        reset_rain_value()
+    return tips
 
 def reset_rain_value():
     mc.set("rain_events",pd.Series())

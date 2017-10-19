@@ -270,8 +270,6 @@ def routine(xbee):
 	print rssi_msg
 	common.save_sms_to_memory(rssi_msg)
 
-
-
 def main():
 	# get_network_info()
 	# print common.mc

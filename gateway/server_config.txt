@@ -47,3 +47,6 @@ port = /dev/xbeeusbport
 baud = 9600
 sampletimeout = 90
 
+[rain]
+mmpertip = 0.5
+

@@ -6,9 +6,13 @@ import gsmio
 import common
 import processcontrol as pctrl
 import dbio
+import subprocess
 
 mc = common.get_mc_server()
 sconf = common.get_config_handle()
+
+def gateway_initialize():
+    common.main()
 
 def change_server_number(row):
     cfg = common.read_cfg_file()
@@ -33,7 +37,32 @@ def change_server_number(row):
     
     # sendMsgWRetry(reply,msg.simnum)
     common.save_sms_to_memory(reply, row['contact_id'])
+    gateway_initialize()
 
+def change_xbee_timeout(row):
+    cfg = common.read_cfg_file()
+
+    args = row['msg'].split()
+
+    try:
+        timeout_s = args[2]
+    except IndexError:
+        reply = "Insufficient arguments."
+        common.save_sms_to_memory(reply, row['contact_id'])
+        return
+
+    print "Changing xbee sampling timeout"
+    try:
+        cfg.set('xbee','sampletimeout',timeout_s)
+        common.save_cfg_changes(cfg)
+        reply = "NEW XBEE TIMEOUT " + timeout_s
+    except TypeError:
+        print ">> No timeoout value given"
+        reply = "ERROR IN SMS: " + row['msg']
+    
+    # sendMsgWRetry(reply,msg.simnum)
+    common.save_sms_to_memory(reply, row['contact_id'])
+    gateway_initialize()
 
 def register_number(row):
     print '>> Registering number'
@@ -93,17 +122,6 @@ def cycle_gsm(row):
     common.save_sms_to_memory(reply, row["contact_id"])
 
 def change_report_interval(row):
-    """
-    crontab order
-    0 reserved
-    1 sendmsgfromfiles.py   routinemsg
-    2 , xbeesampling
-    3 sendweatherinfo.py    weather
-    4 setSystemTime.py      changerpitime
-    5 getCmdFromSms.py      getsmscommands
-    6 raindetect.py         detectrain
-    """
-
     msg_arguments = row['msg'].split(" ")
 
     try:
@@ -121,6 +139,9 @@ def change_report_interval(row):
     
     reply_message = pctrl.change_report_interval(job_name,interval)
     common.save_sms_to_memory(reply_message,row['contact_id'])
+
+# def run_cmd_terminal(row):
+    
 
 def main():
     
@@ -196,6 +217,8 @@ def main():
             subprocess.Popen(["python","/home/pi/gateway/xbeegate.py -s"])                
         elif cmd == 'interval':
             change_report_interval(row)
+        elif cmd == 'xbeetimeout':
+            change_xbee_timeout(row)
         else:
             # read_fail = True
             print ">> Command not recognized", cmd
