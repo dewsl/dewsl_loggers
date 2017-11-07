@@ -134,6 +134,7 @@ def change_report_interval(row):
     try:
         interval = msg_arguments[3]
     except IndexError:
+        reply_message = "ERROR: missing argument:\n %s" % row["msg"]
         common.save_sms_to_memory(reply_message,row['contact_id'])
         return
     

@@ -189,10 +189,12 @@ def gsmcmd(cmd,gsm=None):
 
 def check_csq():
     csq_reply = gsmcmd('AT+CSQ')
+    mc = common.get_mc_server()
     print csq_reply
 
     try:
         csq_val = int(re.search("(?<=: )\d{1,2}(?=,)",csq_reply).group(0))
+        mc.set("csq_val",csq_val)
         return csq_val
     except ValueError, AttributeError:
         return 0
@@ -204,7 +206,7 @@ def check_network():
     print network_reply
 
     try:
-        network_val = re.search("(globe)|(smart)",csq_reply.lower()).group(0)
+        network_val = re.search("(globe)|(smart)",network_reply.lower()).group(0)
         return 1
     except ValueError, AttributeError:
         return 0

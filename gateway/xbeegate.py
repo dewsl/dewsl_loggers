@@ -129,8 +129,6 @@ def wakeup(xbee):
 	# ser.close()
 	return
 
-        sys.exit()
-
 def receive(xbee):
 	
 	paddr=""
@@ -142,6 +140,14 @@ def receive(xbee):
 
 	router_tilt_soms_msg = {}
 	voltage_info = {}
+
+	msg_ctr = {}
+	for n in net_info["router_addr_short_by_name"].keys():
+		msg_ctr[n] = dict()
+		msg_ctr[n]["total"] = 20
+		msg_ctr[n]["received"] = 0
+		router_tilt_soms_msg[n] = ""
+	print msg_ctr
 	
 	while True:
 		print "\nwaiting for packets ... "
@@ -193,21 +199,30 @@ def receive(xbee):
 
 			msg = rf[hashStart+1:-1]
 			msg = re.sub('[^A-Zxyabc0-9\*]',"",msg)
+			rf = re.sub('[^A-Zxyabc0-9\*<>\#\/]',"",rf)
 
-			try:
-				# append message to existing packet
-				router_tilt_soms_msg[router_name] += msg
-				
-				if (rf.find("<") != -1):
-					# end of sms msg
-					router_tilt_soms_msg[router_name] += ","
-			except KeyError:
-				# new packet
+			if re.search("\d{2,3}>>\d{1,2}\/\d{1,2}#.*<<",rf):
+				print ">> Sending complete message"
+				# counters = re.serach("\d{1,2}\/\d{1,2}",rf).group(0).split("/")
+				# print counters
+				# msg_ctr[router_name]["total"] = int(counters[1])
+				# msg_ctr[router_name]["received"]
+				# msg_ctr[router_name] = dict() 
+
 				router_tilt_soms_msg[router_name] = msg
-			
-		# exit routine here for coding
-		
-			
+				common.save_sms_to_memory(router_tilt_soms_msg[router_name])
+
+			elif re.search("\d{2,3}>>\d{1,2}\/\d{1,2}#.*",rf):
+				router_tilt_soms_msg[router_name] = msg
+			elif re.search(".*<<",rf):
+				router_tilt_soms_msg[router_name] += msg
+				print "Sending at end of message"
+				common.save_sms_to_memory(router_tilt_soms_msg[router_name])
+			elif re.search(".*",rf):
+				router_tilt_soms_msg[router_name] += msg
+			else:
+				print "::: unrecognized"
+
 	return router_tilt_soms_msg, voltage_info
 
 def get_arguments():
@@ -233,7 +248,11 @@ class SampleTimeoutException(Exception):
 def signal_handler(signum, frame):
 	raise SampleTimeoutException("Timed out!")
 
-def routine(xbee):
+def routine(xbee = None):
+
+	if not xbee:
+		xbee = get_xbee_handle()
+
 	reset(xbee)
 	time.sleep(5)
 	rssi_info = get_rssi(xbee)
@@ -250,13 +269,13 @@ def routine(xbee):
 	# except KeyboardInterrupt:
 		# print '>> Uesr timeout!'
 
-	for key in router_tsm_msgs.keys():
-		for msg in router_tsm_msgs[key].split(",")[:-1]:
-			# msg_cleaned = re.sub('[^A-Zxyabc0-9\*]',"",msg)
-			# print msg_cleaned
-			print msg
-			common.save_sms_to_memory(msg)
-
+	# for key in router_tsm_msgs.keys():
+	# 	for msg in router_tsm_msgs[key].split(",")[:-1]:
+	# 		# msg_cleaned = re.sub('[^A-Zxyabc0-9\*]',"",msg)
+	# 		# print msg_cleaned
+	# 		print msg
+	# 		common.save_sms_to_memory(msg)
+ 
 	# rssi and voltage message
 	sc = common.get_config_handle()
 	site_code = sc['coordinfo']['name']
@@ -270,12 +289,7 @@ def routine(xbee):
 	print rssi_msg
 	common.save_sms_to_memory(rssi_msg)
 
-def main():
-	# get_network_info()
-	# print common.mc
-	lockscript.get_lock('xbeegate')
-	args = get_arguments()
-
+def get_xbee_handle():
 	sc = common.get_config_handle()
 
 	try:
@@ -286,6 +300,15 @@ def main():
 		# send error message to server here
 		sys.exit()
 
+	return xbee
+
+def main():
+	# get_network_info()
+	# print common.mc
+	lockscript.get_lock('xbeegate')
+	args = get_arguments()
+
+	xbee = get_xbee_handle()
 	
 	# get_rssi(xbee)
 	if args.get_network_info:

@@ -12,12 +12,11 @@ timeout = 5
 smartport = /dev/gsmusbport
 
 [coordinfo]
-name = BTO
+name = LUN
 
 [serverinfo]
-simnum = 639176023735
 #simnum = 639176321023
-#smart = 639988448687 
+simnum = 639988448687
 
 [gsmio]
 port = /dev/gsmusbport
@@ -27,6 +26,7 @@ sendretry = 15
 resetpin = 38
 statpin = 37
 ripin = 35
+purgeafter = 60
 
 [mysql]
 sentbuffersize = 15
@@ -45,7 +45,7 @@ timeout = 5
 [xbee]
 port = /dev/xbeeusbport
 baud = 9600
-sampletimeout = 90
+sampletimeout = 120
 
 [rain]
 mmpertip = 0.5

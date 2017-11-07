@@ -9,7 +9,6 @@ import argparse
 import raindetect as rd
 
 def main():
-
     parser = argparse.ArgumentParser(description = "Health routine [-options]")
     parser.add_argument("-r", "--read_only", 
         help = "do not save data to memory", action = 'store_true')
@@ -22,17 +21,19 @@ def main():
         print error
         sys.exit()
 
+    mc = common.get_mc_server()
 
     ts = dt.today()
     ts_str = ts.strftime("%x,%X,")
 
     try:
-        csq = str(gsmio.check_csq())
-    except AttributeError:
+        # csq = str(gsmio.check_csq())
+        csq = int(mc.get("csq_val"))
+        csq = str(csq)
+    except TypeError:
         print ">> Error reading GSM CSQ. Setting CSQ to error value"
         csq = "98"
 
-    mc = common.get_mc_server()
     cfg = mc.get("server_config")
 
     mmpertip = float(cfg['rain']['mmpertip'])
@@ -46,6 +47,7 @@ def main():
     msgtosend += csq
 
     if not args.read_only:
+        print ">> Saving to memory:"
         print msgtosend
         common.save_sms_to_memory(msgtosend)
     
