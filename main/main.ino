@@ -1,7 +1,11 @@
 #include "variant.h"
 #include <due_can.h>
 #include <SD.h>
+#include <Wire.h>
+#include <Adafruit_INA219.h>
 // #include <avr/pgmspace.h>
+#include <XBee.h>
+
 
 #define VERBOSE 0
 
@@ -25,6 +29,20 @@
 #define DATALOGGER Serial1
 
 #define CAN_ARRAY_BUFFER_SIZE 100
+
+#define XBLEN 83 //paylenght+2(identifier)+3(randnum)+1(null)
+#define PAYLEN 80
+
+XBee xbee = XBee();
+
+uint8_t payload[XBLEN];
+XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40F62F8A);
+ZBTxRequest zbTx = ZBTxRequest(addr64, payload, sizeof(payload));
+ZBTxStatusResponse txStatus = ZBTxStatusResponse();
+XBeeResponse response = XBeeResponse();
+ZBRxResponse rx = ZBRxResponse();
+
+int xbFlag=0;
 
 // SD-related / CONFIG-related
 int g_gids[40][2];
@@ -55,9 +73,15 @@ int t_num_message_type = 6; // 5 - ilang klase ng text messages ang gagawin
   // i.e. x - axel 1 , y - accel 2, b - raw soms , c - calib soms, ff - piezo, d - diagnostics
 
 
+//current sensor
+
+
+Adafruit_INA219 ina219;
+
+
+
 
 bool ate=true;
-
 /* 
   Function: setup
     
@@ -91,6 +115,8 @@ bool ate=true;
 */
 void setup() {
   Serial.begin(BAUDRATE);
+  DATALOGGER.begin(9600);
+  ina219.begin();
   Serial.println("setup");
   pinMode(RELAYPIN, OUTPUT);
   init_can();
@@ -104,82 +130,117 @@ void setup() {
 //Function: loop
 // Run the <getATcommand in loop.
 void loop(){
-
-  getATCommand();
+  int timestart = millis();
+  int timenow = millis();
+  while ( timenow - timestart < 10000){
+    timenow = millis();
+    if (Serial.available()){
+      getATCommand();  
+    }
+    else if (DATALOGGER.available()) {
+      wait_arq_cmd();
+    }
+  }
+  
+  process();
+  
+//  poll_data();
+  delay (1000);
 }
 //Function: getATCommand
 // Take in-line serial input and execute AT command 
 void getATCommand(){
   String serial_line, command;
   int i_equals = 0;
-  
-  do{
-    serial_line = Serial.readStringUntil('\r\n');
-  } while(serial_line == "");
-  serial_line.toUpperCase();
-  serial_line.replace("\r","");
+  if (Serial.available()) {
+    do{
+      serial_line = Serial.readStringUntil('\r\n');
+    } while(serial_line == "");
+    
+    serial_line.toUpperCase();
+    serial_line.replace("\r","");
 
-  // echo command if ate is set, default true
-  if (ate) Serial.println(serial_line);
-    i_equals = serial_line.indexOf('=');
-  if (i_equals == -1) command = serial_line;
-  else command = serial_line.substring(0,i_equals);
-  
-  if (command == ATCMD)
-    Serial.println(OKSTR);
-  else if (command == ATECMDTRUE){
-    ate = true;
-    Serial.println(OKSTR);
-  }
-  else if (command == ATECMDFALSE){
-    ate = false;
-    Serial.println(OKSTR);
-  }
-  else if (command == ATRCVCAN){
-    Serial.println(OKSTR);
-  }
-  else if (command == ATGETSENSORDATA){
-    read_data_from_column(g_final_dump, 1);
-    Serial.println(OKSTR);
-  }
-  else if (command == "AT+POLL"){
-    read_data_from_column(g_final_dump, 1);
-    build_txt_msgs(g_final_dump, text_message);
-    Serial.println(OKSTR);
-  }
-  else if (command == ATSNIFFCAN){
-    while (true){
+    // echo command if ate is set, default true
+    if (ate) Serial.println(serial_line);
+      i_equals = serial_line.indexOf('=');
+    if (i_equals == -1) command = serial_line;
+    else command = serial_line.substring(0,i_equals);
+    
+    if (command == ATCMD)
+      Serial.println(OKSTR);
+    else if (command == ATECMDTRUE){
+      ate = true;
       Serial.println(OKSTR);
     }
-  }
-  else if (command == ATDUMP){
-    Serial.print("g_final_dump: ");
-    Serial.println(g_final_dump);
-    Serial.println(OKSTR);
-  }
-  else if (command == ATSD){
-    String conf;
-    init_sd();
-    open_config();
-    Serial.println(F(OKSTR));
-  }
-  else if (command == "AT+SEND"){
-    char *token1 = strtok(text_message,"+");
-    while (token1 != NULL){
-      send_data(false, token1);
-      token1 = strtok(NULL, "+");
+    else if (command == ATECMDFALSE){
+      ate = false;
+      Serial.println(OKSTR);
+    }
+    else if (command == ATRCVCAN){
+      Serial.println(OKSTR);
+    }
+    else if (command == ATGETSENSORDATA){
+      read_data_from_column(g_final_dump, 1);
+      Serial.println(OKSTR);
+    }
+    else if (command == "AT+POLL"){
+      read_data_from_column(g_final_dump, 1);
+      build_txt_msgs(g_final_dump, text_message);
+      Serial.println(OKSTR);
+    }
+    else if (command == ATSNIFFCAN){
+      while (true){
+        Serial.println(OKSTR);
+      }
+    }
+    else if (command == ATDUMP){
+      Serial.print("g_final_dump: ");
+      Serial.println(g_final_dump);
+      Serial.println(OKSTR);
+    }
+    else if (command == ATSD){
+      String conf;
+      init_sd();
+      open_config();
+      Serial.println(F(OKSTR));
+    }
+    else if (command == "AT+SEND"){
+      char *token1 = strtok(text_message,"+");
+      while (token1 != NULL){
+        send_data(false, token1);
+        token1 = strtok(NULL, "+");
+      }
+    }
+    else if (command == "AT+CURRENT"){
+      read_current();
+    }
+    else if (command == "AT+VOLTAGE"){
+        read_voltage();
+    }
+    // else if (command == "AT+SAVE"){
+
+    // }
+    else{
+      Serial.println(ERRORSTR);
     }
   }
-  // else if (command == "AT+SAVE"){
-
-  // }
-  else{
-    Serial.println(ERRORSTR);
-  }
+  else 
+    return;
 }
 
 //Function: getArguments
 // Read in-line serial AT command.
+
+void process(){
+  Serial.println("process woooooooooooooh");
+ //read_data_from_column(g_final_dump, 1);
+ //build_txt_msgs(g_final_dump, text_message); 
+
+  //send data
+  send_thru_xbee(g_final_dump);
+  //ioff na everything
+  
+ }
 void getArguments(String at_cmd, String *arguments){
   int i_from = 0, i_to = 0, i_arg = 0;
   bool f_exit = true;
@@ -281,6 +342,28 @@ void read_data_from_column(char* column_data, int sensor_version){
     - <writeData>
 */
 
+void wait_arq_cmd(){
+  String serial_line, command;  
+  Serial.println("poll naaaa~");
+
+  do{
+    serial_line = DATALOGGER.readStringUntil('\r\n');
+  } while(serial_line == "");
+    
+  serial_line.toUpperCase();
+  serial_line.replace("\r","");
+
+  // echo command if ate is set, default true
+//  if (ate) Serial.println(serial_line);
+//    i_equals = serial_line.indexOf('=');
+//  if (i_equals == -1) command = serial_line;
+//    else command = serial_line.substring(0,i_equals);
+  command = serial_line;
+  if (command == "ARQCMD6T")
+    Serial.println(OKSTR);
+  else
+    return;
+}
 
 void build_txt_msgs(char* source, char* destination){
   char *token1,*token2;
@@ -752,3 +835,121 @@ void send_data(bool isDebug, char* columnData){
   }
 
 } 
+
+void read_current(){
+  float current_mA = 0;
+  current_mA = ina219.getCurrent_mA();
+  Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
+}
+
+
+void read_voltage(){
+  float shuntvoltage = 0;
+  float busvoltage = 0;
+  float loadvoltage = 0;
+
+  shuntvoltage = ina219.getShuntVoltage_mV();
+  busvoltage = ina219.getBusVoltage_V();
+  loadvoltage = busvoltage + (shuntvoltage / 1000);
+  
+  Serial.print("Bus Voltage:   "); Serial.print(busvoltage); Serial.println(" V");
+  Serial.print("Shunt Voltage: "); Serial.print(shuntvoltage); Serial.println(" mV");
+  Serial.print("Load Voltage:  "); Serial.print(loadvoltage); Serial.println(" V");
+}
+
+void send_thru_xbee(char* load_data) {
+  int count_success=0;
+  int verify_send[24]={0};
+  Serial.println("now in sendMessage");
+  delay(500);
+  Serial.println(F("Start"));
+  int length=strlen(load_data);
+  
+  int exc=length%PAYLEN;
+  int parts=length/PAYLEN;
+  Serial.print(F("length="));
+  Serial.println(length);
+  Serial.print(F("parts="));
+  Serial.println(parts);
+  Serial.print(F("excess="));
+  Serial.println(exc);
+  int datalen = 0;
+  int i=0, j=0;    
+  for (i=0;i<parts+1;i++){
+    for (j=0;j<XBLEN+1;j++) payload[j]=0x00;
+
+    delay(500);
+       
+    for (j=0;j<PAYLEN;j++){
+      payload[j]=(uint8_t)load_data[datalen];
+      datalen++;
+    }
+
+    Serial.println(datalen);  
+    Serial.println(F("sending before xbee.send"));
+      
+    xbee.send(zbTx);
+    Serial.println(F("Packet sent"));
+    if (xbee.readPacket(1000)) {
+      Serial.println(F("Got a response!"));
+      if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
+        xbee.getResponse().getZBTxStatusResponse(txStatus);
+        if (txStatus.getDeliveryStatus() == SUCCESS) {
+          Serial.println(F("Success!"));
+          if (verify_send[i] == 0){
+            count_success=count_success+1;
+            verify_send[i]=1;
+            if (count_success==parts+1){
+            }
+          } 
+        } 
+        else {
+          Serial.println(F("myb no pwr"));
+        }
+      } 
+      else{
+      }
+    } 
+    else if (xbee.getResponse().isError()) {
+      Serial.println(F("Error1"));
+    } 
+    else {
+      Serial.println(F("Error2"));
+    }
+  }
+  Serial.println(F("exit send"));
+  delay(1000);
+  return;
+}
+
+void get_xbee_flag(){
+  Serial.println(F("Wait for xb"));  
+  xbee.readPacket();
+    
+  if (xbee.getResponse().isAvailable()) {
+    // got something
+    Serial.println(F("We got something!"));
+      
+    if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
+      // got a zb rx packet
+      Serial.println(F("Izz zb rx packet!"));
+        
+      // now fill our zb rx class
+      xbee.getResponse().getZBRxResponse(rx);
+      for (int i = 0; i < rx.getDataLength (); i++)
+        Serial.print((char) rx.getData(i));
+          
+        xbFlag = 1;
+        Serial.println(F("xbFlag is set"));
+          
+        if (rx.getOption() == ZB_PACKET_ACKNOWLEDGED) {
+          Serial.println(F("And sender got an ACK"));
+        } else {
+          Serial.println(F("But sender did not receive ACK"));
+        }
+      }
+  }
+  return;
+  
+  }
+
