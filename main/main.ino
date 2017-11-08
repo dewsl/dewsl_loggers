@@ -57,8 +57,6 @@ int g_cd_counter = 0;
 
 
 // CAN-related
-// char *g_temp_dump = {};
-// char *g_final_dump = {};
 char g_temp_dump[1250];
 char g_final_dump[2500];
 char g_no_gids_dump[2500];
@@ -117,7 +115,7 @@ void setup() {
   Serial.begin(BAUDRATE);
   DATALOGGER.begin(9600);
   ina219.begin();
-  Serial.println("setup");
+  // Serial.println("setup");
   pinMode(RELAYPIN, OUTPUT);
   init_can();
   init_char_arrays();
@@ -125,10 +123,10 @@ void setup() {
   init_sd(); 
   open_config();
   print_stored_config();
-  Serial.println("Receiving AT Command. . .");
+  // Serial.println("Receiving AT Command. . .");
 }
 //Function: loop
-// Run the <getATcommand in loop.
+// Run the <getATcommand> in loop.
 void loop(){
   int timestart = millis();
   int timenow = millis();
@@ -138,15 +136,13 @@ void loop(){
       getATCommand();  
     }
     else if (DATALOGGER.available()) {
-      wait_arq_cmd();
+      Serial.println("DATALOGGER is available.");
+      process(wait_arq_cmd());
     }
   }
-  
-  process();
-  
-//  poll_data();
   delay (1000);
 }
+
 //Function: getATCommand
 // Take in-line serial input and execute AT command 
 void getATCommand(){
@@ -180,11 +176,11 @@ void getATCommand(){
       Serial.println(OKSTR);
     }
     else if (command == ATGETSENSORDATA){
-      read_data_from_column(g_final_dump, 1);
+      read_data_from_column(g_final_dump, g_sensor_version,1);
       Serial.println(OKSTR);
     }
     else if (command == "AT+POLL"){
-      read_data_from_column(g_final_dump, 1);
+      read_data_from_column(g_final_dump, g_sensor_version,1);
       build_txt_msgs(g_final_dump, text_message);
       Serial.println(OKSTR);
     }
@@ -217,9 +213,6 @@ void getATCommand(){
     else if (command == "AT+VOLTAGE"){
         read_voltage();
     }
-    // else if (command == "AT+SAVE"){
-
-    // }
     else{
       Serial.println(ERRORSTR);
     }
@@ -228,19 +221,19 @@ void getATCommand(){
     return;
 }
 
-//Function: getArguments
-// Read in-line serial AT command.
 
-void process(){
-  Serial.println("process woooooooooooooh");
- //read_data_from_column(g_final_dump, 1);
- //build_txt_msgs(g_final_dump, text_message); 
 
+void process(int types){
+  // Serial.println("process woooooooooooooh");
+  read_data_from_column(g_final_dump, g_sensor_version, types);
+  build_txt_msgs(g_final_dump, text_message); 
   //send data
   send_thru_xbee(g_final_dump);
   //ioff na everything
-  
  }
+
+ //Function: getArguments
+// Read in-line serial AT command.
 void getArguments(String at_cmd, String *arguments){
   int i_from = 0, i_to = 0, i_arg = 0;
   bool f_exit = true;
@@ -277,12 +270,32 @@ void turn_off_column(){
   delay(1000);
 }
 
-void read_data_from_column(char* column_data, int sensor_version){
+//Function: read_data_from_column
+// Collect data from sensors.
+void read_data_from_column(char* column_data, int sensor_version, int types){
+  if (sensor_version == 2){
+    get_data(32,1,column_data);
+    get_data(33,1,column_data);
+    if (types == 2){
+      get_data(110,1,column_data);
+      get_data(112,1,column_data);
+    }
+  } else if (sensor_version == 3){
     get_data(11,1,column_data);
     get_data(12,1,column_data);
+    get_data(22,1,column_data);
+    if (types == 2){
+      get_data(111,1,column_data);
+      get_data(113,1,column_data);
+    }
+  } else if (sensor_version == 1){
+    Serial.println("Not yet supported");
+  }
+
+
     // get_data(110,1,column_data);
     // get_data(113,1,column_data);
-    get_data(22,1,column_data);
+
     // get_data(113,1,column_data);
 }
 
@@ -341,29 +354,6 @@ void read_data_from_column(char* column_data, int sensor_version){
     
     - <writeData>
 */
-
-void wait_arq_cmd(){
-  String serial_line, command;  
-  Serial.println("poll naaaa~");
-
-  do{
-    serial_line = DATALOGGER.readStringUntil('\r\n');
-  } while(serial_line == "");
-    
-  serial_line.toUpperCase();
-  serial_line.replace("\r","");
-
-  // echo command if ate is set, default true
-//  if (ate) Serial.println(serial_line);
-//    i_equals = serial_line.indexOf('=');
-//  if (i_equals == -1) command = serial_line;
-//    else command = serial_line.substring(0,i_equals);
-  command = serial_line;
-  if (command == "ARQCMD6T")
-    Serial.println(OKSTR);
-  else
-    return;
-}
 
 void build_txt_msgs(char* source, char* destination){
   char *token1,*token2;
@@ -772,6 +762,50 @@ int check_cutoff(char idf){
     }
   }
   return cutoff;
+}
+
+/* 
+  Function: check_cutoff
+
+    Determine the type of data expected from the sensors through the command
+  
+  Parameters:
+  
+    n/a
+  
+  Returns:
+  
+    1 - tilt
+
+    2 - tilt and soil moisture
+
+  
+  See Also:
+  
+    - <loop>
+*/
+int wait_arq_cmd(){
+  String serial_line, command;  
+  Serial.println("poll naaaa~");
+
+  do{
+    serial_line = DATALOGGER.readStringUntil('\r\n');
+  } while(serial_line == "");
+    
+  serial_line.toUpperCase();
+  serial_line.replace("\r","");
+
+  command = serial_line;
+  if (command == "ARQCMD6T"){   // kailangang ayusin ito na CMD6T or CMD6S lang tinitingnan
+    Serial.println(OKSTR);
+    return 1; 
+  }
+  else if ( command == "ARQCMD6S"){
+    Serial.println(OKSTR);
+    return 2;
+  }
+  else
+    return 0;
 }
 
 void no_data_parsed(char* message){
