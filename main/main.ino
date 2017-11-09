@@ -115,11 +115,11 @@ bool ate=true;
 
     <init_can> <init_strings> <init_gids> <init_sd> <open_config>
 */
+
 void setup() {
   Serial.begin(BAUDRATE);
   DATALOGGER.begin(9600);
   ina219.begin();
-  // Serial.println("setup");
   pinMode(RELAYPIN, OUTPUT);
   init_can();
   init_char_arrays();
@@ -127,7 +127,6 @@ void setup() {
   init_sd(); 
   open_config();
   print_stored_config();
-  // Serial.println("Receiving AT Command. . .");
 }
 //Function: loop
 // Run the <getATcommand> in loop.
@@ -143,7 +142,6 @@ void loop(){
       Serial.println("DATALOGGER is available.");
       operation(wait_arq_cmd(), comm_mode);
     }
-    
   }
   operation(1, comm_mode);
   shut_down();
@@ -208,6 +206,7 @@ void getATCommand(){
       Serial.println(F(OKSTR));
     }
     else if (command == "AT+SEND"){
+      Serial.println(text_message);
       char *token1 = strtok(text_message,"+");
       while (token1 != NULL){
         send_data(false, token1);
@@ -231,15 +230,13 @@ void getATCommand(){
 
 
 void operation(int types, int mode){
-  // Serial.println("process woooooooooooooh");
-  //ask kuya kennex pano yung timestamp niya
-  strcpy(g_final_dump, "QWERTYUIOPASDFGHJKLZXCVBNMQWERTYUIOPASDFGHJKLZXCVBNMQWERTYUIOPASDFGHJKZXCVBNMERFGTHUJIKDFGHJKERTGHJKDFGHJXCVBN");
-  //read_data_from_column(g_final_dump, g_sensor_version, types);
-  //build_txt_msgs(g_final_dump, text_message); 
-  //send data
-  if (mode == 1)
+  read_data_from_column(g_final_dump, g_sensor_version, types);
+  build_txt_msgs(g_final_dump, text_message); 
+  // Serial.println("txt_msgs built");
+  if (mode == 1){
+    Serial.println("mode 1");
     send_data(false, g_final_dump);
-  else if(mode == 2)
+  }else if(mode == 2)
     send_thru_xbee(g_final_dump);
   else //default
     send_data(true, g_final_dump);
@@ -383,7 +380,9 @@ void build_txt_msgs(char* source, char* destination){
   int i,j;
   int token_length = 0;
 
+  // Serial.println("before getting timestamp");
   String timestamp = getTimestamp();
+  Serial.println(timestamp);
   //I added this kuya kennex
   char Ctimestamp[12] = "";
     for (int i = 0; i < 12; i++) {
@@ -426,18 +425,19 @@ void build_txt_msgs(char* source, char* destination){
         c++;
         token1++;
         if (c == (token_length)){
-          // Serial.println("copied enough characters.");
+
           break;
         }
       }
       strncat(dest,"*",1);
-      strncat(dest,"__timestamp_",12);
+      // strncat(dest,"__timestamp_",12);
+      strncat(dest,Ctimestamp,12);
       strncat(dest,"+",1);
     }
     num_text_to_send = num_text_to_send + num_text_per_dtype;
     token1 = strtok(NULL, "+");
   }
-
+  // Serial.println(dest);
   token2 = strtok(dest, "+");
   c=0;
   while( token2 != NULL ){
@@ -452,11 +452,15 @@ void build_txt_msgs(char* source, char* destination){
     strncat(pad,temp,4);
     sprintf(temp,"%02d#",num_text_to_send);
     strncat(pad,temp,4);
+    Serial.println(token2);
     strncpy(token2,pad,11);
+    Serial.println(token2);
     strncat(destination,token2, strlen(token2));
     strncat(destination, "+", 2);
     token2 = strtok(NULL, "+");
   }
+  // Serial.println(destination);
+  // Serial.println("build_txt_msgs finished.!!!");
 }
 
 /* 
@@ -1014,18 +1018,26 @@ void get_xbee_flag(){
   }
 
 String getTimestamp(){
-    powerM.flush();
+    // Serial.println("before flush");
+    // powerM.flush();
+    // Serial.println("after flush");
     char timestamp[20] = "";    
     powerM.println("PM+R");
     timestart = millis();
     timenow = millis();
-    while (!powerM.available()) {
-      while ( timenow - timestart < 7000 ) {
+    while ( (!powerM.available()) && ( timenow - timestart < 7000 ) ) {
+      // while ( timenow - timestart < 7000 ) {
           timenow = millis();
-      }
+      // }
     }
-    powerM.readBytesUntil('\n', timestamp, 20);
-    return timestamp; 
+
+    if (powerM.available()){
+      powerM.readBytesUntil('\n', timestamp, 20);
+      return timestamp; 
+    } else {
+      return String("1001011000");
+    }
+
 }
 
 void shut_down(){
