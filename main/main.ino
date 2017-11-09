@@ -1,3 +1,4 @@
+
 #include "variant.h"
 #include <due_can.h>
 #include <SD.h>
@@ -27,14 +28,17 @@
 #define BAUDRATE 9600
 
 #define DATALOGGER Serial1
+#define powerM Serial2
 
 #define CAN_ARRAY_BUFFER_SIZE 100
 
 #define XBLEN 83 //paylenght+2(identifier)+3(randnum)+1(null)
 #define PAYLEN 80
 
+#define comm_mode 2 // 1 for ARQ, 2 XBEE
 XBee xbee = XBee();
-
+long timestart = 0;
+long timenow = 0;
 uint8_t payload[XBLEN];
 XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40F62F8A);
 ZBTxRequest zbTx = ZBTxRequest(addr64, payload, sizeof(payload));
@@ -130,16 +134,19 @@ void setup() {
 void loop(){
   int timestart = millis();
   int timenow = millis();
-  while ( timenow - timestart < 10000){
+  while ( timenow - timestart < 20000){
     timenow = millis();
     if (Serial.available()){
       getATCommand();  
     }
     else if (DATALOGGER.available()) {
       Serial.println("DATALOGGER is available.");
-      process(wait_arq_cmd());
+      operation(wait_arq_cmd(), comm_mode);
     }
+    
   }
+  operation(1, comm_mode);
+  shut_down();
   delay (1000);
 }
 
@@ -223,12 +230,19 @@ void getATCommand(){
 
 
 
-void process(int types){
+void operation(int types, int mode){
   // Serial.println("process woooooooooooooh");
-  read_data_from_column(g_final_dump, g_sensor_version, types);
-  build_txt_msgs(g_final_dump, text_message); 
+  //ask kuya kennex pano yung timestamp niya
+  strcpy(g_final_dump, "QWERTYUIOPASDFGHJKLZXCVBNMQWERTYUIOPASDFGHJKLZXCVBNMQWERTYUIOPASDFGHJKZXCVBNMERFGTHUJIKDFGHJKERTGHJKDFGHJXCVBN");
+  //read_data_from_column(g_final_dump, g_sensor_version, types);
+  //build_txt_msgs(g_final_dump, text_message); 
   //send data
-  send_thru_xbee(g_final_dump);
+  if (mode == 1)
+    send_data(false, g_final_dump);
+  else if(mode == 2)
+    send_thru_xbee(g_final_dump);
+  else //default
+    send_data(true, g_final_dump);
   //ioff na everything
  }
 
@@ -356,6 +370,7 @@ void read_data_from_column(char* column_data, int sensor_version, int types){
 */
 
 void build_txt_msgs(char* source, char* destination){
+
   char *token1,*token2;
   char dest[5000] = {};
   char idf = '0';
@@ -367,6 +382,17 @@ void build_txt_msgs(char* source, char* destination){
   int name_len = 0,char_cnt = 0,c=0;
   int i,j;
   int token_length = 0;
+
+  String timestamp = getTimestamp();
+  //I added this kuya kennex
+  char Ctimestamp[12] = "";
+    for (int i = 0; i < 12; i++) {
+        Ctimestamp[i] = timestamp[i];
+    }
+    Ctimestamp[12] = '\0';
+  // Use Ctimestamp
+  ///////
+  
   token1 = strtok(source, "+");
   while ( token1 != NULL){
     c=0;
@@ -986,4 +1012,23 @@ void get_xbee_flag(){
   return;
   
   }
+
+String getTimestamp(){
+    powerM.flush();
+    char timestamp[20] = "";    
+    powerM.println("PM+R");
+    timestart = millis();
+    timenow = millis();
+    while (!powerM.available()) {
+      while ( timenow - timestart < 7000 ) {
+          timenow = millis();
+      }
+    }
+    powerM.readBytesUntil('\n', timestamp, 20);
+    return timestamp; 
+}
+
+void shut_down(){
+    powerM.println("PM+D");
+}
 
