@@ -217,7 +217,7 @@ void getATCommand(){
       read_current();
     }
     else if (command == "AT+VOLTAGE"){
-        read_voltage();
+      read_voltage();
     }
     else{
       Serial.println(ERRORSTR);
@@ -234,12 +234,15 @@ void operation(int types, int mode){
   build_txt_msgs(g_final_dump, text_message); 
   // Serial.println("txt_msgs built");
   if (mode == 1){
-    Serial.println("mode 1");
-    send_data(false, g_final_dump);
+    char *token1 = strtok(text_message,"+");
+    while (token1 != NULL){
+      send_data(false, token1);
+      token1 = strtok(NULL, "+");
+    }
   }else if(mode == 2)
-    send_thru_xbee(g_final_dump);
+    send_thru_xbee(g_final_dump);// mali ito.
   else //default
-    send_data(true, g_final_dump);
+    send_data(true, g_final_dump); // mali ito.
   //ioff na everything
  }
 
@@ -380,17 +383,13 @@ void build_txt_msgs(char* source, char* destination){
   int i,j;
   int token_length = 0;
 
-  // Serial.println("before getting timestamp");
   String timestamp = getTimestamp();
-  Serial.println(timestamp);
-  //I added this kuya kennex
   char Ctimestamp[12] = "";
-    for (int i = 0; i < 12; i++) {
-        Ctimestamp[i] = timestamp[i];
-    }
-    Ctimestamp[12] = '\0';
-  // Use Ctimestamp
-  ///////
+  for (int i = 0; i < 12; i++) {
+      Ctimestamp[i] = timestamp[i];
+  }
+  Ctimestamp[12] = '\0';
+
   
   token1 = strtok(source, "+");
   while ( token1 != NULL){
@@ -430,14 +429,12 @@ void build_txt_msgs(char* source, char* destination){
         }
       }
       strncat(dest,"*",1);
-      // strncat(dest,"__timestamp_",12);
       strncat(dest,Ctimestamp,12);
       strncat(dest,"+",1);
     }
     num_text_to_send = num_text_to_send + num_text_per_dtype;
     token1 = strtok(NULL, "+");
   }
-  // Serial.println(dest);
   token2 = strtok(dest, "+");
   c=0;
   while( token2 != NULL ){
@@ -446,21 +443,17 @@ void build_txt_msgs(char* source, char* destination){
     idf = check_identifier(token1,2);
     identifier[0] = idf;
     identifier[1] = '\0';
-    sprintf(pad, "%02d", char_cnt);
+    sprintf(pad, "%03d", char_cnt);
     strncat(pad,">>",3);
     sprintf(temp, "%02d/", c);
     strncat(pad,temp,4);
     sprintf(temp,"%02d#",num_text_to_send);
     strncat(pad,temp,4);
-    Serial.println(token2);
-    strncpy(token2,pad,11);
-    Serial.println(token2);
+    strncpy(token2,pad,11);//
     strncat(destination,token2, strlen(token2));
     strncat(destination, "+", 2);
     token2 = strtok(NULL, "+");
   }
-  // Serial.println(destination);
-  // Serial.println("build_txt_msgs finished.!!!");
 }
 
 /* 
@@ -663,7 +656,6 @@ void message_content_parameters(int* parameters, char* source_by_dtype){
   parameters[2] = cutoff_length;
   parameters[3] = remove_extra_characters_cmd;
 }
-
 
 void message_counter(int* parameters, char* source_by_dtype){
   int tokens_count = 0;
