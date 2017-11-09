@@ -35,7 +35,7 @@
 #define XBLEN 83 //paylenght+2(identifier)+3(randnum)+1(null)
 #define PAYLEN 80
 
-#define comm_mode 2 // 1 for ARQ, 2 XBEE
+#define comm_mode 1 // 1 for ARQ, 2 XBEE
 XBee xbee = XBee();
 long timestart = 0;
 long timenow = 0;
@@ -139,7 +139,7 @@ void loop(){
       getATCommand();  
     }
     else if (DATALOGGER.available()) {
-      Serial.println("DATALOGGER is available.");
+      // Serial.println("DATALOGGER is available.");
       operation(wait_arq_cmd(), comm_mode);
     }
   }
@@ -228,14 +228,13 @@ void getATCommand(){
 }
 
 
-
 void operation(int types, int mode){
   read_data_from_column(g_final_dump, g_sensor_version, types);
   build_txt_msgs(g_final_dump, text_message); 
-  // Serial.println("txt_msgs built");
   if (mode == 1){
     char *token1 = strtok(text_message,"+");
     while (token1 != NULL){
+      Serial.println(token1);
       send_data(false, token1);
       token1 = strtok(NULL, "+");
     }
@@ -430,6 +429,7 @@ void build_txt_msgs(char* source, char* destination){
       }
       strncat(dest,"*",1);
       strncat(dest,Ctimestamp,12);
+      strncat(dest,"<<",2);
       strncat(dest,"+",1);
     }
     num_text_to_send = num_text_to_send + num_text_per_dtype;
@@ -449,7 +449,8 @@ void build_txt_msgs(char* source, char* destination){
     strncat(pad,temp,4);
     sprintf(temp,"%02d#",num_text_to_send);
     strncat(pad,temp,4);
-    strncpy(token2,pad,11);//
+    strncpy(token2,pad,11);
+    // strncat(token2,"<<",3);
     strncat(destination,token2, strlen(token2));
     strncat(destination, "+", 2);
     token2 = strtok(NULL, "+");
@@ -806,6 +807,8 @@ int check_cutoff(char idf){
   
     - <loop>
 */
+
+
 int wait_arq_cmd(){
   String serial_line, command;  
   Serial.println("poll naaaa~");
@@ -818,12 +821,16 @@ int wait_arq_cmd(){
   serial_line.replace("\r","");
 
   command = serial_line;
-  if (command == "ARQCMD6T"){   // kailangang ayusin ito na CMD6T or CMD6S lang tinitingnan
+  Serial.print(F("Received command: "));
+  Serial.println(command);
+  // if (command.startsWith("ARQCMD6T")){   // kailangang ayusin ito na CMD6T or CMD6S lang tinitingnan
+  if ((command.charAt(6) == '6') && (command.charAt(7) == 'T')){
+    Serial.println("return 1");
     Serial.println(OKSTR);
     return 1; 
   }
-  else if ( command == "ARQCMD6S"){
-    Serial.println(OKSTR);
+  else if (command.startsWith("ARQCMD6S")){
+    // Serial.println(OKSTR);
     return 2;
   }
   else
@@ -842,7 +849,6 @@ void send_data(bool isDebug, char* columnData){
   int timestart = millis();
   int timenow = millis();
   bool OKFlag = false;
-  Serial.println("nasa send");
   if (isDebug == true){
     Serial.println("debug is true");
     Serial.println(columnData);
@@ -870,7 +876,6 @@ void send_data(bool isDebug, char* columnData){
       DATALOGGER.println(columnData);
       timestart = millis();
       timenow = millis();
-
       while (!DATALOGGER.available()){
         while ( timenow - timestart < 9000 ) {
           timenow = millis();
@@ -1010,17 +1015,12 @@ void get_xbee_flag(){
   }
 
 String getTimestamp(){
-    // Serial.println("before flush");
-    // powerM.flush();
-    // Serial.println("after flush");
     char timestamp[20] = "";    
     powerM.println("PM+R");
     timestart = millis();
     timenow = millis();
     while ( (!powerM.available()) && ( timenow - timestart < 7000 ) ) {
-      // while ( timenow - timestart < 7000 ) {
           timenow = millis();
-      // }
     }
 
     if (powerM.available()){
@@ -1029,7 +1029,6 @@ String getTimestamp(){
     } else {
       return String("1001011000");
     }
-
 }
 
 void shut_down(){
