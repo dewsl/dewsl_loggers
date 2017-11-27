@@ -1,4 +1,10 @@
+//turn on COLUMN sa start palang
+// I SWITCH YUNG PMM PARA MAG ON DUE
+//NO DATA FROM SENSLOPE
+//retrY NANG MARAMI -ok na, 10 to. 
 
+//817,557,526,674,522,777,791,853,855,927,1058,1084,1092,1132,2731//inatb
+//2748,1105,1098,1073,1069,971,942,925,920,888,873,827,807,671// inatc
 #include "variant.h"
 #include <due_can.h>
 #include <SD.h>
@@ -23,7 +29,7 @@
 #define ATSD      "ATSD"
 
 #define RELAYPIN 44
-#define TIMEOUT 2500
+#define TIMEOUT 8000
 #define POLL_TIMEOUT 1500
 #define BAUDRATE 9600
 
@@ -32,31 +38,37 @@
 
 #define CAN_ARRAY_BUFFER_SIZE 100
 
-#define XBLEN 83 //paylenght+2(identifier)+3(randnum)+1(null)
-#define PAYLEN 80
+//#define XBLEN 83 //paylenght+2(identifier)+3(randnum)+1(null)
+//#define PAYLEN 80
 
-#define comm_mode 1 // 1 for ARQ, 2 XBEE
+#define ARQ 0 //if arq, choose 1 
+
+#define comm_mode 2 // 1 for ARQ, 2 XBEE
 XBee xbee = XBee();
 long timestart = 0;
 long timenow = 0;
-uint8_t payload[XBLEN];
-XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40F62F8A);
+//uint8_t payload[XBLEN];
+uint8_t payload[200];
+//XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40F62F8A);
+XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00);
+//XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40F62F77);
+
 ZBTxRequest zbTx = ZBTxRequest(addr64, payload, sizeof(payload));
 ZBTxStatusResponse txStatus = ZBTxStatusResponse();
 XBeeResponse response = XBeeResponse();
 ZBRxResponse rx = ZBRxResponse();
 
 int xbFlag=0;
-
+int datalogger_flag = 0;
 // SD-related / CONFIG-related
 int g_gids[40][2];
-int g_num_of_nodes = 40;
-char g_mastername[6] = "XXXXX";
-char g_timestamp[19] = "171009";
+int g_num_of_nodes = 15;
+char g_mastername[6] = "INATC";
+String g_timestamp = "000000000000";
 int g_chip_select = SS3;
 int g_turn_on_delay = 10; // in centi seconds ( ie. 100 centiseconds = 1 sec) 
 int g_sensor_version = 3;
-int g_datalogger_version = 2;
+int g_datalogger_version = 3;
 int g_cd_counter = 0;
 
 
@@ -76,11 +88,8 @@ int t_num_message_type = 6; // 5 - ilang klase ng text messages ang gagawin
 
 
 //current sensor
-
-
 Adafruit_INA219 ina219;
-
-
+// String arqtime = "000000000000";
 
 
 bool ate=true;
@@ -119,6 +128,10 @@ bool ate=true;
 void setup() {
   Serial.begin(BAUDRATE);
   DATALOGGER.begin(9600);
+  powerM.begin(9600);
+  if (ARQ == 0){
+    xbee.setSerial(DATALOGGER);
+  }
   ina219.begin();
   pinMode(RELAYPIN, OUTPUT);
   init_can();
@@ -137,17 +150,32 @@ void loop(){
     timenow = millis();
     if (Serial.available()){
       getATCommand();  
+      datalogger_flag = 1;
     }
     else if (DATALOGGER.available()) {
-      // Serial.println("DATALOGGER is available.");
-      operation(wait_arq_cmd(), comm_mode);
+      if (ARQ){
+        operation(wait_arq_cmd(), comm_mode);
+        shut_down();
+        datalogger_flag = 1;
+      }
+      else{
+        datalogger_flag =0;
+      }
     }
   }
-  operation(1, comm_mode);
-  shut_down();
+  if (datalogger_flag == 0) {
+    operation(1, comm_mode);
+    Serial.println("Turning off ");
+    shut_down();
+  }
   delay (1000);
 }
 
+void hard_gids(){
+  String str1 = "column1 = 2748,1105,1098,1073,1069,971,942,925,920,888,873,827,807,671";
+  g_num_of_nodes = process_column_ids(str1);
+  
+}
 //Function: getATCommand
 // Take in-line serial input and execute AT command 
 void getATCommand(){
@@ -186,7 +214,7 @@ void getATCommand(){
     }
     else if (command == "AT+POLL"){
       read_data_from_column(g_final_dump, g_sensor_version,1);
-      build_txt_msgs(g_final_dump, text_message);
+      build_txt_msgs(1, g_final_dump, text_message); //di ko to sure
       Serial.println(OKSTR);
     }
     else if (command == ATSNIFFCAN){
@@ -219,6 +247,10 @@ void getATCommand(){
     else if (command == "AT+VOLTAGE"){
       read_voltage();
     }
+    else if (command == "AT+TIMESTAMPPMM"){
+        String timestamp = getTimestamp(2);
+        Serial.println(timestamp);
+    }
     else{
       Serial.println(ERRORSTR);
     }
@@ -227,22 +259,51 @@ void getATCommand(){
     return;
 }
 
+/* 
+  Function: operation
 
+    Remove specific characters unnecessary for data interpretation.
+  
+  Parameters:
+  
+    types - integer that determines the kind of data requested from the sensor
+
+    mode - integer that determines which DATALOGGER receives the sent data. *1- ARQ* *2- Xbee* 
+  
+  Returns:
+  
+    n/a
+  
+  See Also:
+  
+    <loop>
+
+  Global Variables:
+
+    g_final_dump, g_sensor_version, text_message
+*/
 void operation(int types, int mode){
+  int counter= 0;
   read_data_from_column(g_final_dump, g_sensor_version, types);
-  build_txt_msgs(g_final_dump, text_message); 
-  if (mode == 1){
-    char *token1 = strtok(text_message,"+");
-    while (token1 != NULL){
-      Serial.println(token1);
-      send_data(false, token1);
-      token1 = strtok(NULL, "+");
+  build_txt_msgs(mode, g_final_dump, text_message); 
+  char *token1 = strtok(text_message,"+");
+  while (token1 != NULL){
+    Serial.println(token1);
+    if (mode == 1) {
+      send_data(false, token1);    
     }
-  }else if(mode == 2)
-    send_thru_xbee(g_final_dump);// mali ito.
-  else //default
-    send_data(true, g_final_dump); // mali ito.
-  //ioff na everything
+    else if(mode == 2) {
+      while (send_thru_xbee(token1) == false){
+        if (counter == 10)
+          break;
+        counter ++;
+       }
+    }
+    else { //default
+      send_data(true, token1); 
+    }
+    token1 = strtok(NULL, "+");
+  }
  }
 
  //Function: getArguments
@@ -269,22 +330,29 @@ void getArguments(String at_cmd, String *arguments){
   } while(f_exit);
 }
 
-//Function: turn_on_column
-// Assert GPIO ( defined by RELAYPIN ) high to turn on sensor column.
-void turn_on_column(){
-  digitalWrite(RELAYPIN, HIGH);
-  delay(g_turn_on_delay);
-}
 
-//Function: turn_off_column
-// Assert GPIO ( defined by RELAYPIN ) low to turn off sensor column.
-void turn_off_column(){
-  digitalWrite(RELAYPIN, LOW);
-  delay(1000);
-}
+//Group: Data Gathering Functions
+/* 
+  Function: read_data_from_column
 
-//Function: read_data_from_column
-// Collect data from sensors.
+    Sequentially samples data from the sensor column.
+  
+  Parameters:
+  
+    column_data - char array that will store the raw data received from the sensors
+
+    sensor_version - integer that states the sensor version
+
+    types - integer that determines the kind of data requested from the sensor
+  
+  Returns:
+  
+    n/a
+  
+  See Also:
+  
+    <operation>
+*/
 void read_data_from_column(char* column_data, int sensor_version, int types){
   if (sensor_version == 2){
     get_data(32,1,column_data);
@@ -304,13 +372,126 @@ void read_data_from_column(char* column_data, int sensor_version, int types){
   } else if (sensor_version == 1){
     Serial.println("Not yet supported");
   }
-
-
-    // get_data(110,1,column_data);
-    // get_data(113,1,column_data);
-
-    // get_data(113,1,column_data);
 }
+
+//Function: read_current()
+// Reads the current draw from the onboard ina219.
+void read_current(){
+  float current_mA = 0;
+  current_mA = ina219.getCurrent_mA();
+  Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
+}
+
+//Function: read_voltage()
+// Reads the *Bus Voltage*, *Shunt Voltage*, *Load Voltage* from the onboard ina219.
+void read_voltage(){
+  float shuntvoltage = 0;
+  float busvoltage = 0;
+  float loadvoltage = 0;
+
+  shuntvoltage = ina219.getShuntVoltage_mV();
+  busvoltage = ina219.getBusVoltage_V();
+  loadvoltage = busvoltage + (shuntvoltage / 1000);
+  
+  Serial.print("Bus Voltage:   "); Serial.print(busvoltage); Serial.println(" V");
+  Serial.print("Shunt Voltage: "); Serial.print(shuntvoltage); Serial.println(" mV");
+  Serial.print("Load Voltage:  "); Serial.print(loadvoltage); Serial.println(" V");
+}
+
+/* 
+  Function: getTimestamp()
+
+    Extract the timestamp from either the ARQCMD or the Xbee.
+  
+  Parameters:
+  
+    mode - integer Despacito
+  
+  Returns:
+  
+    Despacito
+  
+  See Also:
+  
+    <poll_data>
+*/
+String getTimestamp(int mode){
+  if (mode == 1){ //arq
+    Serial.println("WAT");
+    return g_timestamp;
+  } else if(mode == 2){ //xbee
+    char timestamp[20] = "";    
+    timestart = millis();
+    timenow = millis();
+    powerM.write("PM+R");
+    
+    while ( (!powerM.available()) && ( timenow - timestart < 7000 )){
+      timenow = millis();
+    }
+    if (powerM.available()){
+      powerM.readBytesUntil('\n', timestamp, 20);
+      Serial.println(timestamp);
+    } else {
+      return String("0TIMESTAMP");
+    }
+
+    if (timestamp[0] == '1'){
+      return timestamp;
+    } else {
+      while ( (!powerM.available()) && ( timenow - timestart < 7000 )){
+        timenow = millis();
+      }
+      if (powerM.available()){
+        powerM.readBytesUntil('\n', timestamp, 20);
+        Serial.println(timestamp);
+        return timestamp; 
+      }    
+    }
+  }
+  
+  else{
+    return String("0TIMESTAMP");
+  }
+}
+
+/* 
+  Function: wait_arq_cmd
+
+    Determine the types of data to be sampled from the sensors based on given ARQCMD.
+    ARQCMD is read from the defined DATALOGGER.
+  
+  Parameters:
+  
+    n/a
+  
+  Returns:
+  
+    1 - tilt
+
+    2 - tilt and soil moisture
+  
+  See Also:
+  
+    - <loop>
+*/
+int wait_arq_cmd(){
+  String serial_line, command;  
+  Serial.println("poll naaaa~");
+
+  if (DATALOGGER.find("ARQCMD6T")){
+    g_timestamp = DATALOGGER.readStringUntil('\r\n');
+    return 1;
+  }
+  else if (DATALOGGER.find("ARQCMD6S")){
+    g_timestamp = DATALOGGER.readStringUntil('\r\n');
+    return 2;
+  }
+  else{
+    return 0;
+  }
+}
+
+//Group: Data parsing functions
 
 /* 
   Function: build_txt_msgs
@@ -368,7 +549,7 @@ void read_data_from_column(char* column_data, int sensor_version, int types){
     - <writeData>
 */
 
-void build_txt_msgs(char* source, char* destination){
+void build_txt_msgs(int mode, char* source, char* destination){
 
   char *token1,*token2;
   char dest[5000] = {};
@@ -382,13 +563,17 @@ void build_txt_msgs(char* source, char* destination){
   int i,j;
   int token_length = 0;
 
-  String timestamp = getTimestamp();
+  for (int i = 0; i < 5000; i++) {
+      destination[i] = '\0';
+  }
+
+
+  String timestamp = getTimestamp(mode);
   char Ctimestamp[12] = "";
   for (int i = 0; i < 12; i++) {
       Ctimestamp[i] = timestamp[i];
   }
   Ctimestamp[12] = '\0';
-
   
   token1 = strtok(source, "+");
   while ( token1 != NULL){
@@ -398,7 +583,7 @@ void build_txt_msgs(char* source, char* destination){
     identifier[1] = '\0';
     cutoff = check_cutoff(idf);
     remove_extra_characters(token1, idf);
-    writeData(String(token1));
+    writeData(timestamp,String(token1));
     num_text_per_dtype = ( strlen(token1) / cutoff );
     if ((strlen(token1) % cutoff) != 0){
       num_text_per_dtype++;
@@ -451,6 +636,7 @@ void build_txt_msgs(char* source, char* destination){
     strncat(pad,temp,4);
     strncpy(token2,pad,11);
     // strncat(token2,"<<",3);
+    Serial.println(token2);
     strncat(destination,token2, strlen(token2));
     strncat(destination, "+", 2);
     token2 = strtok(NULL, "+");
@@ -787,56 +973,6 @@ int check_cutoff(char idf){
   return cutoff;
 }
 
-/* 
-  Function: check_cutoff
-
-    Determine the type of data expected from the sensors through the command
-  
-  Parameters:
-  
-    n/a
-  
-  Returns:
-  
-    1 - tilt
-
-    2 - tilt and soil moisture
-
-  
-  See Also:
-  
-    - <loop>
-*/
-
-
-int wait_arq_cmd(){
-  String serial_line, command;  
-  Serial.println("poll naaaa~");
-
-  do{
-    serial_line = DATALOGGER.readStringUntil('\r\n');
-  } while(serial_line == "");
-    
-  serial_line.toUpperCase();
-  serial_line.replace("\r","");
-
-  command = serial_line;
-  Serial.print(F("Received command: "));
-  Serial.println(command);
-  // if (command.startsWith("ARQCMD6T")){   // kailangang ayusin ito na CMD6T or CMD6S lang tinitingnan
-  if ((command.charAt(6) == '6') && (command.charAt(7) == 'T')){
-    Serial.println("return 1");
-    Serial.println(OKSTR);
-    return 1; 
-  }
-  else if (command.startsWith("ARQCMD6S")){
-    // Serial.println(OKSTR);
-    return 2;
-  }
-  else
-    return 0;
-}
-
 void no_data_parsed(char* message){
   
   sprintf(message, "040>>1/1#", 3);
@@ -844,6 +980,55 @@ void no_data_parsed(char* message){
   strncat(message, "*0*ERROR: no data parsed<<", 26);
 }
 
+//Group: Auxilliary Control Functions
+
+//Function: shut_down()
+// Sends a shutdown command to the 328 PowerModule.
+void shut_down(){
+  
+    powerM.println("PM+D");
+}
+
+//Function: turn_on_column
+// Assert GPIO ( defined by RELAYPIN ) high to turn on sensor column.
+
+void turn_on_column(){
+  digitalWrite(RELAYPIN, HIGH);
+  delay(g_turn_on_delay);
+}
+
+//Function: turn_off_column
+// Assert GPIO ( defined by RELAYPIN ) low to turn off sensor column.
+void turn_off_column(){
+  digitalWrite(RELAYPIN, LOW);
+  delay(1000);
+}
+
+//Group: Sending Related Functions
+
+/* 
+  Function: send_data
+  
+    * Sends data to the defined DATALOGGER serial. 
+
+    * Manages the retry for sending.
+  
+  Parameters:
+  
+    isDebug - boolean that states whether in debug mode or not.
+
+    columnData - array of characters that contain the messages to be sent
+  
+  Returns:
+  
+    1 - tilt
+
+    2 - tilt and soil moisture
+  
+  See Also:
+  
+    - <operation>
+*/
 
 void send_data(bool isDebug, char* columnData){
   int timestart = millis();
@@ -894,62 +1079,57 @@ void send_data(bool isDebug, char* columnData){
     } while (OKFlag == false);
 
   }
-
 } 
 
-void read_current(){
-  float current_mA = 0;
-  current_mA = ina219.getCurrent_mA();
-  Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
-}
 
+/* 
+  Function: send_thru_xbee
 
-void read_voltage(){
-  float shuntvoltage = 0;
-  float busvoltage = 0;
-  float loadvoltage = 0;
-
-  shuntvoltage = ina219.getShuntVoltage_mV();
-  busvoltage = ina219.getBusVoltage_V();
-  loadvoltage = busvoltage + (shuntvoltage / 1000);
+    Despacito 
+    Quiero respirar tu cuello despacito 
+    Deja que te diga cosas al oído 
+    Para que te acuerdes si no estás conmigo
   
-  Serial.print("Bus Voltage:   "); Serial.print(busvoltage); Serial.println(" V");
-  Serial.print("Shunt Voltage: "); Serial.print(shuntvoltage); Serial.println(" mV");
-  Serial.print("Load Voltage:  "); Serial.print(loadvoltage); Serial.println(" V");
-}
+  Parameters:
+  
+    n/a
+  
+  Returns:
+  
+    1 - tilt
 
-void send_thru_xbee(char* load_data) {
+    2 - tilt and soil moisture
+  
+  See Also:
+  
+    - <send_data>
+*/
+bool send_thru_xbee(char* load_data) {
+  bool successFlag= false;
   int count_success=0;
   int verify_send[24]={0};
   Serial.println("now in sendMessage");
   delay(500);
   Serial.println(F("Start"));
-  int length=strlen(load_data);
-  
-  int exc=length%PAYLEN;
-  int parts=length/PAYLEN;
+  int length = strlen(load_data);
+
   Serial.print(F("length="));
   Serial.println(length);
-  Serial.print(F("parts="));
-  Serial.println(parts);
-  Serial.print(F("excess="));
-  Serial.println(exc);
-  int datalen = 0;
   int i=0, j=0;    
-  for (i=0;i<parts+1;i++){
-    for (j=0;j<XBLEN+1;j++) payload[j]=0x00;
 
-    delay(500);
-       
-    for (j=0;j<PAYLEN;j++){
-      payload[j]=(uint8_t)load_data[datalen];
-      datalen++;
-    }
+  for (j=0;j<200;j++){
+      payload[j]=(uint8_t)'\0';
+  }
 
-    Serial.println(datalen);  
+  for (j=0;j<length;j++){
+      payload[j]=(uint8_t)load_data[j];
+  }
+    payload[j]= (uint8_t)'\0';
+    
     Serial.println(F("sending before xbee.send"));
-      
+  
     xbee.send(zbTx);
+
     Serial.println(F("Packet sent"));
     if (xbee.readPacket(1000)) {
       Serial.println(F("Got a response!"));
@@ -960,9 +1140,8 @@ void send_thru_xbee(char* load_data) {
           if (verify_send[i] == 0){
             count_success=count_success+1;
             verify_send[i]=1;
-            if (count_success==parts+1){
-            }
           } 
+          successFlag= true;
         } 
         else {
           Serial.println(F("myb no pwr"));
@@ -977,12 +1156,33 @@ void send_thru_xbee(char* load_data) {
     else {
       Serial.println(F("Error2"));
     }
-  }
   Serial.println(F("exit send"));
   delay(1000);
-  return;
+  return successFlag;
 }
 
+/* 
+  Function: get_xbee_flag
+
+    Despacito 
+    Quiero respirar tu cuello despacito 
+    Deja que te diga cosas al oído 
+    Para que te acuerdes si no estás conmigo
+  
+  Parameters:
+  
+    n/a
+  
+  Returns:
+  
+    1 - tilt
+
+    2 - tilt and soil moisture
+  
+  See Also:
+  
+    - <send_thru_xbee>
+*/
 void get_xbee_flag(){
   Serial.println(F("Wait for xb"));  
   xbee.readPacket();
@@ -1014,24 +1214,5 @@ void get_xbee_flag(){
   
   }
 
-String getTimestamp(){
-    char timestamp[20] = "";    
-    powerM.println("PM+R");
-    timestart = millis();
-    timenow = millis();
-    while ( (!powerM.available()) && ( timenow - timestart < 7000 ) ) {
-          timenow = millis();
-    }
 
-    if (powerM.available()){
-      powerM.readBytesUntil('\n', timestamp, 20);
-      return timestamp; 
-    } else {
-      return String("1001011000");
-    }
-}
-
-void shut_down(){
-    powerM.println("PM+D");
-}
 

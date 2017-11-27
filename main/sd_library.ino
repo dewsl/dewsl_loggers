@@ -80,6 +80,7 @@ void open_config(){
 
 	if (!g_file){
 		Serial.println("CONFIG.txt not found.");
+    hard_gids();
 		return;
 	} 
 	memset(one_line,0,sizeof(one_line));
@@ -286,21 +287,24 @@ String get_value_from_line(String line){
 	See Also:
 		<>
 */
-int8_t writeData(String data){
+int8_t writeData(String fname,String data){
 	File sdFile;
 	char filename[100]= {};
 	char logger_file_name[7] = {};
 	String timeString;
-	Serial.println(g_timestamp);
+	// Serial.println(g_timestamp);
 
 	// if (!SD.begin(6,g_chip_select)) {
 	// 	Serial.println(" SD.begin() Failed!");
 	// 	return -1;
 	// }
 	delay(20);
+  
 	for(int i=0; i<6 ; i++){
-		logger_file_name[i]= g_timestamp[i];
+	 	logger_file_name[i]= fname[i];
 	}
+	//fname.substring(0,6).toCharArray(filename,6);
+	
 	strcpy(filename,logger_file_name);
 	strcat(filename,".TXT");
 	Serial.println(filename);

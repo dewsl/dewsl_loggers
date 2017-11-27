@@ -237,6 +237,8 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
         can_buffer[i].data.byte[5] = incoming.data.byte[5];
         can_buffer[i].data.byte[6] = incoming.data.byte[6];
         can_buffer[i].data.byte[7] = incoming.data.byte[7];
+        //Serial.print("incoming.id: ");
+        //Serial.println(incoming.id);
         i++;
         if (i == expected_frames){
           process_all_frames(g_can_buffer);
