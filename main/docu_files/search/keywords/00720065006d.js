@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("rem",["Function"],[["remove_extra_characters",,[[,,,,0,"File:main.ino:remove_extra_characters"]]]]);
