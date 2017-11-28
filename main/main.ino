@@ -49,9 +49,10 @@ long timestart = 0;
 long timenow = 0;
 //uint8_t payload[XBLEN];
 uint8_t payload[200];
-//XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40F62F8A);
-XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00);
+XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00); //sets the data that it will only send to the coordinator
+
 //XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40F62F77);
+//XBeeAddress64 addr64 = XBeeAddress64(0x0013a200, 0x40F62F8A);
 
 ZBTxRequest zbTx = ZBTxRequest(addr64, payload, sizeof(payload));
 ZBTxStatusResponse txStatus = ZBTxStatusResponse();
@@ -95,6 +96,7 @@ Adafruit_INA219 ina219;
 bool ate=true;
 /* 
   Function: setup
+
     
     - Sets the baudrate for the Serial communications.
 
@@ -382,8 +384,12 @@ void read_current(){
   Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
 }
 
-//Function: read_voltage()
-// Reads the *Bus Voltage*, *Shunt Voltage*, *Load Voltage* from the onboard ina219.
+
+/* 
+  Function: read_voltage()
+
+    Reads the *Bus Voltage*, *Shunt Voltage*, *Load Voltage* from the onboard ina219.
+*/
 void read_voltage(){
   float shuntvoltage = 0;
   float busvoltage = 0;
@@ -401,15 +407,15 @@ void read_voltage(){
 /* 
   Function: getTimestamp()
 
-    Extract the timestamp from either the ARQCMD or the Xbee.
+    Extract the timestamp from either the ARQCMD or power module.
   
   Parameters:
   
-    mode - integer Despacito
+    mode - integer, 1 from arq, 2 if from xbee 
   
   Returns:
   
-    Despacito
+    timestamp or String "0TIMESTAMP"
   
   See Also:
   
@@ -417,7 +423,6 @@ void read_voltage(){
 */
 String getTimestamp(int mode){
   if (mode == 1){ //arq
-    Serial.println("WAT");
     return g_timestamp;
   } else if(mode == 2){ //xbee
     char timestamp[20] = "";    
@@ -973,6 +978,18 @@ int check_cutoff(char idf){
   return cutoff;
 }
 
+/* 
+  Function: no_data_parsed
+
+    - Send this message instead if there is no availabe data from the sensor
+    
+    - Not yet working
+  
+  Parameters:
+  
+    message - empty char array 
+*/
+
 void no_data_parsed(char* message){
   
   sprintf(message, "040>>1/1#", 3);
@@ -983,7 +1000,9 @@ void no_data_parsed(char* message){
 //Group: Auxilliary Control Functions
 
 //Function: shut_down()
+
 // Sends a shutdown command to the 328 PowerModule.
+
 void shut_down(){
   
     powerM.println("PM+D");
@@ -1085,24 +1104,15 @@ void send_data(bool isDebug, char* columnData){
 /* 
   Function: send_thru_xbee
 
-    Despacito 
-    Quiero respirar tu cuello despacito 
-    Deja que te diga cosas al oído 
-    Para que te acuerdes si no estás conmigo
-  
+    - Sends data thru designated xbee Serial port 
+
   Parameters:
   
-    n/a
+    load_data =  char array to be forwarded to sbee
   
   Returns:
-  
-    1 - tilt
 
-    2 - tilt and soil moisture
-  
-  See Also:
-  
-    - <send_data>
+    boolean: States whether data is successfully sent or nor  
 */
 bool send_thru_xbee(char* load_data) {
   bool successFlag= false;
@@ -1164,24 +1174,7 @@ bool send_thru_xbee(char* load_data) {
 /* 
   Function: get_xbee_flag
 
-    Despacito 
-    Quiero respirar tu cuello despacito 
-    Deja que te diga cosas al oído 
-    Para que te acuerdes si no estás conmigo
-  
-  Parameters:
-  
-    n/a
-  
-  Returns:
-  
-    1 - tilt
-
-    2 - tilt and soil moisture
-  
-  See Also:
-  
-    - <send_thru_xbee>
+    - Sets the xbee flag 1 if received acknowledgement from the coordinator
 */
 void get_xbee_flag(){
   Serial.println(F("Wait for xb"));  
