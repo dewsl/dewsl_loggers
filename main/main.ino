@@ -13,7 +13,7 @@
 // #include <avr/pgmspace.h>
 #include <XBee.h>
 
-
+#include <RTCDue.h>
 #define VERBOSE 0
 
 #define ATCMD     "AT"
@@ -47,7 +47,9 @@
 XBee xbee = XBee();
 long timestart = 0;
 long timenow = 0;
-//uint8_t payload[XBLEN];
+
+RTCDue rtc(XTAL);
+
 uint8_t payload[200];
 XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00); //sets the data that it will only send to the coordinator
 
@@ -181,7 +183,7 @@ void hard_gids(){
 //Function: getATCommand
 // Take in-line serial input and execute AT command 
 void getATCommand(){
-  String serial_line, command;
+  String serial_line, command, extra_parameters;
   int i_equals = 0;
   if (Serial.available()) {
     do{
@@ -202,6 +204,22 @@ void getATCommand(){
     else if (command == ATECMDTRUE){
       ate = true;
       Serial.println(OKSTR);
+    } else if (command == "AT+RTC"){
+      extra_parameters = serial_line.substring(i_equals+1);
+      set_rtc_time(extra_parameters);
+    } else if (command = "AT+TIMENOW"){
+      Serial.print(rtc.getDay());
+      Serial.print("/");
+      Serial.print(rtc.getMonth());
+      Serial.print("/");
+      Serial.print(rtc.getYear());
+      Serial.print("\t");
+
+      Serial.print(rtc.getHours());
+      Serial.print(":");
+      Serial.print(rtc.getMinutes());
+      Serial.print(":");
+      Serial.println(rtc.getSeconds());
     }
     else if (command == ATECMDFALSE){
       ate = false;
@@ -252,6 +270,13 @@ void getATCommand(){
     else if (command == "AT+TIMESTAMPPMM"){
         String timestamp = getTimestamp(2);
         Serial.println(timestamp);
+    }
+    else if (command == "AT+LOOPSEND"){
+      while(1){
+        Serial.println("sent.");
+        send_command(3,3);
+        delay(1000);
+      }
     }
     else{
       Serial.println(ERRORSTR);
@@ -452,13 +477,46 @@ String getTimestamp(int mode){
         return timestamp; 
       }    
     }
+  
   }
   
   else{
+
     return String("0TIMESTAMP");
   }
 }
 
+/* 
+  Function: set_rtc_time()
+
+    Set the time of the customDue internal rtc.
+  
+  Parameters:
+  
+    time_str - String  
+  
+  Returns:
+  
+    timestamp or String "0TIMESTAMP"
+  
+  See Also:
+  
+    <poll_data>
+*/
+
+void set_rtc_time(String time_string){
+  int hours,minutes,seconds,day,month,year;
+  
+  year = time_string.substring(0,2).toInt();
+  month = time_string.substring(2,4).toInt();
+  day = time_string.substring(4,6).toInt();
+  hours = time_string.substring(6,8).toInt();
+  minutes = time_string.substring(8,10).toInt();
+  seconds = time_string.substring(10,12).toInt();
+
+  rtc.setTime(hours, minutes, seconds);
+  rtc.setDate(day, month, year);
+}
 /* 
   Function: wait_arq_cmd
 
@@ -1000,7 +1058,6 @@ void no_data_parsed(char* message){
 //Group: Auxilliary Control Functions
 
 //Function: shut_down()
-
 // Sends a shutdown command to the 328 PowerModule.
 
 void shut_down(){
@@ -1104,15 +1161,15 @@ void send_data(bool isDebug, char* columnData){
 /* 
   Function: send_thru_xbee
 
-    - Sends data thru designated xbee Serial port 
+     Sends data thru designated xbee Serial port 
 
   Parameters:
   
-    load_data =  char array to be forwarded to sbee
+    load_data -  char array to be forwarded to sbee
   
   Returns:
 
-    boolean: States whether data is successfully sent or nor  
+    boolean - States whether data is successfully sent or nor  
 */
 bool send_thru_xbee(char* load_data) {
   bool successFlag= false;
