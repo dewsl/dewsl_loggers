@@ -29,7 +29,7 @@
 #define ATSD      "ATSD"
 
 #define RELAYPIN 44
-#define TIMEOUT 8000
+#define TIMEOUT 2000
 #define POLL_TIMEOUT 1500
 #define BAUDRATE 9600
 
@@ -41,9 +41,7 @@
 //#define XBLEN 83 //paylenght+2(identifier)+3(randnum)+1(null)
 //#define PAYLEN 80
 
-#define ARQ 0 //if arq, choose 1 
-
-#define comm_mode 2 // 1 for ARQ, 2 XBEE
+#define comm_mode 1 // 1 for ARQ, 2 XBEE
 XBee xbee = XBee();
 long timestart = 0;
 long timenow = 0;
@@ -92,7 +90,7 @@ int t_num_message_type = 6; // 5 - ilang klase ng text messages ang gagawin
 
 //current sensor
 Adafruit_INA219 ina219;
-// String arqtime = "000000000000";
+
 
 
 bool ate=true;
@@ -133,7 +131,7 @@ void setup() {
   Serial.begin(BAUDRATE);
   DATALOGGER.begin(9600);
   powerM.begin(9600);
-  if (ARQ == 0){
+  if (comm_mode == 2){
     xbee.setSerial(DATALOGGER);
   }
   ina219.begin();
@@ -157,7 +155,7 @@ void loop(){
       datalogger_flag = 1;
     }
     else if (DATALOGGER.available()) {
-      if (ARQ){
+      if (comm_mode == 1){
         operation(wait_arq_cmd(), comm_mode);
         shut_down();
         datalogger_flag = 1;
@@ -207,7 +205,8 @@ void getATCommand(){
     } else if (command == "AT+RTC"){
       extra_parameters = serial_line.substring(i_equals+1);
       set_rtc_time(extra_parameters);
-    } else if (command = "AT+TIMENOW"){
+    } else if (command == "AT+TIMENOW"){
+      Serial.print("Due RTC:");
       Serial.print(rtc.getDay());
       Serial.print("/");
       Serial.print(rtc.getMonth());
@@ -220,6 +219,8 @@ void getATCommand(){
       Serial.print(rtc.getMinutes());
       Serial.print(":");
       Serial.println(rtc.getSeconds());
+      Serial.print("ARQ Time String: ");
+      Serial.println(g_timestamp);
     }
     else if (command == ATECMDFALSE){
       ate = false;
@@ -311,27 +312,31 @@ void getATCommand(){
 */
 void operation(int types, int mode){
   int counter= 0;
+  int num_of_tokens = 0;
   read_data_from_column(g_final_dump, g_sensor_version, types);
   build_txt_msgs(mode, g_final_dump, text_message); 
+  // if (text_message[0] == '\0'){
+  //   no_data_parsed(text_message);
+  // }
   char *token1 = strtok(text_message,"+");
+
   while (token1 != NULL){
     Serial.println(token1);
-    if (mode == 1) {
+    if (mode == 1) { // ARQ
       send_data(false, token1);    
-    }
-    else if(mode == 2) {
+    } else if(mode == 2) { // XBEE
       while (send_thru_xbee(token1) == false){
         if (counter == 10)
           break;
         counter ++;
-       }
-    }
-    else { //default
+      }
+    } else { //default
       send_data(true, token1); 
     }
     token1 = strtok(NULL, "+");
+    num_of_tokens = num_of_tokens + 1;
   }
- }
+}
 
  //Function: getArguments
 // Read in-line serial AT command.
@@ -447,7 +452,10 @@ void read_voltage(){
     <poll_data>
 */
 String getTimestamp(int mode){
-  if (mode == 1){ //arq
+
+  if (mode == 0){ //internal rtc
+    return g_timestamp;
+  }else if ( mode == 1){ // ARQ
     return g_timestamp;
   } else if(mode == 2){ //xbee
     char timestamp[20] = "";    
@@ -538,18 +546,57 @@ void set_rtc_time(String time_string){
     - <loop>
 */
 int wait_arq_cmd(){
-  String serial_line, command;  
+  String serial_line, command, temp_time,purged_time;
+  char c_serial_line[30];  
+  char * pch;
+  char cmd[] = "CMD6";
+  int cmd_index,slash_index;
   Serial.println("poll naaaa~");
+
+  while(!DATALOGGER.available());
+  
+  do{
+    serial_line = DATALOGGER.readStringUntil('\r\n');
+  } while(serial_line == "");
+  
+  serial_line.toCharArray(c_serial_line,serial_line.length());
+
+  // Serial.println(c_serial_line);
+
+  if ((pch = strstr(c_serial_line,cmd)) != NULL) {
+    if (*(pch+strlen(cmd)) == 'S'){ // SOMS + TILT
+      cmd_index = serial_line.indexOf('S',6); // ARQCMD has 6 characters
+      temp_time = serial_line.substring(cmd_index+1); 
+      slash_index = temp_time.indexOf('/');
+      temp_time.remove(slash_index,1);
+      g_timestamp = temp_time;
+      Serial.print("g_timestamp: ");
+      Serial.println(g_timestamp);
+    } else if (*(pch+strlen(cmd)) == 'T'){ // TILT Only
+      cmd_index = serial_line.indexOf('T',6); // ARQCMD has 6 characters
+      temp_time = serial_line.substring(cmd_index+1); 
+      slash_index = temp_time.indexOf('/');
+      temp_time.remove(slash_index,1);
+      g_timestamp = temp_time;
+      Serial.print("g_timestamp: ");
+      Serial.println(g_timestamp);
+    }
+  }
 
   if (DATALOGGER.find("ARQCMD6T")){
     g_timestamp = DATALOGGER.readStringUntil('\r\n');
+    Serial.print("g_timestamp: ");
+    Serial.println(g_timestamp);
     return 1;
   }
-  else if (DATALOGGER.find("ARQCMD6S")){
+  else if (DATALOGGER.find("CMD6S")){
     g_timestamp = DATALOGGER.readStringUntil('\r\n');
+    Serial.print("g_timestamp: ");
+    Serial.println(g_timestamp);
     return 2;
   }
   else{
+    Serial.println("wait_arq_cmd returned 0");
     return 0;
   }
 }
@@ -630,6 +677,10 @@ void build_txt_msgs(int mode, char* source, char* destination){
       destination[i] = '\0';
   }
 
+  // check muna kung may data from sensors.
+  if (source[0] == '\0'){
+    no_data_parsed(source);
+  }
 
   String timestamp = getTimestamp(mode);
   char Ctimestamp[12] = "";
@@ -1052,7 +1103,7 @@ void no_data_parsed(char* message){
   
   sprintf(message, "040>>1/1#", 3);
   strncat(message, g_mastername, 5);
-  strncat(message, "*0*ERROR: no data parsed<<", 26);
+  strncat(message, "*0*ERROR: no data parsed<<+", 27);
 }
 
 //Group: Auxilliary Control Functions
