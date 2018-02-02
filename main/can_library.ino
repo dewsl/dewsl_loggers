@@ -202,6 +202,9 @@ void get_data(int cmd, int transmit_id, char* final_dump){
     - Receive all the incoming frames.
     
     - Place the frames in a CAN_FRAME array.
+
+    - If comm_mode = 1, checks the current time and sends ARQWAIT if time elapsed
+    between st
     
     - Process the frames in the buffer <process_all_frames>
 
@@ -237,8 +240,6 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
         can_buffer[i].data.byte[5] = incoming.data.byte[5];
         can_buffer[i].data.byte[6] = incoming.data.byte[6];
         can_buffer[i].data.byte[7] = incoming.data.byte[7];
-        //Serial.print("incoming.id: ");
-        //Serial.println(incoming.id);
         i++;
         if (i == expected_frames){
           process_all_frames(g_can_buffer);
@@ -247,6 +248,13 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
             return i;
             break;
           }
+        }
+      }
+      if (comm_mode == 1){
+        if ( (millis() - arq_start_time) >= ARQTIMEOUT){
+          arq_start_time = millis();
+          Serial.println("ARQWAIT");
+          DATALOGGER.print("ARQWAIT");
         }
       }
   } while ((millis() - timestart <= timeout_ms)); 

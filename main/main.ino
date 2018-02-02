@@ -32,6 +32,7 @@
 #define TIMEOUT 2000
 #define POLL_TIMEOUT 1500
 #define BAUDRATE 9600
+#define ARQTIMEOUT 30000
 
 #define DATALOGGER Serial1
 #define powerM Serial2
@@ -45,6 +46,7 @@
 XBee xbee = XBee();
 long timestart = 0;
 long timenow = 0;
+long arq_start_time = 0;
 
 RTCDue rtc(XTAL);
 
@@ -313,11 +315,8 @@ void getATCommand(){
 void operation(int types, int mode){
   int counter= 0;
   int num_of_tokens = 0;
-  read_data_from_column(g_final_dump, g_sensor_version, types);
+  read_data_from_column(g_final_dump, g_sensor_version, types);// matagal ito.
   build_txt_msgs(mode, g_final_dump, text_message); 
-  // if (text_message[0] == '\0'){
-  //   no_data_parsed(text_message);
-  // }
   char *token1 = strtok(text_message,"+");
 
   while (token1 != NULL){
@@ -543,7 +542,7 @@ void set_rtc_time(String time_string){
   
   See Also:
   
-    - <loop>
+    - <loop,arqwait_delay>
 */
 int wait_arq_cmd(){
   String serial_line, command, temp_time,purged_time;
@@ -554,6 +553,8 @@ int wait_arq_cmd(){
 
   while(!DATALOGGER.available());
   
+  arq_start_time = millis(); // Global variable used by arqwait_delay
+
   do{
     serial_line = DATALOGGER.readStringUntil('\r\n');
   } while(serial_line == "");
@@ -589,6 +590,39 @@ int wait_arq_cmd(){
   }
 }
 
+/* 
+  Function: arqwait_delay()
+
+    A delay function that sends ARQWAIT every
+
+  Parameters:
+
+    time - int milliseconds of delay
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <process_g_string>
+*/
+
+void arqwait_delay(int milli_secs){
+  int func_start = 0;
+  if (comm_mode == 1){
+    while ( (millis() - func_start ) < milli_secs ){
+      if ( (millis() - arq_start_time) >= ARQTIMEOUT ) {
+        arq_start_time = millis();
+        Serial.println("ARQWAIT");
+        DATALOGGER.print("ARQWAIT");
+      }
+    }
+  } else {
+    delay(milli_secs);
+  }
+
+}
 //Group: Data parsing functions
 
 /* 
@@ -1109,14 +1143,14 @@ void shut_down(){
 
 void turn_on_column(){
   digitalWrite(RELAYPIN, HIGH);
-  delay(g_turn_on_delay);
+  arqwait_delay(g_turn_on_delay);
 }
 
 //Function: turn_off_column
 // Assert GPIO ( defined by RELAYPIN ) low to turn off sensor column.
 void turn_off_column(){
   digitalWrite(RELAYPIN, LOW);
-  delay(1000);
+  arqwait_delay(1000);
 }
 
 //Group: Sending Related Functions
