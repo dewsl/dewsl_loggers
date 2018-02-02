@@ -611,10 +611,12 @@ void check_can_status(){
   rx_error_cnt = Can0.get_rx_error_cnt();
   tx_error_cnt = Can0.get_tx_error_cnt();
   if (rx_error_cnt + tx_error_cnt != 0){ 
-    Serial.print("rx_error : ");
-    Serial.print(rx_error_cnt);
-    Serial.print("\t tx_error :");
-    Serial.println(tx_error_cnt);
+    if (VERBOSE){
+      Serial.print("rx_error : ");
+      Serial.print(rx_error_cnt);
+      Serial.print("\t tx_error :");
+      Serial.println(tx_error_cnt);
+    }
   }
   return;
 }

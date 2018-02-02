@@ -551,7 +551,6 @@ int wait_arq_cmd(){
   char * pch;
   char cmd[] = "CMD6";
   int cmd_index,slash_index;
-  Serial.println("poll naaaa~");
 
   while(!DATALOGGER.available());
   
@@ -561,7 +560,8 @@ int wait_arq_cmd(){
   
   serial_line.toCharArray(c_serial_line,serial_line.length());
 
-  // Serial.println(c_serial_line);
+  Serial.println(serial_line);
+
 
   if ((pch = strstr(c_serial_line,cmd)) != NULL) {
     if (*(pch+strlen(cmd)) == 'S'){ // SOMS + TILT
@@ -570,34 +570,22 @@ int wait_arq_cmd(){
       slash_index = temp_time.indexOf('/');
       temp_time.remove(slash_index,1);
       g_timestamp = temp_time;
-      Serial.print("g_timestamp: ");
-      Serial.println(g_timestamp);
+      return 2;
+      // Serial.print("g_timestamp: ");
+      // Serial.println(g_timestamp);
     } else if (*(pch+strlen(cmd)) == 'T'){ // TILT Only
       cmd_index = serial_line.indexOf('T',6); // ARQCMD has 6 characters
       temp_time = serial_line.substring(cmd_index+1); 
       slash_index = temp_time.indexOf('/');
       temp_time.remove(slash_index,1);
       g_timestamp = temp_time;
-      Serial.print("g_timestamp: ");
-      Serial.println(g_timestamp);
+      return 1;
+      // Serial.print("g_timestamp: ");
+      // Serial.println(g_timestamp);
+    } else {
+      Serial.println("wait_arq_cmd returned 0");
+      return 0;
     }
-  }
-
-  if (DATALOGGER.find("ARQCMD6T")){
-    g_timestamp = DATALOGGER.readStringUntil('\r\n');
-    Serial.print("g_timestamp: ");
-    Serial.println(g_timestamp);
-    return 1;
-  }
-  else if (DATALOGGER.find("CMD6S")){
-    g_timestamp = DATALOGGER.readStringUntil('\r\n');
-    Serial.print("g_timestamp: ");
-    Serial.println(g_timestamp);
-    return 2;
-  }
-  else{
-    Serial.println("wait_arq_cmd returned 0");
-    return 0;
   }
 }
 
@@ -677,11 +665,6 @@ void build_txt_msgs(int mode, char* source, char* destination){
       destination[i] = '\0';
   }
 
-  // check muna kung may data from sensors.
-  if (source[0] == '\0'){
-    no_data_parsed(source);
-  }
-
   String timestamp = getTimestamp(mode);
   char Ctimestamp[12] = "";
   for (int i = 0; i < 12; i++) {
@@ -754,6 +737,11 @@ void build_txt_msgs(int mode, char* source, char* destination){
     strncat(destination,token2, strlen(token2));
     strncat(destination, "+", 2);
     token2 = strtok(NULL, "+");
+  }
+
+  if (destination[0] == '\0'){
+    no_data_parsed(destination);
+    writeData(timestamp,String("*0*ERROR: no data parsed"));
   }
 }
 
