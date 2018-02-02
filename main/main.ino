@@ -621,7 +621,6 @@ void arqwait_delay(int milli_secs){
   } else {
     delay(milli_secs);
   }
-
 }
 //Group: Data parsing functions
 
@@ -1033,6 +1032,10 @@ char check_identifier(char* token, int index_msgid){
         idfier = 'x';
       else if (token[index_msgid+1] == 'C')
         idfier = 'y';
+      else if (token[index_msgid+1] == 'A')
+        idfier = 'b';
+      else if (token[index_msgid+1] == 'D')
+        idfier = 'c';
       break;
     } case '2': {
       Serial.println(token[index_msgid+1]);
