@@ -10,7 +10,7 @@
 #include <SD.h>
 #include <Wire.h>
 #include <Adafruit_INA219.h>
-// #include <avr/pgmspace.h>
+#include <avr/pgmspace.h>
 #include <XBee.h>
 
 #include <RTCDue.h>
@@ -36,19 +36,22 @@
 
 #define DATALOGGER Serial1
 #define powerM Serial2
-
+#define ENABLE_RTC 0
 #define CAN_ARRAY_BUFFER_SIZE 100
 
-//#define XBLEN 83 //paylenght+2(identifier)+3(randnum)+1(null)
-//#define PAYLEN 80
-
 #define comm_mode 1 // 1 for ARQ, 2 XBEE
+
+const char base64[64] PROGMEM = {'A','B','C','D','E','F','G','H','I','J','K','L','M',
+'N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h',
+'i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2',
+'3','4','5','6','7','8','9','+','/'};
+
 XBee xbee = XBee();
 long timestart = 0;
 long timenow = 0;
 long arq_start_time = 0;
 
-RTCDue rtc(XTAL);
+// 
 
 uint8_t payload[200];
 XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00); //sets the data that it will only send to the coordinator
@@ -66,8 +69,8 @@ int datalogger_flag = 0;
 // SD-related / CONFIG-related
 int g_gids[40][2];
 int g_num_of_nodes = 15;
-char g_mastername[6] = "INATC";
-String g_timestamp = "000000000000";
+char g_mastername[6] = "XXXXX";
+String g_timestamp = "TIMESTAMP000";
 int g_chip_select = SS3;
 int g_turn_on_delay = 10; // in centi seconds ( ie. 100 centiseconds = 1 sec) 
 int g_sensor_version = 3;
@@ -136,6 +139,9 @@ void setup() {
   if (comm_mode == 2){
     xbee.setSerial(DATALOGGER);
   }
+  // if (ENABLE_RTC){
+
+  // }
   ina219.begin();
   pinMode(RELAYPIN, OUTPUT);
   init_can();
@@ -184,7 +190,9 @@ void hard_gids(){
 // Take in-line serial input and execute AT command 
 void getATCommand(){
   String serial_line, command, extra_parameters;
-  int i_equals = 0;
+  char converted[4] = {};
+  // converted[0] = '\0';
+  int i_equals = 0; // index of equal sign
   if (Serial.available()) {
     do{
       serial_line = Serial.readStringUntil('\r\n');
@@ -204,23 +212,30 @@ void getATCommand(){
     else if (command == ATECMDTRUE){
       ate = true;
       Serial.println(OKSTR);
+    } else if (command == "AT+B64"){
+      extra_parameters = serial_line.substring(i_equals+1);
+      to_base64(extra_parameters.toInt(),converted);
+      Serial.print("converted: ");
+      Serial.print(converted);
     } else if (command == "AT+RTC"){
       extra_parameters = serial_line.substring(i_equals+1);
       set_rtc_time(extra_parameters);
     } else if (command == "AT+TIMENOW"){
-      Serial.print("Due RTC:");
-      Serial.print(rtc.getDay());
-      Serial.print("/");
-      Serial.print(rtc.getMonth());
-      Serial.print("/");
-      Serial.print(rtc.getYear());
-      Serial.print("\t");
+      // if (ENABLE_RTC){
+      //   Serial.print("Due RTC:");
+      //   Serial.print(rtc.getDay());
+      //   Serial.print("/");
+      //   Serial.print(rtc.getMonth());
+      //   Serial.print("/");
+      //   Serial.print(rtc.getYear());
+      //   Serial.print("\t");
 
-      Serial.print(rtc.getHours());
-      Serial.print(":");
-      Serial.print(rtc.getMinutes());
-      Serial.print(":");
-      Serial.println(rtc.getSeconds());
+      //   Serial.print(rtc.getHours());
+      //   Serial.print(":");
+      //   Serial.print(rtc.getMinutes());
+      //   Serial.print(":");
+      //   Serial.println(rtc.getSeconds());
+      // }
       Serial.print("ARQ Time String: ");
       Serial.println(g_timestamp);
     }
@@ -296,7 +311,7 @@ void getATCommand(){
   
   Parameters:
   
-    types - integer that determines the kind of data requested from the sensor
+    types - integer that determines the kind of data requested from the sensor. *1 - tilt* *2 - tilt + soms*
 
     mode - integer that determines which DATALOGGER receives the sent data. *1- ARQ* *2- Xbee* 
   
@@ -312,18 +327,18 @@ void getATCommand(){
 
     g_final_dump, g_sensor_version, text_message
 */
-void operation(int types, int mode){
+void operation(int sensor_type, int communication_mode){
   int counter= 0;
   int num_of_tokens = 0;
-  read_data_from_column(g_final_dump, g_sensor_version, types);// matagal ito.
-  build_txt_msgs(mode, g_final_dump, text_message); 
+  read_data_from_column(g_final_dump, g_sensor_version, sensor_type);// matagal ito.
+  build_txt_msgs(communication_mode, g_final_dump, text_message); 
   char *token1 = strtok(text_message,"+");
-
+    
   while (token1 != NULL){
     Serial.println(token1);
-    if (mode == 1) { // ARQ
+    if (communication_mode == 1) { // ARQ
       send_data(false, token1);    
-    } else if(mode == 2) { // XBEE
+    } else if(communication_mode == 2) { // XBEE
       while (send_thru_xbee(token1) == false){
         if (counter == 10)
           break;
@@ -384,11 +399,11 @@ void getArguments(String at_cmd, String *arguments){
   
     <operation>
 */
-void read_data_from_column(char* column_data, int sensor_version, int types){
+void read_data_from_column(char* column_data, int sensor_version, int sensor_type){
   if (sensor_version == 2){
     get_data(32,1,column_data);
     get_data(33,1,column_data);
-    if (types == 2){
+    if (sensor_type == 2){
       get_data(110,1,column_data);
       get_data(112,1,column_data);
     }
@@ -396,7 +411,7 @@ void read_data_from_column(char* column_data, int sensor_version, int types){
     get_data(11,1,column_data);
     get_data(12,1,column_data);
     get_data(22,1,column_data);
-    if (types == 2){
+    if (sensor_type == 2){
       get_data(111,1,column_data);
       get_data(113,1,column_data);
     }
@@ -450,13 +465,15 @@ void read_voltage(){
   
     <poll_data>
 */
-String getTimestamp(int mode){
+String getTimestamp(int communication_mode){
 
-  if (mode == 0){ //internal rtc
+  if (communication_mode == 0){ //internal rtc
     return g_timestamp;
-  }else if ( mode == 1){ // ARQ
+  } else if (communication_mode == 1){ // ARQ
+    Serial.print("g_timestamp: ");
+    Serial.println(g_timestamp);
     return g_timestamp;
-  } else if(mode == 2){ //xbee
+  } else if(communication_mode == 2){ //xbee
     char timestamp[20] = "";    
     timestart = millis();
     timenow = millis();
@@ -520,9 +537,11 @@ void set_rtc_time(String time_string){
   hours = time_string.substring(6,8).toInt();
   minutes = time_string.substring(8,10).toInt();
   seconds = time_string.substring(10,12).toInt();
-
-  rtc.setTime(hours, minutes, seconds);
-  rtc.setDate(day, month, year);
+  if (ENABLE_RTC){
+    RTCDue rtc(XTAL);
+    rtc.setTime(hours, minutes, seconds);
+    rtc.setDate(day, month, year);
+  }
 }
 /* 
   Function: wait_arq_cmd
@@ -742,8 +761,9 @@ void build_txt_msgs(int mode, char* source, char* destination){
           break;
         }
       }
-      strncat(dest,"*",1);
-      strncat(dest,Ctimestamp,12);
+      // Baka dapat kapag V3 ito. 
+      // strncat(dest,"*",1);
+      // strncat(dest,Ctimestamp,12);
       strncat(dest,"<<",2);
       strncat(dest,"+",1);
     }
