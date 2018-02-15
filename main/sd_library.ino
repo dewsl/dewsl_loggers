@@ -80,7 +80,7 @@ void open_config(){
 
 	if (!g_file){
 		Serial.println("CONFIG.txt not found.");
-    hard_gids();
+    	hard_code();
 		return;
 	} 
 	memset(one_line,0,sizeof(one_line));

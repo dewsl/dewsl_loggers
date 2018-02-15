@@ -29,7 +29,7 @@
 #define ATSD      "ATSD"
 
 #define RELAYPIN 44
-#define TIMEOUT 2000
+#define TIMEOUT 3000
 #define POLL_TIMEOUT 1500
 #define BAUDRATE 9600
 #define ARQTIMEOUT 30000
@@ -181,9 +181,12 @@ void loop(){
   delay (1000);
 }
 
-void hard_gids(){
+void hard_code(){
   String str1 = "column1 = 2748,1105,1098,1073,1069,971,942,925,920,888,873,827,807,671";
+  String str2 = "MasterName = BOLTA";
+
   g_num_of_nodes = process_column_ids(str1);
+  get_value_from_line(str2).toCharArray(g_mastername,6);
   
 }
 //Function: getATCommand
