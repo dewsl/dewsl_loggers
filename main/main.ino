@@ -29,7 +29,7 @@
 #define ATSD      "ATSD"
 
 #define RELAYPIN 44
-#define TIMEOUT 3000
+//#define TIMEOUT 3000
 #define POLL_TIMEOUT 1500
 #define BAUDRATE 9600
 #define ARQTIMEOUT 30000
@@ -77,6 +77,7 @@ int g_sensor_version = 3;
 int g_datalogger_version = 3;
 int g_cd_counter = 0;
 
+int TIMEOUT = 3000;
 
 // CAN-related
 char g_temp_dump[1250];
