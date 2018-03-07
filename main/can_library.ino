@@ -181,7 +181,11 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   // write frames to String or char array
   for (int i = 0;i<count;i++){
     if (g_can_buffer[i].id != 0){
-      write_frame_to_dump(g_can_buffer[i],g_temp_dump);
+      if (!b64){
+        write_frame_to_dump(g_can_buffer[i],g_temp_dump);
+      } else if (b64){
+        b64_write_frame_to_dump(g_can_buffer[i],g_temp_dump);
+      }
     }
   }
   // add delimiter "+"
@@ -354,38 +358,6 @@ void delete_repeating_frames(CAN_FRAME can_buffer[]){
   }
 }
 
-/* 
-  Function: convert_uid_to_gid
-
-    Converts the uid (universal id) to the gid (geographic id)
-
-  Parameters:
-
-    uid - integer universal id
-
-  Returns:
-
-    gid - integer geographic id of given universal id according sd card config
-    0 -  non existent uids
-    -1 - for erroneous uids
-
-  See Also:
-
-    <process_g_string,>
-*/
-int convert_uid_to_gid(int uid){
-  int gid = 0;
-  if ((uid == 0) | (uid == -1)){
-    return -1;
-  }
-  for (int i=0; i< g_num_of_nodes;i++){
-    if (g_gids[i][0] == uid){
-      return g_gids[i][1];
-    }
-  }
-  return 0;
-}
-
 
 // Group: Char array based operations
 /* 
@@ -436,7 +408,81 @@ void write_frame_to_dump(CAN_FRAME incoming, char* dump){
   sprintf(temp,"%02X-",incoming.data.byte[7]);
   strcat(dump,temp);
 
+  interpret_frame(incoming);
   return;
+}
+
+void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
+  char temp[5] = {};
+  char temp2[5] = {};
+  int gid,msgid,x,y,z,v;
+  gid = convert_uid_to_gid(incoming.id);
+  msgid = incoming.data.byte[0];
+
+  x = compute_axis(incoming.data.byte[1],incoming.data.byte[2]);
+  y = compute_axis(incoming.data.byte[3],incoming.data.byte[4]);
+  z = compute_axis(incoming.data.byte[5],incoming.data.byte[6]);
+  v = incoming.data.byte[7];
+
+  to_base64(gid,temp);
+  Serial.print("gid converted:"); Serial.println(temp);
+  pad_b64(1,temp,temp2);
+  Serial.print("gid padded:"); Serial.println(temp2);
+  strcat(dump,temp2);
+
+  to_base64(msgid,temp);
+  // Serial.print("msgid converted:"); Serial.println(temp);
+  pad_b64(2,temp,temp2);
+  // Serial.print("msgid padded:"); Serial.println(temp2);
+  strcat(dump,temp2);
+
+  to_base64(x,temp);
+  pad_b64(2,temp,temp2);
+  strcat(dump,temp2);
+  to_base64(y,temp);
+  pad_b64(2,temp,temp2);
+  strcat(dump,temp2);
+  to_base64(z,temp);
+  pad_b64(2,temp,temp2);
+  strcat(dump,temp2);
+  to_base64(v,temp);
+  pad_b64(2,temp,temp2);
+  strcat(dump,temp2);
+
+  interpret_frame(incoming);
+  return;
+}
+
+/* 
+  Function: convert_uid_to_gid
+
+    Converts the uid (universal id) to the gid (geographic id)
+
+  Parameters:
+
+    uid - integer universal id
+
+  Returns:
+
+    gid - integer geographic id of given universal id according sd card config
+    0 -  non existent uids
+    -1 - for erroneous uids
+
+  See Also:
+
+    <process_g_string,>
+*/
+int convert_uid_to_gid(int uid){
+  int gid = 0;
+  if ((uid == 0) | (uid == -1)){
+    return -1;
+  }
+  for (int i=0; i< g_num_of_nodes;i++){
+    if (g_gids[i][0] == uid){
+      return g_gids[i][1];
+    }
+  }
+  return 0;
 }
 
 /* 
@@ -588,13 +634,21 @@ void interpret_frame(CAN_FRAME incoming){
 */
 int compute_axis(int d1, int d2){
   int value = 5000;
-  if (d2 >= 240) {
-    d2 = d2 - 240;
-    value = (d1 + (d2*256)) - 4095;
-  } else {
+  if (!b64){
+    if (d2 >= 240) {
+      d2 = d2 - 240;
+      value = (d1 + (d2*256)) - 4095;
+    } else {
+      value = (d1 + (d2*256));
+    } 
+    return value;
+  } else if (b64) {
+    if (d2 >= 240) {
+      d2 = d2 - 240;
+    } 
     value = (d1 + (d2*256));
+    return value;
   }
-  return value;
 }
 
 /* 

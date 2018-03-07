@@ -1,10 +1,3 @@
-//turn on COLUMN sa start palang
-// I SWITCH YUNG PMM PARA MAG ON DUE
-//NO DATA FROM SENSLOPE
-//retrY NANG MARAMI -ok na, 10 to. 
-
-//817,557,526,674,522,777,791,853,855,927,1058,1084,1092,1132,2731//inatb
-//2748,1105,1098,1073,1069,971,942,925,920,888,873,827,807,671// inatc
 #include "variant.h"
 #include <due_can.h>
 #include <SD.h>
@@ -12,9 +5,10 @@
 #include <Adafruit_INA219.h>
 #include <avr/pgmspace.h>
 #include <XBee.h>
+#include <stdbool.h>
 
 #include <RTCDue.h>
-#define VERBOSE 0
+
 
 #define ATCMD     "AT"
 #define ATECMDTRUE  "ATE"
@@ -27,15 +21,17 @@
 #define OKSTR     "OK"
 #define ERRORSTR  "ERROR"
 #define ATSD      "ATSD"
+#define DATALOGGER Serial1
+#define powerM Serial2
 
+
+#define VERBOSE 0
 #define RELAYPIN 44
-//#define TIMEOUT 3000
 #define POLL_TIMEOUT 1500
 #define BAUDRATE 9600
 #define ARQTIMEOUT 30000
 
-#define DATALOGGER Serial1
-#define powerM Serial2
+
 #define ENABLE_RTC 0
 #define CAN_ARRAY_BUFFER_SIZE 100
 
@@ -50,8 +46,10 @@ XBee xbee = XBee();
 long timestart = 0;
 long timenow = 0;
 long arq_start_time = 0;
-
-// 
+// Group: Global Variables
+// Variable: b64
+// global variable that turns on the b64 data representation mode. 0 by default.
+uint8_t b64 = 0; //boolean for b64 operations.
 
 uint8_t payload[200];
 XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00); //sets the data that it will only send to the coordinator
@@ -64,19 +62,42 @@ ZBTxStatusResponse txStatus = ZBTxStatusResponse();
 XBeeResponse response = XBeeResponse();
 ZBRxResponse rx = ZBRxResponse();
 
-int xbFlag=0;
-int datalogger_flag = 0;
-// SD-related / CONFIG-related
-int g_gids[40][2];
-int g_num_of_nodes = 15;
-char g_mastername[6] = "XXXXX";
-String g_timestamp = "TIMESTAMP000";
-int g_chip_select = SS3;
-int g_turn_on_delay = 10; // in centi seconds ( ie. 100 centiseconds = 1 sec) 
-int g_sensor_version = 3;
-int g_datalogger_version = 3;
-int g_cd_counter = 0;
+uint8_t xbFlag=0;
 
+uint8_t datalogger_flag = 0;
+// Variable: g_gids
+// 2 dimensional integer array that stores the links the unique id with the geographic id
+int g_gids[40][2];
+
+// Variable: g_num_of_nodes
+// integer that stores the number of nodes. This variable is overwritten by *<process_config_line>*. This variable is also used by *<init_char_arrays>*. 
+uint8_t g_num_of_nodes = 40;
+
+// Variable: g_mastername
+// global char array that holds the mastername. This variable is overwrittern by *<process_config_line>*. This variable defaults to "XXXXX".
+char g_mastername[6] = "XXXXX";
+
+// Variable: g_timestamp
+// global String that holds the timestamp.This variable is overwritten by the timestamp from the string sent by the ARQ. This variable defaults to "TIMESTAMP000".
+String g_timestamp = "TIMESTAMP000";
+
+int g_chip_select = SS3;
+
+// Variable: g_turn_on_delay
+// integer that determines the delay in centi seconds ( ie. 100 centiseconds = 1 sec ) introduced by the firmware after the column switch turns on. 
+// This ensures the voltage stability for the column.
+uint8_t g_turn_on_delay = 10;
+
+// Variable: g_sensor_version
+// integer that determines the sensor version ( 1, 2, or 3 ). This variable is overwrittern by *<process_config_line>*. 
+uint8_t g_sensor_version = 3;
+
+// Variable: g_datalogger_version
+// integer that determines the datalogger version ( 2 ARQ or 3 Regular,V3 ). This variable is overwrittern by *<process_config_line>*. 
+uint8_t g_datalogger_version = 3;
+
+// Variable: TIMEOUT
+// integer that determines the tumeout duration of broadcast (in milliseconds ). This variable is overwrittern by *<process_config_line>*. 
 int TIMEOUT = 3000;
 
 // CAN-related
@@ -140,9 +161,6 @@ void setup() {
   if (comm_mode == 2){
     xbee.setSerial(DATALOGGER);
   }
-  // if (ENABLE_RTC){
-
-  // }
   ina219.begin();
   pinMode(RELAYPIN, OUTPUT);
   init_can();
@@ -194,8 +212,8 @@ void hard_code(){
 // Take in-line serial input and execute AT command 
 void getATCommand(){
   String serial_line, command, extra_parameters;
-  char converted[4] = {};
-  // converted[0] = '\0';
+  char converted[5] = {};
+  char padded[5] = {};
   int i_equals = 0; // index of equal sign
   if (Serial.available()) {
     do{
@@ -219,8 +237,10 @@ void getATCommand(){
     } else if (command == "AT+B64"){
       extra_parameters = serial_line.substring(i_equals+1);
       to_base64(extra_parameters.toInt(),converted);
-      Serial.print("converted: ");
-      Serial.print(converted);
+      pad_b64(1,converted,padded);
+      Serial.print("converted and padded: ");
+      Serial.print(padded);
+
     } else if (command == "AT+RTC"){
       extra_parameters = serial_line.substring(i_equals+1);
       set_rtc_time(extra_parameters);
@@ -247,6 +267,14 @@ void getATCommand(){
       ate = false;
       Serial.println(OKSTR);
     }
+    else if (command == "AT+SWITCHB64"){
+      if(b64){
+        b64 = 0;
+      } else {
+        b64 = 1;
+      }
+      Serial.println("Toggled b64 operations.");
+    }
     else if (command == ATRCVCAN){
       Serial.println(OKSTR);
     }
@@ -259,10 +287,18 @@ void getATCommand(){
       build_txt_msgs(1, g_final_dump, text_message); //di ko to sure
       Serial.println(OKSTR);
     }
+    else if (command == "AT+GETDATA"){
+      get_data(11,1,g_final_dump);
+      get_data(12,1,g_final_dump);
+    }
     else if (command == ATSNIFFCAN){
       while (true){
         Serial.println(OKSTR);
       }
+    }
+    else if (command == "AT+S"){
+      get_data(11,1,g_final_dump);
+      get_data(12,1,g_final_dump);
     }
     else if (command == ATDUMP){
       Serial.print("g_final_dump: ");
@@ -866,7 +902,8 @@ void remove_extra_characters(char* columnData, char idf){
         }
         break;
       }
-      case 9: {  // diagnostics for v3 sensors
+      case 9: {  // diagnostics for v3 sensors //takes temp only 
+      // final format is gid(2chars)msgid(2chars)temp_hex(4chars)
         if (i % 20 != 0 && i % 20 != 1 && i % 20 != 6 && i % 20 != 7 && i % 20 != 8 && i % 20 != 9 && i % 20 != 14 && i % 20 != 15 && i % 20 != 16 && i % 20 != 17 && i % 20 != 18 && i % 20 != 19 ) {
           strncat(pArray, columnData, 1);
         }

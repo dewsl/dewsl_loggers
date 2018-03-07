@@ -45,13 +45,13 @@ void to_base64(int input, char* dest){
 			break;
 		}
 	}
-	Serial.print("current dest length: ");
-	Serial.println(strlen(dest));
+	// Serial.print("current dest length: ");
+	// Serial.println(strlen(dest));
 	reverse_char_order(dest,strlen(dest));
 	// pad here
 }
 
-void reverse_char_order(char* input, int length){
+void reverse_char_order(char* input, uint8_t length){
 	char temp[4] = {0};
 	char temp1[2] = {0};
 	temp[0] = '\0';
@@ -62,3 +62,23 @@ void reverse_char_order(char* input, int length){
 	temp[length] = '\0';
 	strncpy(input,temp,strlen(temp));
 }
+
+
+
+void pad_b64(uint8_t length_of_output, char* input, char* dest){
+	int num_of_pads = 0;
+	char temp[5] = {};
+	temp[0] = '\0'; // para makapag strncat ka dahil may null na si temp
+	num_of_pads = length_of_output - strlen(input);
+
+	if (num_of_pads > 0){
+		for (int i = 0; i<num_of_pads; i++){
+			strcat(temp,"A");
+		}
+		strcat(temp,input);
+		strncpy(dest,temp,strlen(temp));
+	} else {
+		strncpy(dest,input,strlen(input));
+	}
+}
+
