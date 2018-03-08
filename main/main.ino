@@ -47,8 +47,20 @@ long timestart = 0;
 long timenow = 0;
 long arq_start_time = 0;
 // Group: Global Variables
-// Variable: b64
-// global variable that turns on the b64 data representation mode. 0 by default.
+// These are the variables declared globally.
+
+/* 
+  Variable: b64
+  global variable that turns on the b64 data representation mode. 0 by default.
+
+  An AT Command can be used to toggle this. *AT+SWITCHB64* command toggles on and off
+  the b64 data representation. 
+
+  Variable declaration:
+  --- Code
+  uint8_t b64 = 0;
+  --- 
+*/
 uint8_t b64 = 0; //boolean for b64 operations.
 
 uint8_t payload[200];
@@ -63,42 +75,88 @@ XBeeResponse response = XBeeResponse();
 ZBRxResponse rx = ZBRxResponse();
 
 uint8_t xbFlag=0;
-
+int g_chip_select = SS3;
 uint8_t datalogger_flag = 0;
-// Variable: g_gids
-// 2 dimensional integer array that stores the links the unique id with the geographic id
+
+/*
+  Variable: g_gids
+  2 dimensional integer array that stores the links the unique id with the geographic id
+  
+  Variable declaration:
+  --- Code
+  int g_gids[40][2];
+  ---
+
+*/
 int g_gids[40][2];
 
-// Variable: g_num_of_nodes
-// integer that stores the number of nodes. This variable is overwritten by *<process_config_line>*. This variable is also used by *<init_char_arrays>*. 
-uint8_t g_num_of_nodes = 40;
+/*
+  Variable: g_num_of_nodes
+  integer that stores the number of nodes. This variable is overwritten by *<process_config_line>*. This variable is also used by *<init_char_arrays>*.
 
-// Variable: g_mastername
-// global char array that holds the mastername. This variable is overwrittern by *<process_config_line>*. This variable defaults to "XXXXX".
+  Variable declaration:
+  --- Code
+  uint8_t g_num_of_nodes = 40;
+  --- 
+*/
+uint8_t g_num_of_nodes = 40;
+/*
+  Variable: g_mastername
+  global char array that holds the 5 char mastername. This variable is overwrittern by *<process_config_line>*. This variable defaults to "XXXXX".
+
+  *SD Card Config Line* usage:
+  --- Code
+  mastername = INATA
+  ---
+*/
 char g_mastername[6] = "XXXXX";
 
-// Variable: g_timestamp
-// global String that holds the timestamp.This variable is overwritten by the timestamp from the string sent by the ARQ. This variable defaults to "TIMESTAMP000".
-String g_timestamp = "TIMESTAMP000";
+/*
+  Variable: g_turn_on_delay
+  integer that determines the delay in centi seconds ( ie. 100 centiseconds = 1 sec ) introduced by the firmware after the column switch turns on. 
+  This ensures the voltage stability for the column.
 
-int g_chip_select = SS3;
-
-// Variable: g_turn_on_delay
-// integer that determines the delay in centi seconds ( ie. 100 centiseconds = 1 sec ) introduced by the firmware after the column switch turns on. 
-// This ensures the voltage stability for the column.
+  *SD Card Config Line* usage:
+  --- Code
+  turn_on_delay = 100
+  ---
+*/
 uint8_t g_turn_on_delay = 10;
 
-// Variable: g_sensor_version
-// integer that determines the sensor version ( 1, 2, or 3 ). This variable is overwrittern by *<process_config_line>*. 
+/*
+  Variable: g_sensor_version
+  integer that determines the sensor version ( 1, 2, or 3 ). This variable is overwrittern by *<process_config_line>*. 
+
+  *SD Card Config Line* usage:
+  --- Code
+  sensorVersion = 3
+  ---
+*/
 uint8_t g_sensor_version = 3;
 
-// Variable: g_datalogger_version
-// integer that determines the datalogger version ( 2 ARQ or 3 Regular,V3 ). This variable is overwrittern by *<process_config_line>*. 
+/*
+  Variable: g_datalogger_version
+  integer that determines the datalogger version ( 2 ARQ or 3 Regular,V3 ). This variable is overwrittern by *<process_config_line>*. 
+  
+  Variable declaration:
+  --- Code
+  uint8_t g_datalogger_version = 3;
+  ---
+*/
 uint8_t g_datalogger_version = 3;
 
-// Variable: TIMEOUT
-// integer that determines the tumeout duration of broadcast (in milliseconds ). This variable is overwrittern by *<process_config_line>*. 
+/* 
+  Variable: TIMEOUT
+  integer that determines the tumeout duration of broadcast (in milliseconds ). This variable is overwrittern by *<process_config_line>*. 
+
+  *SD Card Config Line* usage:
+  --- Code
+  brodcast_timeout = 3000
+  ---
+*/
 int TIMEOUT = 3000;
+
+
 
 // CAN-related
 char g_temp_dump[1250];
@@ -114,6 +172,11 @@ CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
 int t_num_message_type = 6; // 5 - ilang klase ng text messages ang gagawin
   // i.e. x - axel 1 , y - accel 2, b - raw soms , c - calib soms, ff - piezo, d - diagnostics
 
+/*
+  Variable: g_timestamp
+  global String that holds the timestamp.This variable is overwritten by the timestamp from the string sent by the ARQ. This variable defaults to "TIMESTAMP000".
+*/
+String g_timestamp = "TIMESTAMP000";
 
 //current sensor
 Adafruit_INA219 ina219;
@@ -943,6 +1006,7 @@ void remove_extra_characters(char* columnData, char idf){
   
     <poll_data>
 */
+/*
 void tokenize_data_by_data_type(char** tokens, char* source, bool isDebug){
   char *token;
   const char delimiter[2] = "+";
@@ -961,6 +1025,7 @@ void tokenize_data_by_data_type(char** tokens, char* source, bool isDebug){
     tokens[j]= '\0';
   }
 }
+*/
 
 /* 
   Function: tokenize_data_by_message
@@ -984,14 +1049,15 @@ void tokenize_data_by_data_type(char** tokens, char* source, bool isDebug){
   
     <poll_data>
 */
+/*
 void tokenize_data_by_message(char** message_array,char* source, int cutoff_length, int message_count){
-
   for (int i = 0; i < message_count; i++) {
     strncpy(message_array[i], source, cutoff_length);
     message_array[i][cutoff_length] = '\0';
     source = source + cutoff_length;
   } 
 }
+*/
 
 /* 
   Function: message_content_parameters
@@ -1025,6 +1091,7 @@ void tokenize_data_by_message(char** message_array,char* source, int cutoff_leng
 
     - <check_cutoff>
 */
+/*
 void message_content_parameters(int* parameters, char* source_by_dtype){
   char identifier = 'c';
   int cutoff_length = 0;
@@ -1053,6 +1120,7 @@ void message_counter(int* parameters, char* source_by_dtype){
   } 
   parameters[0] = tokens_count;
 }
+*/
 
 /* 
   Function: check_identifier
@@ -1074,6 +1142,7 @@ void message_counter(int* parameters, char* source_by_dtype){
   
     - <message_content_parameters>
 */
+
 char check_identifier(char* token, int index_msgid){
   char idfier = '0';
   switch (token[index_msgid]) {
