@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("b64",["Variable","Function"],[["b64",,[[,,,,0,"File:main.ino:b64"]]],["b64_process_g_temp_dump",,[[,,,,1,"File:base_64.ino:b64_process_g_temp_dump"]]],["b64_write_frame_to_dump",,[[,,,,1,"File:base_64.ino:b64_write_frame_to_dump"]]]]);
