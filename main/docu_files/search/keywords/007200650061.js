@@ -1,1 +1,0 @@
-NDSearch.OnPrefixDataLoaded("rea",["Function"],[["read_current",,[[,,,,0,"File:main.ino:read_current"]]],["read_data_from_column",,[[,,,,0,"File:main.ino:read_data_from_column"]]],["read_voltage",,[[,,,,0,"File:main.ino:read_voltage"]]]]);

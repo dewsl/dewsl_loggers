@@ -1,1 +1,0 @@
-NDSearch.OnPrefixDataLoaded("cou",["Function"],[["count_frames",,[[,,,,0,"File:can_library.ino:count_frames"]]]]);

@@ -1,1 +1,0 @@
-NDSearch.OnPrefixDataLoaded("ini",["Function"],[["init_can",,[[,,,,0,"File:can_library.ino:init_can"]]],["init_char_arrays",,[[,,,,0,"File:can_library.ino:init_char_arrays"]]],["init_gids",,[[,,,,0,"File:sd_library.ino:init_gids"]]],["init_strings",,[[,,,,0,"File:can_library.ino:init_strings"]]]]);
