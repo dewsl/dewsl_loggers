@@ -27,7 +27,7 @@
 
 #define VERBOSE 0
 #define RELAYPIN 44
-#define POLL_TIMEOUT 1500
+#define POLL_TIMEOUT 5000
 #define BAUDRATE 9600
 #define ARQTIMEOUT 30000
 
@@ -156,7 +156,7 @@ uint8_t g_datalogger_version = 3;
 */
 int TIMEOUT = 3000;
 
-
+char g_delim[2] = "~";
 
 // CAN-related
 char g_temp_dump[1250];
@@ -376,10 +376,10 @@ void getATCommand(){
     }
     else if (command == "AT+SEND"){
       Serial.println(text_message);
-      char *token1 = strtok(text_message,"+");
+      char *token1 = strtok(text_message,g_delim);
       while (token1 != NULL){
         send_data(false, token1);
-        token1 = strtok(NULL, "+");
+        token1 = strtok(NULL, g_delim);
       }
     }
     else if (command == "AT+CURRENT"){
@@ -435,7 +435,7 @@ void operation(int sensor_type, int communication_mode){
   int num_of_tokens = 0;
   read_data_from_column(g_final_dump, g_sensor_version, sensor_type);// matagal ito.
   build_txt_msgs(communication_mode, g_final_dump, text_message); 
-  char *token1 = strtok(text_message,"+");
+  char *token1 = strtok(text_message,"~");
     
   while (token1 != NULL){
     Serial.println(token1);
@@ -450,7 +450,7 @@ void operation(int sensor_type, int communication_mode){
     } else { //default
       send_data(true, token1); 
     }
-    token1 = strtok(NULL, "+");
+    token1 = strtok(NULL, g_delim);
     num_of_tokens = num_of_tokens + 1;
   }
 }
@@ -719,7 +719,7 @@ int wait_arq_cmd(){
 
   Parameters:
 
-    time - int milliseconds of delay
+    milli_secs - int milliseconds of delay
 
   Returns:
 
@@ -751,7 +751,7 @@ void arqwait_delay(int milli_secs){
 
     Build the text messages to be sent.
 
-    * Splits the data though the delimiter "+"
+    * Splits the data though the delimiter defined by *<g_delim>* 
 
     * The identifier, and cutoff are identified based on the type of data.
 
@@ -771,7 +771,6 @@ void arqwait_delay(int milli_secs){
 
         * timestamp
 
-    * The delimiter is a "+"
 
     * The appended data is copied per character to a temporary buffer.
 
@@ -787,7 +786,7 @@ void arqwait_delay(int milli_secs){
     source - char array that contains the aggregated data
 
     destination - char array that will contain the text messages to be sent separated by
-    the delimiter "+"
+    the delimiter *<g_delim>*
   
   Returns:
   
@@ -827,7 +826,7 @@ void build_txt_msgs(int mode, char* source, char* destination){
   }
   Ctimestamp[12] = '\0';
   
-  token1 = strtok(source, "+");
+  token1 = strtok(source, g_delim);
   while ( token1 != NULL){
     c=0;
     idf = check_identifier(token1,4);
@@ -868,12 +867,12 @@ void build_txt_msgs(int mode, char* source, char* destination){
       // strncat(dest,"*",1);
       // strncat(dest,Ctimestamp,12);
       strncat(dest,"<<",2);
-      strncat(dest,"+",1);
+      strncat(dest,g_delim,1);
     }
     num_text_to_send = num_text_to_send + num_text_per_dtype;
-    token1 = strtok(NULL, "+");
+    token1 = strtok(NULL, g_delim);
   }
-  token2 = strtok(dest, "+");
+  token2 = strtok(dest, g_delim);
   c=0;
   while( token2 != NULL ){
     c++;
@@ -891,8 +890,8 @@ void build_txt_msgs(int mode, char* source, char* destination){
     // strncat(token2,"<<",3);
     Serial.println(token2);
     strncat(destination,token2, strlen(token2));
-    strncat(destination, "+", 2);
-    token2 = strtok(NULL, "+");
+    strncat(destination, g_delim, 2);
+    token2 = strtok(NULL, g_delim);
   }
 
   if (destination[0] == '\0'){
@@ -1005,7 +1004,6 @@ void remove_extra_characters(char* columnData, char idf){
   
     - <message_content_parameters>
 */
-
 char check_identifier(char* token, int index_msgid){
   char idfier = '0';
   switch (token[index_msgid]) {
@@ -1108,15 +1106,12 @@ int check_cutoff(char idf){
 /* 
   Function: no_data_parsed
 
-    - Send this message instead if there is no availabe data from the sensor
-    
-    - Not yet working
+    - Writes "*0*ERROR: no data parsed<<+" to the input char array if there is no availabe data from the sensor
   
   Parameters:
   
     message - empty char array 
 */
-
 void no_data_parsed(char* message){
   
   sprintf(message, "040>>1/1#", 3);
@@ -1165,10 +1160,8 @@ void turn_off_column(){
     columnData - array of characters that contain the messages to be sent
   
   Returns:
-  
-    1 - tilt
 
-    2 - tilt and soil moisture
+    n/a
   
   See Also:
   
@@ -1180,7 +1173,7 @@ void send_data(bool isDebug, char* columnData){
   int timenow = millis();
   bool OKFlag = false;
   if (isDebug == true){
-    Serial.println("debug is true");
+    Serial.print("Sending: ");
     Serial.println(columnData);
 
     do{
@@ -1331,7 +1324,7 @@ void get_xbee_flag(){
   }
   return;
   
-  }
+}
 
 
 

@@ -89,16 +89,8 @@ void init_char_arrays(){
   for (int b = 0; b < 1250; b++){
     g_no_gids_dump[b] = '\0';
   }
-  // g_temp_dump = (char *)malloc(1250*sizeof(char));
-  // for (int i = 0; i < 1250; i++) {
-  //   g_temp_dump[i] = '\0';
-  // }
-
-  // g_final_dump = (char *)malloc(2500*sizeof(char));
-  // for (int i = 0; i < 2500; i++) {
-  //   g_final_dump[i] = '\0';
-  // }
 }
+
 /* 
   Function: clear_can_buffer
 
@@ -114,8 +106,7 @@ void init_char_arrays(){
   
   Parameters:
   
-    can_buffer - CAN_FRAME structure
-  
+    can_buffer - CAN_FRAME structure 
 */
 void clear_can_buffer(CAN_FRAME can_buffer[]){
   for(int i = 0; i< CAN_ARRAY_BUFFER_SIZE; i++){
@@ -126,8 +117,28 @@ void clear_can_buffer(CAN_FRAME can_buffer[]){
 /* 
   Function: get_data
 
-    Clear the global strings used for storage.
-    *Modifies the global char array g_no_gids_dump.*
+    Wrapper function that moderates the sending and gathering of CAN Frames.
+    This function is responsible for managing the retries, turning off and on of the column. 
+
+    *cmd < 100 (Broadcast Mode)*
+    
+    Broadcast mode sends a CAN frame through <send_command>, for all the sensor nodes to receive and interpret. 
+    <get_all_frames> waits for CAN Frames until <TIMEOUT> expires. 
+    The function internally counts the number of valid frames received.
+    Upon reaching <g_num_of_nodes>, or the set timeout, the column is turned off.
+    The arbitration is handled by the CAN protocol.
+
+    *cmd >= 100 (Polling Mode)*
+
+    A specifically structured CAN Frame is broacast to all sensors on the CAN Bus.
+    The CAN Frame contains the low byte and high byte of the specific sensor uid.
+    That specific sensor is expected to be the only valid responder. 
+    <get_one_frame> waits for the valid frame or for timeout to expire.
+
+    The collected CAN Frames are written to <g_temp_dump> before being processed by 
+    <process_g_temp_dump>.
+
+    Finally, <g_can_buffer> is emptied.
 
   Parameters:
 
@@ -160,23 +171,24 @@ void get_data(int cmd, int transmit_id, char* final_dump){
       turn_off_column();
     }
   } else {
+    turn_on_column();
     for (int i = 0; i < g_num_of_nodes; i++){
-      turn_on_column();
       uid = g_gids[i][0];
-      poll_command(cmd,uid);
+      poll_command(cmd,uid); //hindi ko ba kailangang ireset yung column?
       Serial.print(F("Polling UID: "));
       Serial.print(uid);
-      for (retry_count=0; retry_count < g_sampling_max_retry; retry_count++){
+      for (retry_count=0; retry_count < g_sampling_max_retry+2; retry_count++){
         Serial.print(" .");
-        ic = count_frames(g_can_buffer);
-        if (get_all_frames(POLL_TIMEOUT, g_can_buffer, 1) > ic ){
-          Serial.println(" OK");
+        
+        // contains 1 after first run.
+        if (get_one_frame(POLL_TIMEOUT, g_can_buffer, uid) == uid ){ 
+            Serial.println(" OK");
           break;
         }
       }
-      Serial.println(" ");
+      // Serial.println(" ");
     }
-  }
+  } 
   count = count_frames(g_can_buffer);
   // write frames to String or char array
   for (int i = 0;i<count;i++){
@@ -188,8 +200,7 @@ void get_data(int cmd, int transmit_id, char* final_dump){
       }
     }
   }
-  // add delimiter "+"
-  strcat(g_temp_dump,"+");
+  strcat(g_temp_dump,g_delim);
   strcat(g_temp_dump, '\0');
   Serial.print("g_temp_dump: ");
   Serial.println(g_temp_dump);
@@ -217,6 +228,8 @@ void get_data(int cmd, int transmit_id, char* final_dump){
     timeout_ms - int timeout in milliseconds
 
     can_buffer[] - CAN_FRAME struct array
+
+    expected_frames - int expected number of unique frames from the sensors
 
   Returns:
 
@@ -267,6 +280,75 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
 } 
 
 /* 
+  Function: get_one_frame
+
+    - Receive all the incoming frames.
+    
+    - Place the frames in a CAN_FRAME array.
+
+    - If comm_mode = 1, checks the current time and sends ARQWAIT if time elapsed
+    between st
+    
+    - Process the frames in the buffer <process_all_frames>
+
+  Parameters:
+  
+    timeout_ms - int timeout in milliseconds
+
+    can_buffer[] - CAN_FRAME struct array
+
+    expected_uid - int expected uid of the sensor.
+
+  Returns:
+
+    integer uid of the sensor responding
+
+    0 - the expected uid was not encountered by the process
+
+  See Also:
+
+    <get_data>
+*/
+int get_one_frame(int timeout_ms, CAN_FRAME can_buffer[], int expected_uid) {
+  int timestart = millis();
+  int a = 0, i = 0;
+  i = count_frames(can_buffer);
+  CAN_FRAME incoming;
+  if (VERBOSE == 1) { Serial.println("get_all_frames()"); }
+  do {
+      check_can_status();
+      if (Can0.available()){
+        Can0.read(incoming);
+        can_buffer[i].id = incoming.id;
+        can_buffer[i].data.byte[0] = incoming.data.byte[0];
+        can_buffer[i].data.byte[1] = incoming.data.byte[1];
+        can_buffer[i].data.byte[2] = incoming.data.byte[2];
+        can_buffer[i].data.byte[3] = incoming.data.byte[3];
+        can_buffer[i].data.byte[4] = incoming.data.byte[4];
+        can_buffer[i].data.byte[5] = incoming.data.byte[5];
+        can_buffer[i].data.byte[6] = incoming.data.byte[6];
+        can_buffer[i].data.byte[7] = incoming.data.byte[7];
+        i++;
+        if (incoming.id == expected_uid){
+          process_all_frames(g_can_buffer);
+            return incoming.id;
+        }
+      }
+      if (comm_mode == 1){
+        if ( (millis() - arq_start_time) >= ARQTIMEOUT){
+          arq_start_time = millis();
+          Serial.println("ARQWAIT");
+          DATALOGGER.print("ARQWAIT");
+        }
+      }
+  } while ((millis() - timestart <= timeout_ms)); 
+  process_all_frames(g_can_buffer);
+  return 0;                              
+} 
+
+
+
+/* 
   Function: process_all_frames
 
     - Facilitates the processing of CAN Frames stored in the can_buffer[] array.
@@ -291,7 +373,7 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
 */
 void process_all_frames(CAN_FRAME can_buffer[]){
   int count,i;
-  count = count_frames(can_buffer);
+  //count = count_frames(can_buffer);
   // repeating frames filter
   delete_repeating_frames(can_buffer);
   // magnitude filter? i.e. kuha ulit data kapag bagsak sa magnitude?
@@ -330,7 +412,7 @@ int count_frames(CAN_FRAME can_buffer[]){
   Function: delete_repeating_frames
 
     Replaces the values inside the CAN_FRAME struct with 0s
-    if an id is not unique within the CAN_FRAME array.
+    if an id is not unique within the CAN_FRAME array. Compares ids only.
     0s the 2nd instance. The first is retained. 
 
   Parameters:
@@ -363,8 +445,17 @@ void delete_repeating_frames(CAN_FRAME can_buffer[]){
 /* 
   Function: write_frame_to_dump
 
-    Convert the frames into one char array.
-    id 
+    Write the frames as hex coded char array.
+    Uids are written as 4 character hex.
+
+    Format:
+    gids - 4 char
+    msgid - 2 chars
+    data - 14 chars
+
+    *[gids][msgid][data]*
+
+    The format for data varies depending on msgid.
 
   Parameters:
 
@@ -408,50 +499,11 @@ void write_frame_to_dump(CAN_FRAME incoming, char* dump){
   sprintf(temp,"%02X-",incoming.data.byte[7]);
   strcat(dump,temp);
 
-  interpret_frame(incoming);
+  // interpret_frame(incoming);
   return;
 }
 
-void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
-  char temp[5] = {};
-  char temp2[5] = {};
-  int gid,msgid,x,y,z,v;
-  gid = convert_uid_to_gid(incoming.id);
-  msgid = incoming.data.byte[0];
 
-  x = compute_axis(incoming.data.byte[1],incoming.data.byte[2]);
-  y = compute_axis(incoming.data.byte[3],incoming.data.byte[4]);
-  z = compute_axis(incoming.data.byte[5],incoming.data.byte[6]);
-  v = incoming.data.byte[7];
-
-  to_base64(gid,temp);
-  Serial.print("gid converted:"); Serial.println(temp);
-  pad_b64(1,temp,temp2);
-  Serial.print("gid padded:"); Serial.println(temp2);
-  strcat(dump,temp2);
-
-  to_base64(msgid,temp);
-  // Serial.print("msgid converted:"); Serial.println(temp);
-  pad_b64(2,temp,temp2);
-  // Serial.print("msgid padded:"); Serial.println(temp2);
-  strcat(dump,temp2);
-
-  to_base64(x,temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
-  to_base64(y,temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
-  to_base64(z,temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
-  to_base64(v,temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
-
-  interpret_frame(incoming);
-  return;
-}
 
 /* 
   Function: convert_uid_to_gid
@@ -498,9 +550,9 @@ int convert_uid_to_gid(int uid){
 
     - Failed conversion of uid to gid : delimiter "="
 
-    - Write in g_final_dump
+    - Write in *<g_final_dump>*
 
-        Format of data in g_string_proc:
+        Format of data in *<g_string_proc>*:
     
         delimiter - 1 char
         gids - 4 chars
@@ -522,7 +574,6 @@ int convert_uid_to_gid(int uid){
 
     <get_data>
 */
-
 void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
   char *token,*last_char;
   char temp_id[5],temp_gid[5],temp_data[17];
@@ -548,7 +599,7 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
     }
     token = strtok(NULL,"-");
   } 
-  strncat(final_dump,"+",1); // add delimiterfor different data type
+  strncat(final_dump,g_delim,1); // add delimiterfor different data type
 }
 
 //Group: Serial Display Functions
@@ -582,7 +633,6 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
 
     <write_frame_to_dump>
 */
-
 void interpret_frame(CAN_FRAME incoming){
   int id,d1,d2,d3,d4,d5,d6,d7,d8,x,y,z;
   char temp[6];
@@ -712,6 +762,25 @@ void send_command(int command,int transmit_id){
   Can0.sendFrame(outgoing);
 }
 
+/* 
+  Function: poll_command
+
+    Populates an outgoing frame with a command and uid then broadcasts the frame.
+
+  Parameters:
+
+    command - integer message id ( msgid )
+
+    uid - integer unique id of sensor expected to receive the frame.
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <get_all_frames>
+*/
 void poll_command(int command,int uid){
   if (VERBOSE == 1) { Serial.println("send_frame()"); }
   CAN_FRAME outgoing;
