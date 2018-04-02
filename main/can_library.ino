@@ -267,7 +267,7 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
           }
         }
       }
-      if (comm_mode == 1){
+      if (comm_mode == "ARQ"){
         if ( (millis() - arq_start_time) >= ARQTIMEOUT){
           arq_start_time = millis();
           Serial.println("ARQWAIT");
@@ -334,7 +334,7 @@ int get_one_frame(int timeout_ms, CAN_FRAME can_buffer[], int expected_uid) {
             return incoming.id;
         }
       }
-      if (comm_mode == 1){
+      if (comm_mode == "ARQ"){
         if ( (millis() - arq_start_time) >= ARQTIMEOUT){
           arq_start_time = millis();
           Serial.println("ARQWAIT");

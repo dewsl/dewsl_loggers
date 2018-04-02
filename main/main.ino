@@ -35,7 +35,7 @@
 #define ENABLE_RTC 0
 #define CAN_ARRAY_BUFFER_SIZE 100
 
-#define comm_mode 1 // 1 for ARQ, 2 XBEE
+#define comm_mode "ARQ" // 1 for ARQ, 2 XBEE
 
 const char base64[64] PROGMEM = {'A','B','C','D','E','F','G','H','I','J','K','L','M',
 'N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h',
@@ -221,7 +221,7 @@ void setup() {
   Serial.begin(BAUDRATE);
   DATALOGGER.begin(9600);
   powerM.begin(9600);
-  if (comm_mode == 2){
+  if (comm_mode == "XBEE"){
     xbee.setSerial(DATALOGGER);
   }
   ina219.begin();
@@ -245,7 +245,8 @@ void loop(){
       datalogger_flag = 1;
     }
     else if (DATALOGGER.available()) {
-      if (comm_mode == 1){
+      if (comm_mode == "ARQ"){
+        Serial.println("Using ARQ as comm_mode.");
         operation(wait_arq_cmd(), comm_mode);
         shut_down();
         datalogger_flag = 1;
@@ -347,7 +348,7 @@ void getATCommand(){
     }
     else if (command == "AT+POLL"){
       read_data_from_column(g_final_dump, g_sensor_version,1);
-      build_txt_msgs(1, g_final_dump, text_message); //di ko to sure
+      build_txt_msgs(comm_mode, g_final_dump, text_message); //di ko to sure
       Serial.println(OKSTR);
     }
     else if (command == "AT+GETDATA"){
@@ -389,7 +390,7 @@ void getATCommand(){
       read_voltage();
     }
     else if (command == "AT+TIMESTAMPPMM"){
-        String timestamp = getTimestamp(2);
+        String timestamp = getTimestamp("XBEE");
         Serial.println(timestamp);
     }
     else if (command == "AT+LOOPSEND"){
@@ -430,7 +431,7 @@ void getATCommand(){
 
     g_final_dump, g_sensor_version, text_message
 */
-void operation(int sensor_type, int communication_mode){
+void operation(int sensor_type, char communication_mode[]){
   int counter= 0;
   int num_of_tokens = 0;
   read_data_from_column(g_final_dump, g_sensor_version, sensor_type);// matagal ito.
@@ -439,9 +440,9 @@ void operation(int sensor_type, int communication_mode){
     
   while (token1 != NULL){
     Serial.println(token1);
-    if (communication_mode == 1) { // ARQ
+    if (communication_mode == "ARQ") { // ARQ
       send_data(false, token1);    
-    } else if(communication_mode == 2) { // XBEE
+    } else if(communication_mode == "XBEE") { // XBEE
       while (send_thru_xbee(token1) == false){
         if (counter == 10)
           break;
@@ -568,15 +569,15 @@ void read_voltage(){
   
     <poll_data>
 */
-String getTimestamp(int communication_mode){
+String getTimestamp(char communication_mode[]){
 
   if (communication_mode == 0){ //internal rtc
     return g_timestamp;
-  } else if (communication_mode == 1){ // ARQ
+  } else if (communication_mode == "ARQ"){ // ARQ
     Serial.print("g_timestamp: ");
     Serial.println(g_timestamp);
     return g_timestamp;
-  } else if(communication_mode == 2){ //xbee
+  } else if(communication_mode == "XBEE"){ //xbee
     char timestamp[20] = "";    
     timestart = millis();
     timenow = millis();
@@ -732,7 +733,7 @@ int wait_arq_cmd(){
 
 void arqwait_delay(int milli_secs){
   int func_start = 0;
-  if (comm_mode == 1){
+  if (comm_mode == "ARQ"){
     while ( (millis() - func_start ) < milli_secs ){
       if ( (millis() - arq_start_time) >= ARQTIMEOUT ) {
         arq_start_time = millis();
@@ -801,7 +802,7 @@ void arqwait_delay(int milli_secs){
     - <writeData>
 */
 
-void build_txt_msgs(int mode, char* source, char* destination){
+void build_txt_msgs(char mode[], char* source, char* destination){
 
   char *token1,*token2;
   char dest[5000] = {};
