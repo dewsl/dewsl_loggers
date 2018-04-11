@@ -61,19 +61,37 @@ long arq_start_time = 0;
   uint8_t b64 = 0;
   --- 
 */
-uint8_t b64 = 0; //boolean for b64 operations.
+uint8_t b64 = 0;
 
+/* 
+  Variable: payload
+  global variable uint8_t array that will hold the data from xbee
+
+  Variable declaration:
+  --- Code
+  uint8_t payload[200];
+  --- 
+*/
 uint8_t payload[200];
-XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00); //sets the data that it will only send to the coordinator
 
+XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00); //sets the data that it will only send to the coordinator
 ZBTxRequest zbTx = ZBTxRequest(addr64, payload, sizeof(payload));
 ZBTxStatusResponse txStatus = ZBTxStatusResponse();
 XBeeResponse response = XBeeResponse();
 ZBRxResponse rx = ZBRxResponse();
 
-uint8_t xbFlag=0;
 int g_chip_select = SS3;
 uint8_t datalogger_flag = 0;
+
+/* 
+  Variable: xbee_response
+  global variable char array that will hold the command frame received from the xbee
+
+  Variable declaration:
+  --- Code
+  char xbee_response[200];
+  --- 
+*/
 char xbee_response[200];
 
 /*
@@ -98,6 +116,7 @@ int g_gids[40][2];
   --- 
 */
 uint8_t g_num_of_nodes = 40;
+
 /*
   Variable: g_mastername
   global char array that holds the 5 char mastername. This variable is overwrittern by *<process_config_line>*. This variable defaults to "XXXXX".
@@ -154,34 +173,68 @@ uint8_t g_datalogger_version = 3;
 */
 int TIMEOUT = 3000;
 
+/* 
+  Variable: g_sampling_max_retry
+  integer that determines the number of column sampling retry
+  
+  *SD Card Config Line* usage:
+  --- Code
+  sampling_max_retry = 3
+  ---
+*/
+int g_sampling_max_retry = 3;
+
+/* 
+  Variable: g_delim
+  global char array that holds the delimiter used for separating data from different commands
+  
+  Variable declaration:
+  --- Code
+  char g_delim[2] = "~";
+  ---
+*/
 char g_delim[2] = "~";
 
 // CAN-related
 char g_temp_dump[1250];
 char g_final_dump[2500];
 char g_no_gids_dump[2500];
+
+/* 
+  Variable: text_message
+  char array that holds the formatted messages to be sent
+
+  Intial Variable declaration:
+  --- Code
+  char text_message[5000];
+  ---
+  
+  See Also:
+
+  <build_txt_msgs>
+*/
 char text_message[5000];
+
 String g_string;
 String g_string_proc;
-int g_sampling_max_retry = 3;
 CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
 
-
-
-// Text message related 
 int t_num_message_type = 6; // 5 - ilang klase ng text messages ang gagawin
   // i.e. x - axel 1 , y - accel 2, b - raw soms , c - calib soms, ff - piezo, d - diagnostics
 
 /*
   Variable: g_timestamp
   global String that holds the timestamp.This variable is overwritten by the timestamp from the string sent by the ARQ. This variable defaults to "TIMESTAMP000".
+
+  Intial Variable declaration:
+  --- Code
+ String g_timestamp = "TIMESTAMP000";
+  ---
 */
 String g_timestamp = "TIMESTAMP000";
 
 //current sensor
 Adafruit_INA219 ina219;
-
-
 
 bool ate=true;
 /* 
@@ -216,7 +269,6 @@ bool ate=true;
 
     <init_can> <init_strings> <init_gids> <init_sd> <open_config>
 */
-
 void setup() {
   Serial.begin(BAUDRATE);
   DATALOGGER.begin(9600);
@@ -235,13 +287,32 @@ void setup() {
   open_config();
   print_stored_config();
 }
-//Function: loop
-// Run the <getATcommand> in loop.
+
+/* 
+  Function: loop
+
+    - Waits for any activity in the DATALOGGER Serial or xbee Serial for 20 secs.
+
+    - Calls <operation>
+
+    - Sets the datalogger_flag
+
+  Parameters:
+    
+    n/a
+
+  Returns:
+    
+    n/a
+  
+  See Also:
+
+    <operation> <getATCommand> 
+*/
 void loop(){
   int timestart = millis();
   int timenow = millis();
 
-  
   while ( timenow - timestart < 20000){
     xbee.readPacket();
     timenow = millis();
@@ -257,9 +328,8 @@ void loop(){
         operation(wait_xbee_cmd(10000,xbee_response), comm_mode);
         shut_down();
         datalogger_flag = 1;
-        // operation(wait_xbee_cmd(), comm_mode);
       } else{
-        datalogger_flag =0;
+        datalogger_flag = 0;
       }
     }
   }
@@ -268,6 +338,8 @@ void loop(){
     Serial.println("Turning off ");
     shut_down();
   }
+  shut_down();
+
   delay (1000);
 }
 
@@ -276,9 +348,9 @@ void hard_code(){
   String str2 = "MasterName = BOLTA";
 
   g_num_of_nodes = process_column_ids(str1);
-  get_value_from_line(str2).toCharArray(g_mastername,6);
-  
+  get_value_from_line(str2).toCharArray(g_mastername,6); 
 }
+
 //Function: getATCommand
 // Take in-line serial input and execute AT command 
 void getATCommand(){
@@ -430,7 +502,7 @@ void getATCommand(){
   
     types - integer that determines the kind of data requested from the sensor. *1 - tilt* *2 - tilt + soms*
 
-    mode - integer that determines which DATALOGGER receives the sent data. *1- ARQ* *2- Xbee* 
+    communication_mode - char array that determines which DATALOGGER receives the sent data. *ARQ* or *XBEE* 
   
   Returns:
   
@@ -442,7 +514,7 @@ void getATCommand(){
 
   Global Variables:
 
-    g_final_dump, g_sensor_version, text_message
+    <g_final_dump>, <g_sensor_version>, <text_message>
 */
 void operation(int sensor_type, char communication_mode[]){
   int counter= 0;
@@ -469,7 +541,7 @@ void operation(int sensor_type, char communication_mode[]){
   }
 }
 
- //Function: getArguments
+//Function: getArguments
 // Read in-line serial AT command.
 void getArguments(String at_cmd, String *arguments){
   int i_from = 0, i_to = 0, i_arg = 0;
@@ -492,7 +564,6 @@ void getArguments(String at_cmd, String *arguments){
 
   } while(f_exit);
 }
-
 
 //Group: Data Gathering Functions
 /* 
@@ -544,7 +615,6 @@ void read_current(){
   current_mA = ina219.getCurrent_mA();
   Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
 }
-
 
 /* 
   Function: read_voltage()
@@ -644,7 +714,6 @@ String getTimestamp(char communication_mode[]){
   
     <poll_data>
 */
-
 void set_rtc_time(String time_string){
   int hours,minutes,seconds,day,month,year;
   
@@ -660,6 +729,7 @@ void set_rtc_time(String time_string){
     rtc.setDate(day, month, year);
   }
 }
+
 /* 
   Function: wait_arq_cmd
 
@@ -678,7 +748,7 @@ void set_rtc_time(String time_string){
   
   See Also:
   
-    - <loop,arqwait_delay>
+    - <loop> <parse_cmd>
 */
 int wait_arq_cmd(){
   String serial_line; 
@@ -728,6 +798,72 @@ int wait_arq_cmd(){
   // }
 }
 
+/* 
+  Function: wait_xbee_cmd
+
+    Waits for a frame from the xbee and writes it to the response_string
+
+  Parameters:
+
+    timeout - integer in milliseconds that determines the timeout value for waitig
+
+    response_string - char array that will contain the response from the xbee
+
+  See Also:
+
+    - <parse_cmd> <loop>
+*/
+int wait_xbee_cmd(int timeout, char* response_string){
+  xbee_response[0] = '\0';
+  xbee.readPacket(timeout);
+  char temp[1];
+  
+    if (xbee.getResponse().isAvailable()) {
+        if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
+            xbee.getResponse().getZBRxResponse(rx);
+            for (int i = 0; i < rx.getDataLength (); i++){
+              temp[0] = (char)rx.getData(i);
+              strncat(response_string,temp,1 ) ;        
+            }
+        }
+    } else if ( xbee.getResponse().isError()){
+          Serial.print("Error ");
+          Serial.println(xbee.getResponse().getErrorCode());
+    }
+    Serial.println(response_string);
+  return parse_cmd(response_string);
+}
+
+/* 
+  Function: parse_cmd
+
+    Determine the types of data to be sampled from the sensors based on input command_string.
+    <wait_arq_cmd> and <wait_xbee_cmd> both return a call to <parse_cmd>.
+
+    *From <wait_arq_cmd>:*
+    --- Code
+    return parse_cmd(c_serial_line);
+    ---
+
+    *From <wait_xbee_cmd>*
+    --- Code
+    return parse_cmd(response_string);
+    ---
+
+  Parameters:
+  
+    command_string - char* to char array that contains the command to be interpreted
+  
+  Returns:
+  
+    1 - tilt
+
+    2 - tilt and soil moisture
+  
+  See Also:
+  
+    - <wait_arq_cmd> <wait_xbee_cmd>
+*/
 int parse_cmd(char* command_string){
   String serial_line; 
   String command, temp_time,purged_time;
@@ -762,7 +898,6 @@ int parse_cmd(char* command_string){
       return 0;
     }
   }
-
 }
 
 /* 
@@ -1176,7 +1311,6 @@ void no_data_parsed(char* message){
 //Function: shut_down()
 // Sends a shutdown command to the 328 PowerModule.
 void shut_down(){
-  
     powerM.println("PM+D");
 }
 
@@ -1338,34 +1472,6 @@ bool send_thru_xbee(char* load_data) {
   Serial.println(F("exit send"));
   delay(1000);
   return successFlag;
-}
-
-/* 
-  Function: get_xbee_flag
-
-    - Sets the xbee flag 1 if received acknowledgement from the coordinator
-*/
-int wait_xbee_cmd(int timeout, char* response_string){
-  // int start=millis();
-  xbee_response[0] = '\0';
-
-  // while((millis() - start)<timeout){
-    xbee.readPacket(timeout);
-    char temp[1];
-    if (xbee.getResponse().isAvailable()) {
-        if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
-            xbee.getResponse().getZBRxResponse(rx);
-            for (int i = 0; i < rx.getDataLength (); i++){
-              temp[0] = (char)rx.getData(i);
-              strncat(response_string,temp,1 ) ;        
-            }
-        }
-    } else if ( xbee.getResponse().isError()){
-          Serial.print("Error ");
-          Serial.println(xbee.getResponse().getErrorCode());
-    }
-    Serial.println(response_string);
-  return parse_cmd(response_string);
 }
 
 
