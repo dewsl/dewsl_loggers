@@ -144,7 +144,7 @@ unsigned int process_config_line(char *one_line){
 
 	} else if( (str1.startsWith("broadcastTimeout")) | (str1.startsWith("broadcast_timeout"))
 		| (str1.startsWith("broadcasttimeout")) | (str1.startsWith("BroadcastTimeout")) ){
-		TIMEOUT = get_value_from_line(str1).toInt();
+		broad_timeout = get_value_from_line(str1).toInt();
 		return 0;
 
 	} else if( (str1.startsWith("sampling_max_retry")) | 
@@ -242,7 +242,7 @@ void print_stored_config(){
 	sprintf(desc,"%-24s","Sensor Version: "); Serial.print(desc); 
 	Serial.println(g_sensor_version);
 	sprintf(desc,"%-24s","Broadcast Timeout: "); Serial.print(desc); 
-	Serial.println(TIMEOUT);
+	Serial.println(broad_timeout);
 	sprintf(desc,"%-24s","Sampling Max Retry: "); Serial.print(desc); 
 	Serial.println(g_sampling_max_retry);
 	sprintf(desc,"%-24s","Turn On Delay: "); Serial.print(desc); 

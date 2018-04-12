@@ -123,7 +123,7 @@ void clear_can_buffer(CAN_FRAME can_buffer[]){
     *cmd < 100 (Broadcast Mode)*
     
     Broadcast mode sends a CAN frame through <send_command>, for all the sensor nodes to receive and interpret. 
-    <get_all_frames> waits for CAN Frames until <TIMEOUT> expires. 
+    <get_all_frames> waits for CAN Frames until <broad_timeout> expires. 
     The function internally counts the number of valid frames received.
     Upon reaching <g_num_of_nodes>, or the set timeout, the column is turned off.
     The arbitration is handled by the CAN protocol.
@@ -160,7 +160,7 @@ void get_data(int cmd, int transmit_id, char* final_dump){
     for (retry_count = 0; retry_count < g_sampling_max_retry; retry_count++){
       turn_on_column();
       send_command(cmd,transmit_id);
-      if( (respondents = get_all_frames(TIMEOUT,g_can_buffer,g_num_of_nodes)) == g_num_of_nodes){
+      if( (respondents = get_all_frames(broad_timeout,g_can_buffer,g_num_of_nodes)) == g_num_of_nodes){
         Serial.println("Complete frames! :) ");
         turn_off_column();
         break;
@@ -346,8 +346,6 @@ int get_one_frame(int timeout_ms, CAN_FRAME can_buffer[], int expected_uid) {
   return 0;                              
 } 
 
-
-
 /* 
   Function: process_all_frames
 
@@ -502,8 +500,6 @@ void write_frame_to_dump(CAN_FRAME incoming, char* dump){
   // interpret_frame(incoming);
   return;
 }
-
-
 
 /* 
   Function: convert_uid_to_gid
@@ -796,7 +792,7 @@ void poll_command(int command,int uid){
 
 
 
-//Group: String-based functions.
+//Group: String-based functions (Commented Out)
 /* 
   Function: write_frame_to_string
 
@@ -814,6 +810,7 @@ void poll_command(int command,int uid){
 
     <process_g_string>
 */
+/*
 void write_frame_to_string(CAN_FRAME incoming){
   char temp[5];
 
@@ -848,6 +845,7 @@ void write_frame_to_string(CAN_FRAME incoming){
 
   return;
 }
+*/
 
 /* 
   Function: string_to_int
@@ -867,6 +865,7 @@ void write_frame_to_string(CAN_FRAME incoming){
 
     <process_g_string>
 */
+/*
 int string_to_int(String id_string){
   char *id_c_add,*last_char;
   char idchar[id_string.length()+1];
@@ -881,7 +880,7 @@ int string_to_int(String id_string){
   id_int = strtol(id_c_add,&last_char,16);
   return id_int;
 }
-
+*/
 /* 
   Function: process_g_string
 
@@ -917,6 +916,7 @@ int string_to_int(String id_string){
 
     <separate_gids_and_uids>
 */
+/*
 int process_g_string(){
   int num_of_proc_data = 0;
   int i1=0, i2=0;
@@ -941,7 +941,8 @@ int process_g_string(){
   }
   return 1;
 }
-
+*/
+/*
 String separate_gids_and_uids(String source_string){
   char temp[5];
   int i1,i2,gid;
@@ -984,3 +985,4 @@ String separate_gids_and_uids(String source_string){
   }
   return processed_string;
 }
+*/

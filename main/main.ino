@@ -163,7 +163,7 @@ uint8_t g_sensor_version = 3;
 uint8_t g_datalogger_version = 3;
 
 /* 
-  Variable: TIMEOUT
+  Variable: broad_timeout
   integer that determines the tumeout duration of broadcast (in milliseconds ). This variable is overwrittern by *<process_config_line>*. 
 
   *SD Card Config Line* usage:
@@ -171,7 +171,7 @@ uint8_t g_datalogger_version = 3;
   brodcast_timeout = 3000
   ---
 */
-int TIMEOUT = 3000;
+int broad_timeout = 3000;
 
 /* 
   Variable: g_sampling_max_retry
@@ -217,10 +217,8 @@ char text_message[5000];
 
 String g_string;
 String g_string_proc;
-CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
 
-int t_num_message_type = 6; // 5 - ilang klase ng text messages ang gagawin
-  // i.e. x - axel 1 , y - accel 2, b - raw soms , c - calib soms, ff - piezo, d - diagnostics
+CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
 
 /*
   Variable: g_timestamp
@@ -235,8 +233,9 @@ String g_timestamp = "TIMESTAMP000";
 
 //current sensor
 Adafruit_INA219 ina219;
-
 bool ate=true;
+
+//Group: Main Loop Functions
 /* 
   Function: setup
 
@@ -313,33 +312,23 @@ void loop(){
   int timestart = millis();
   int timenow = millis();
 
-  while ( timenow - timestart < 20000){
-    xbee.readPacket();
-    timenow = millis();
-    if (Serial.available()){
-      getATCommand();  
-      datalogger_flag = 1;
-    } else if (DATALOGGER.available() || xbee.getResponse().isAvailable()) {
-      if (comm_mode == "ARQ"){
-        operation(wait_arq_cmd(), comm_mode);
-        shut_down();
+  while ( (timenow - timestart < 20000) && (datalogger_flag == 0)){
+      timenow = millis();
+      if (Serial.available()){
+        getATCommand();  
         datalogger_flag = 1;
-      } else if(comm_mode =="XBEE"){
-        operation(wait_xbee_cmd(10000,xbee_response), comm_mode);
-        shut_down();
-        datalogger_flag = 1;
-      } else{
-        datalogger_flag = 0;
+      } else if (comm_mode == "XBEE") {
+          operation(wait_xbee_cmd(20000,xbee_response), comm_mode);
+          shut_down();
+          datalogger_flag = 1;
+      } else if (comm_mode == "ARQ"){
+          if(DATALOGGER.available()){
+              operation(wait_arq_cmd(), comm_mode);
+              shut_down();
+              datalogger_flag = 1;
+          }
       }
-    }
   }
-  if (datalogger_flag == 0) {
-    operation(1, comm_mode);
-    Serial.println("Turning off ");
-    shut_down();
-  }
-  shut_down();
-
   delay (1000);
 }
 
@@ -524,6 +513,7 @@ void operation(int sensor_type, char communication_mode[]){
   char *token1 = strtok(text_message,"~");
     
   while (token1 != NULL){
+    Serial.print("Sending ::::");
     Serial.println(token1);
     if (communication_mode == "ARQ") { // ARQ
       send_data(false, token1);    
@@ -565,7 +555,7 @@ void getArguments(String at_cmd, String *arguments){
   } while(f_exit);
 }
 
-//Group: Data Gathering Functions
+//Group: Sensor Data Gathering Functions
 /* 
   Function: read_data_from_column
 
@@ -661,6 +651,8 @@ String getTimestamp(char communication_mode[]){
     Serial.println(g_timestamp);
     return g_timestamp;
   } else if(communication_mode == "XBEE"){ //xbee
+    return g_timestamp;
+    /*
     char timestamp[20] = "";    
     timestart = millis();
     timenow = millis();
@@ -688,7 +680,7 @@ String getTimestamp(char communication_mode[]){
         return timestamp; 
       }    
     }
-  
+    */
   }
   
   else{
@@ -730,6 +722,7 @@ void set_rtc_time(String time_string){
   }
 }
 
+//Group: Command Gathering Functions
 /* 
   Function: wait_arq_cmd
 
@@ -769,7 +762,6 @@ int wait_arq_cmd(){
   serial_line.toCharArray(c_serial_line,serial_line.length());
 
   Serial.println(serial_line);
-
   return parse_cmd(c_serial_line);
 
   // if ((pch = strstr(c_serial_line,cmd)) != NULL) {
@@ -817,20 +809,20 @@ int wait_xbee_cmd(int timeout, char* response_string){
   xbee_response[0] = '\0';
   xbee.readPacket(timeout);
   char temp[1];
-  
-    if (xbee.getResponse().isAvailable()) {
-        if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
-            xbee.getResponse().getZBRxResponse(rx);
-            for (int i = 0; i < rx.getDataLength (); i++){
-              temp[0] = (char)rx.getData(i);
-              strncat(response_string,temp,1 ) ;        
-            }
-        }
-    } else if ( xbee.getResponse().isError()){
-          Serial.print("Error ");
-          Serial.println(xbee.getResponse().getErrorCode());
-    }
-    Serial.println(response_string);
+  if (xbee.getResponse().isAvailable()) {
+      if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
+          xbee.getResponse().getZBRxResponse(rx);
+          for (int i = 0; i < rx.getDataLength (); i++){
+            temp[0] = (char)rx.getData(i);
+            strncat(response_string,temp,1 ) ;        
+          }
+      }
+  } else if ( xbee.getResponse().isError()){
+        Serial.print("Error ");
+        Serial.println(xbee.getResponse().getErrorCode());
+  }
+  Serial.print("response_string: ");
+  Serial.println(response_string);
   return parse_cmd(response_string);
 }
 
@@ -900,38 +892,6 @@ int parse_cmd(char* command_string){
   }
 }
 
-/* 
-  Function: arqwait_delay()
-
-    A delay function that sends ARQWAIT every
-
-  Parameters:
-
-    milli_secs - int milliseconds of delay
-
-  Returns:
-
-    n/a
-
-  See Also:
-
-    <process_g_string>
-*/
-
-void arqwait_delay(int milli_secs){
-  int func_start = 0;
-  if (comm_mode == "ARQ"){
-    while ( (millis() - func_start ) < milli_secs ){
-      if ( (millis() - arq_start_time) >= ARQTIMEOUT ) {
-        arq_start_time = millis();
-        Serial.println("ARQWAIT");
-        DATALOGGER.print("ARQWAIT");
-      }
-    }
-  } else {
-    delay(milli_secs);
-  }
-}
 
 //Group: Data parsing functions
 /* 
@@ -1085,6 +1045,7 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     no_data_parsed(destination);
     writeData(timestamp,String("*0*ERROR: no data parsed"));
   }
+  Serial.println(F("================================="));
 }
 
 /* 
@@ -1328,6 +1289,38 @@ void turn_off_column(){
   arqwait_delay(1000);
 }
 
+/* 
+  Function: arqwait_delay()
+
+    A delay function that sends ARQWAIT every
+
+  Parameters:
+
+    milli_secs - int milliseconds of delay
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <process_g_string>
+*/
+void arqwait_delay(int milli_secs){
+  int func_start = 0;
+  if (comm_mode == "ARQ"){
+    while ( (millis() - func_start ) < milli_secs ){
+      if ( (millis() - arq_start_time) >= ARQTIMEOUT ) {
+        arq_start_time = millis();
+        Serial.println("ARQWAIT");
+        DATALOGGER.print("ARQWAIT");
+      }
+    }
+  } else {
+    delay(milli_secs);
+  }
+}
+
 //Group: Sending Related Functions
 
 /* 
@@ -1360,47 +1353,45 @@ void send_data(bool isDebug, char* columnData){
     // Serial.println(columnData);
 
     do{
-      timestart = millis();
-      timenow = millis();
-      while (!Serial.available()){
-        while ( timenow - timestart < 9000 ) {
-          timenow = millis();
+        timestart = millis();
+        timenow = millis();
+        while (!Serial.available()){
+            while ( timenow - timestart < 9000 ) {
+                timenow = millis();
+            }
+            Serial.println("Time out...");
+            break;
         }
-        Serial.println("Time out...");
-        break;
-      }
-      if (Serial.find("OK")){
-        OKFlag = true;
-        Serial.println("moving on");
-      } else{
-        Serial.println(columnData);       
-      }
-    } while (OKFlag == false);
-  }
-  else {
-    do{   
-    Serial.print("Sending: ");
-    Serial.println(columnData);
-      DATALOGGER.println(columnData);
-      timestart = millis();
-      timenow = millis();
-      while (!DATALOGGER.available()){
-        while ( timenow - timestart < 9000 ) {
-          timenow = millis();
+        if (Serial.find("OK")){
+            OKFlag = true;
+            Serial.println("moving on");
+        } else{
+            Serial.println(columnData);       
         }
-        DATALOGGER.println("Time out...");
-        break;
-      }
-
-      if (DATALOGGER.find("OK")){
-        OKFlag = true;
-      }
-      else{
-        DATALOGGER.println(columnData);       
-      }
-
     } while (OKFlag == false);
+  } else {
+      do{   
+      Serial.print("Sending: ");
+      Serial.println(columnData);
+        DATALOGGER.println(columnData);
+        timestart = millis();
+        timenow = millis();
+        while (!DATALOGGER.available()){
+          while ( timenow - timestart < 9000 ) {
+            timenow = millis();
+          }
+          DATALOGGER.println("Time out...");
+          break;
+        }
 
+        if (DATALOGGER.find("OK")){
+          OKFlag = true;
+        }
+        else{
+          DATALOGGER.println(columnData);       
+        }
+
+      } while (OKFlag == false);
   }
 } 
 
@@ -1421,13 +1412,11 @@ bool send_thru_xbee(char* load_data) {
   bool successFlag= false;
   int count_success=0;
   int verify_send[24]={0};
-  Serial.println("now in send_thru_xbee");
   delay(500);
-  Serial.println(F("Start"));
   int length = strlen(load_data);
 
-  Serial.print(F("length="));
-  Serial.println(length);
+  // Serial.print(F("length = "));
+  // Serial.println(length);
   int i=0, j=0;    
 
   for (j=0;j<200;j++){
@@ -1438,38 +1427,29 @@ bool send_thru_xbee(char* load_data) {
       payload[j]=(uint8_t)load_data[j];
   }
     payload[j]= (uint8_t)'\0';
-    
-    Serial.println(F("sending before xbee.send"));
-  
     xbee.send(zbTx);
 
-    Serial.println(F("Packet sent"));
-    if (xbee.readPacket(1000)) {
-      Serial.println(F("Got a response!"));
-      if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
-        xbee.getResponse().getZBTxStatusResponse(txStatus);
-        if (txStatus.getDeliveryStatus() == SUCCESS) {
-          Serial.println(F("Success!"));
-          if (verify_send[i] == 0){
-            count_success=count_success+1;
-            verify_send[i]=1;
-          } 
-          successFlag= true;
-        } 
-        else {
-          Serial.println(F("myb no pwr"));
+    if (xbee.readPacket(2000)) {
+      // Serial.println(F("Got a response!"));
+        if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
+            xbee.getResponse().getZBTxStatusResponse(txStatus);
+            if (txStatus.getDeliveryStatus() == SUCCESS) {
+                Serial.println(F("Send Success!"));
+                if (verify_send[i] == 0){
+                    count_success=count_success+1;
+                    verify_send[i]=1;
+                } 
+                successFlag= true;
+            } else {
+                Serial.println(F("Send Failed!"));
+            }
         }
-      } 
-      else{
-      }
-    } 
-    else if (xbee.getResponse().isError()) {
-      Serial.println(F("Error1"));
-    } 
-    else {
-      Serial.println(F("Error2"));
+    } else if (xbee.getResponse().isError()) {
+        Serial.print(F("Error: "));
+        Serial.println(xbee.getResponse().getErrorCode());
+    } else {
+      Serial.println(F("Error: Others"));
     }
-  Serial.println(F("exit send"));
   delay(1000);
   return successFlag;
 }
