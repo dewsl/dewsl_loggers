@@ -125,6 +125,7 @@ void open_config(){
 */
 unsigned int process_config_line(char *one_line){
 	String str1;
+	int temp_int = 0;
 	str1 = String(one_line);
 	if ( (str1.startsWith("mastername")) | (str1.startsWith("MasterName")) ){
 		get_value_from_line(str1).toCharArray(g_mastername,6);
@@ -132,6 +133,17 @@ unsigned int process_config_line(char *one_line){
 
 	} else if(str1.startsWith("turn_on_delay")){
 		g_turn_on_delay = get_value_from_line(str1).toInt();
+		return 0;
+
+	} else if(str1.startsWith("PIEZO") | str1.startsWith("Piezo")){
+		temp_int = get_value_from_line(str1).toInt();
+		if (temp_int == 1){
+			has_piezo = true;
+		} else if ( temp_int == 0){
+			has_piezo = false;
+		} else {
+			has_piezo = false;
+		}
 		return 0;
 
 	} else if(str1.startsWith("dataloggerVersion")){
@@ -314,7 +326,7 @@ int8_t writeData(String fname,String data){
 	
 	strcpy(filename,logger_file_name);
 	strcat(filename,".TXT");
-	Serial.println(filename);
+	// Serial.println(filename);
 	sdFile = SD.open(filename,FILE_WRITE);
 	if(!sdFile){
 		Serial.println("Can't Write to file");
@@ -327,5 +339,5 @@ int8_t writeData(String fname,String data){
 	sdFile.print(g_timestamp);
 	sdFile.println();
 	sdFile.close();//close the file
-	Serial.println("writing to SD"); 
+	// Serial.println("writing to SD"); 
 }

@@ -164,7 +164,7 @@ uint8_t g_datalogger_version = 3;
 
 /* 
   Variable: broad_timeout
-  integer that determines the tumeout duration of broadcast (in milliseconds ). This variable is overwrittern by *<process_config_line>*. 
+  integer that determines the timeout duration of broadcast (in milliseconds ). This variable is overwrittern by *<process_config_line>*. 
 
   *SD Card Config Line* usage:
   --- Code
@@ -172,6 +172,17 @@ uint8_t g_datalogger_version = 3;
   ---
 */
 int broad_timeout = 3000;
+
+/* 
+  Variable: has_piezo
+  boolean variable that decides the sampling of the piezometer readout board
+
+  *SD Card Config Line* usage:
+  --- Code
+  PIEZO = 1
+  ---
+*/
+bool has_piezo = false;
 
 /* 
   Variable: g_sampling_max_retry
@@ -315,12 +326,16 @@ void loop(){
   while ( (timenow - timestart < 20000) && (datalogger_flag == 0)){
       timenow = millis();
       if (Serial.available()){
+        Serial.println("Debug Mode!");
         getATCommand();  
         datalogger_flag = 1;
       } else if (comm_mode == "XBEE") {
-          operation(wait_xbee_cmd(20000,xbee_response), comm_mode);
-          shut_down();
-          datalogger_flag = 1;
+          xbee.readPacket();
+          if (xbee.getResponse().isAvailable()) {
+              operation(wait_xbee_cmd(20000,xbee_response), comm_mode);
+              shut_down();
+              datalogger_flag = 1;
+          }
       } else if (comm_mode == "ARQ"){
           if(DATALOGGER.available()){
               operation(wait_arq_cmd(), comm_mode);
@@ -356,14 +371,15 @@ void getATCommand(){
     serial_line.replace("\r","");
 
     // echo command if ate is set, default true
-    if (ate) Serial.println(serial_line);
+    if (ate) Serial.println(serial_line);{
       i_equals = serial_line.indexOf('=');
+    }
     if (i_equals == -1) command = serial_line;
     else command = serial_line.substring(0,i_equals);
     
-    if (command == ATCMD)
+    if (command == ATCMD){
       Serial.println(OKSTR);
-    else if (command == ATECMDTRUE){
+    } else if (command == ATECMDTRUE){
       ate = true;
       Serial.println(OKSTR);
     } else if (command == "AT+B64"){
@@ -372,113 +388,81 @@ void getATCommand(){
       pad_b64(1,converted,padded);
       Serial.print("converted and padded: ");
       Serial.print(padded);
-
     } else if (command == "AT+RTC"){
       extra_parameters = serial_line.substring(i_equals+1);
       set_rtc_time(extra_parameters);
     } else if (command == "AT+TIMENOW"){
-      // if (ENABLE_RTC){
-      //   Serial.print("Due RTC:");
-      //   Serial.print(rtc.getDay());
-      //   Serial.print("/");
-      //   Serial.print(rtc.getMonth());
-      //   Serial.print("/");
-      //   Serial.print(rtc.getYear());
-      //   Serial.print("\t");
-
-      //   Serial.print(rtc.getHours());
-      //   Serial.print(":");
-      //   Serial.print(rtc.getMinutes());
-      //   Serial.print(":");
-      //   Serial.println(rtc.getSeconds());
-      // }
       Serial.print("ARQ Time String: ");
       Serial.println(g_timestamp);
-    }
-    else if (command == ATECMDFALSE){
+    } else if (command == ATECMDFALSE){
       ate = false;
       Serial.println(OKSTR);
-    }
-    else if (command == "AT+SWITCHB64"){
+    } else if (command == "AT+SWITCHB64"){
       if(b64){
         b64 = 0;
       } else {
         b64 = 1;
       }
       Serial.println("Toggled b64 operations.");
-    }
-    else if (command == ATRCVCAN){
-      Serial.println(OKSTR);
-    }
-    else if (command == ATGETSENSORDATA){
+    } else if (command == ATGETSENSORDATA){
       read_data_from_column(g_final_dump, g_sensor_version,1);
       Serial.println(OKSTR);
-    }
-    else if (command == "AT+POLL"){
+    } else if (command == "AT+POLL"){
       read_data_from_column(g_final_dump, g_sensor_version,1);
-      build_txt_msgs(comm_mode, g_final_dump, text_message); //di ko to sure
+      Serial.println(g_final_dump);
+      build_txt_msgs(comm_mode, g_final_dump, text_message);
       Serial.println(OKSTR);
-    }
-    else if (command == "AT+GETDATA"){
+    } else if (command == "AT+GETDATA"){
       get_data(11,1,g_final_dump);
       get_data(12,1,g_final_dump);
-    }
-    else if (command == ATSNIFFCAN){
+    } else if (command == ATSNIFFCAN){
       while (true){
         Serial.println(OKSTR);
       }
-    }
-    else if (command == "AT+S"){
+    } else if (command == "AT+S"){
       get_data(11,1,g_final_dump);
       get_data(12,1,g_final_dump);
-    }
-    else if (command == ATDUMP){
+    } else if (command == ATDUMP){
       Serial.print("g_final_dump: ");
       Serial.println(g_final_dump);
       Serial.println(OKSTR);
-    }
-    else if (command == ATSD){
+    } else if (command == ATSD){
       String conf;
       init_sd();
       open_config();
       Serial.println(F(OKSTR));
-    }
-    else if (command == "AT+SEND"){
+    } else if (command == "AT+SEND"){
       Serial.println(text_message);
       char *token1 = strtok(text_message,g_delim);
       while (token1 != NULL){
         send_data(false, token1);
         token1 = strtok(NULL, g_delim);
       }
-    }
-    else if (command == "AT+CURRENT"){
+    } else if (command == "AT+CURRENT"){
       read_current();
-    }
-    else if (command == "AT+VOLTAGE"){
+    } else if (command == "AT+VOLTAGE"){
       read_voltage();
-    }
-    else if (command == "AT+TIMESTAMPPMM"){
+    } else if (command == "AT+TIMESTAMPPMM"){
         String timestamp = getTimestamp("XBEE");
         Serial.println(timestamp);
-    }
-    else if (command =="AT+XBEE"){
-      // wait_xbee_cmd(30000);
+    } else if (command =="AT+XBEE"){
       wait_xbee_cmd(10000,xbee_response);
       Serial.print("xbee_response :: ");
       Serial.println(xbee_response);
-    }
-    else if (command == "AT+LOOPSEND"){
+    } else if (command == "AT+PIEZO"){
+      get_data(255,1,g_final_dump);
+      Serial.print("g_final_dump:::");
+      Serial.println(g_final_dump);
+    } else if (command == "AT+LOOPSEND"){
       while(1){
         Serial.println("sent.");
         send_command(3,3);
         delay(1000);
       }
-    }
-    else{
+    } else{
       Serial.println(ERRORSTR);
     }
-  }
-  else 
+  } else 
     return;
 }
 
@@ -595,6 +579,9 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
     }
   } else if (sensor_version == 1){
     Serial.println("Not yet supported");
+  }
+  if (has_piezo){
+    get_data(255,1,column_data);
   }
 }
 
@@ -903,6 +890,8 @@ int parse_cmd(char* command_string){
 
     * The identifier, and cutoff are identified based on the type of data.
 
+    * A special case for the piezometer data is also considered.
+
     * Extra characters are removed via <remove_extra_characters>.
 
     * Data is stored in SD card via <writeData>.
@@ -927,7 +916,7 @@ int parse_cmd(char* command_string){
     * The pads are overwritten with the proper text message length,
     numerator and denominator.
   
-    * These are then stored to the *destination* variable.
+    * These are then stored to the *destination* parameter.
 
   Parameters:
   
@@ -949,12 +938,12 @@ int parse_cmd(char* command_string){
     - <writeData>
 */
 void build_txt_msgs(char mode[], char* source, char* destination){
-
   char *token1,*token2;
   char dest[5000] = {};
   char idf = '0';
   char identifier[2] = {};
   char temp[6];
+  char temp_id[5];
   char pad[12] = "___________";
   char master_name[8] = "";
   int cutoff = 0, num_text_to_send = 0, num_text_per_dtype = 0;
@@ -981,32 +970,42 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     identifier[1] = '\0';
     cutoff = check_cutoff(idf);
     remove_extra_characters(token1, idf);
+
     writeData(timestamp,String(token1));
     num_text_per_dtype = ( strlen(token1) / cutoff );
     if ((strlen(token1) % cutoff) != 0){
       num_text_per_dtype++;
     }
+
     if (g_sensor_version == 1){
-      name_len = 8;
-      strncpy(master_name,g_mastername,4);
-      strncat(master_name,"DUE",4);
+        name_len = 8;
+        strncpy(master_name,g_mastername,4);
+        strncat(master_name,"DUE",4);
+    } else if ( idf == 'p'){
+        name_len = 8;
+        strncpy(master_name,g_mastername,6);
+        strncat(master_name,"PZ",2);
     } else {
-      name_len = 6;
-      strncpy(master_name,g_mastername,6);
+        name_len = 6;
+        strncpy(master_name,g_mastername,6);
     }
+
     token_length = strlen(token1); 
     for (i = 0; i < num_text_per_dtype; i++){
       strncat(dest,pad,11);
       strncat(dest,master_name, name_len);
       strncat(dest,"*", 2);
-      strncat(dest,identifier,2);
-      strncat(dest,"*", 2);
+      if (idf != 'p'){ // except piezo
+          strncat(dest,identifier,2);
+          strncat(dest,"*", 2);
+      }
+      // Serial.print("cutoff: ");
+      // Serial.println(cutoff);
       for (j=0; j < (cutoff); j++ ){
         strncat(dest,token1,1);
         c++;
         token1++;
         if (c == (token_length)){
-
           break;
         }
       }
@@ -1077,7 +1076,9 @@ void remove_extra_characters(char* columnData, char idf){
     cmd = 9;
   } else if ( (idf == 'x' ) || (idf == 'y') ){
     cmd = 1;
-  } 
+  } else if ((idf == 'p')){
+    cmd = 10;
+  }
 
   for (i = 0; i < initlen; i++, columnData++) {
   // for (i = 0; i < 23; i++,) {
@@ -1119,6 +1120,12 @@ void remove_extra_characters(char* columnData, char idf){
         }
         break;
       }
+      case 10:{
+        if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 != 12 && i % 20 != 16){
+          strncat(pArray, columnData, 1);
+        }
+        break;
+      }
       case 41: { // axel wrong gids
         if (i % 20 != 4 && i % 20 != 5 && i % 20 != 8 && i % 20 != 12 && i % 20 != 16 ) {
           strncat(pArray, columnData, 1);
@@ -1137,6 +1144,8 @@ void remove_extra_characters(char* columnData, char idf){
 
     Determine the identifier based on the message id of the message. 
     The starting position of the message id is determined by the index_msgid.
+    A check is performed on the initial 4 characters ( contains the id ).
+    This checks for data with id ( first 4 chars correspond to id ) 255 (piezo).
   
   Parameters:
   
@@ -1154,47 +1163,60 @@ void remove_extra_characters(char* columnData, char idf){
 */
 char check_identifier(char* token, int index_msgid){
   char idfier = '0';
-  switch (token[index_msgid]) {
-    case '1': {
-      if (token[index_msgid+1] == '5') {
-        idfier = 'b';
+  char *last_char;
+  int id_int;
+  char temp_id[5];
+
+  strncpy(temp_id,token,4);
+  id_int = strtol(temp_id,&last_char,16);
+  if (id_int == 255) {
+    idfier = 'p';
+    return idfier;
+  } else {
+    switch (token[index_msgid]) {
+        case '1': {
+          if (token[index_msgid+1] == '5') {
+            idfier = 'b';
+          }
+          else if (token[index_msgid+1] == 'A') {
+            idfier = 'c';
+          }
+          else if (token[index_msgid+1] == '6') {
+            idfier = 'd';
+          }
+          break;
+        } case '0': {
+          if (token[index_msgid+1] == 'B')
+            idfier = 'x';
+          else if (token[index_msgid+1] == 'C')
+            idfier = 'y';
+          else if (token[index_msgid+1] == 'A')
+            idfier = 'b';
+          else if (token[index_msgid+1] == 'D')
+            idfier = 'c';
+          break;
+        } case '2': {
+          Serial.println(token[index_msgid+1]);
+          if (token[index_msgid+1] == '0'){
+            idfier = 'x';
+          } else if (token[index_msgid+1] == '1'){
+            idfier = 'y';
+          }
+          break;
+        } case '6': {
+          idfier = 'b';
+          break;
+        } case '7': {
+          idfier = 'c';
+          break;
+        } case 'F' :{
+          idfier = 'p';
+        }
+        default: {
+          idfier = '0';
+          break;
+        }
       }
-      else if (token[index_msgid+1] == 'A') {
-        idfier = 'c';
-      }
-      else if (token[index_msgid+1] == '6') {
-        idfier = 'd';
-      }
-      break;
-    } case '0': {
-      if (token[index_msgid+1] == 'B')
-        idfier = 'x';
-      else if (token[index_msgid+1] == 'C')
-        idfier = 'y';
-      else if (token[index_msgid+1] == 'A')
-        idfier = 'b';
-      else if (token[index_msgid+1] == 'D')
-        idfier = 'c';
-      break;
-    } case '2': {
-      Serial.println(token[index_msgid+1]);
-      if (token[index_msgid+1] == '0'){
-        idfier = 'x';
-      } else if (token[index_msgid+1] == '1'){
-        idfier = 'y';
-      }
-      break;
-    } case '6': {
-      idfier = 'b';
-      break;
-    } case '7': {
-      idfier = 'c';
-      break;
-    } 
-    default: {
-      idfier = '0';
-      break;
-    }
   }
   return idfier;
 }
@@ -1222,21 +1244,20 @@ int check_cutoff(char idf){
     case 'b': {
       cutoff = 130;
       break;
-    }
-    case 'x': {
+    } case 'x': {
       cutoff = 135;  //15 chars only for axel
       break;
-    }
-    case 'y': {
+    } case 'y': {
       cutoff = 135;  //15 chars only for axel
       break;
-    }
-    case 'c': {
+    } case 'c': {
       cutoff = 133;  //15 chars only for axel
       break;
-    }
-    case 'd': {
+    } case 'd': {
       cutoff = 144;  //15 chars only for axel
+      break;
+    } case 'p' :{
+      cutoff = 135; 
       break;
     }
 
