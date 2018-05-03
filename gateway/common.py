@@ -74,23 +74,13 @@ def reset_memory(valuestr):
 		print value_pointer
 
 def print_memory(valuestr):
-	sms_df = mc.get(valuestr)
-	print_mem_df(sms_df)
+	print mc.get(valuestr)
 
 def spawn_process(process_text):
 	print process_text
 	p = subprocess.Popen(process_text, stdout=subprocess.PIPE, shell=True, 
 		stderr=subprocess.STDOUT)
-	return p.communicate()
-
-def print_mem_df(sms_df):
-	for index, row in sms_df.iterrows():
-		print "Index:", index
-		print "Timestamp:", sms_df.loc[index, 'ts']
-		print "Status:", sms_df.loc[index, 'stat']
-		print "Message:", sms_df.loc[index, 'msg']
-		print ""
-
+	# out, err = p.communicate()
 	# print out, err
 
 def save_smsinbox_to_memory():
@@ -135,11 +125,10 @@ def purge_memory(valuestr):
 	value_pointer = mc.get(valuestr)
 	sc = mc.get('server_config')
 	resend_limit = sc['gsmio']['sendretry']
-	purge_after = sc["gsmio"]["purgeafter"]
 
 	if valuestr == 'smsoutbox':
 		value_pointer = value_pointer[(value_pointer['ts'] > 
-			(dt.now() - td(minutes=60))) | (value_pointer['stat'] < resend_limit)]
+			(dt.now() - td(minutes=120))) | (value_pointer['stat'] < resend_limit)]
 
 	elif valuestr == 'smsinbox':
 		value_pointer = value_pointer[value_pointer["stat"] == 0]

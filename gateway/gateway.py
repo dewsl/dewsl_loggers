@@ -11,7 +11,6 @@ import time
 import re
 from datetime import datetime as dt
 import subprocess
-import xbeegate as xb
 
 sys.path.append(os.path.realpath('..'))
 
@@ -55,8 +54,6 @@ def get_arguments():
         action = 'store_true')
     parser.add_argument('-cm', "--create_startup_message",
         help = "create startup message", action = 'store_true')
-    parser.add_argument('-sr', "--sample_routers",
-        help = "get sample from sensors in routers", action = 'store_true')
 
 
     try:
@@ -87,12 +84,6 @@ def send_smsoutbox_memory():
     for index, row in smsoutbox_unsent.iterrows():
         sms_msg = row['msg']
         sim_num = phonebook[row["contact_id"]]
-
-        if len(sms_msg) > 160:
-            smsoutbox.loc[index, 'stat'] = 99
-            print "Abort sending", sms_msg
-            continue
-
         stat = gsmio.send_msg(sms_msg, sim_num)
         
         if stat == 0: 
@@ -105,20 +96,8 @@ def send_smsoutbox_memory():
 
             if smsoutbox.loc[index, 'stat'] >= resend_limit:
                 dbio.write_sms_to_inbox(sms_msg, sim_num)
-                mc.set("sms_in_db", True)
 
     print smsoutbox
-
-    # get smsoutbox for new messages inserted while sending
-    smsoutbox_updated = mc.get("smsoutbox")
-
-    # get all items later than the latest ts of smsoutbox
-    ts_latest = smsoutbox.ts.max()
-    smsoutbox_new_inserts = smsoutbox_updated[smsoutbox_updated.ts > ts_latest]
-
-    # append new items in existing smsoutbox
-    smsoutbox = smsoutbox.append(smsoutbox_new_inserts, 
-        ignore_index = True) 
 
     mc.set("smsoutbox",smsoutbox)
 
@@ -133,13 +112,6 @@ def custom_sms_routine():
         dbio.write_sms_to_outbox(sms,sim_num)
 
 def send_unsent_msg_outbox():
-    mc = common.get_mc_server()
-    if mc.get("sms_in_db"):
-        print ">> Messages in db"
-    else:
-        print ">> No message in db. Aborting"
-        return
-
     all_sms = dbio.get_db_outbox()
 
     try:
@@ -148,7 +120,6 @@ def send_unsent_msg_outbox():
             gsmio.send_msg(sms.msg,sms.sid)  
     except TypeError:
         print '>> Aborting'
-        mc.set("sms_in_db", False)
 
 def set_system_time():
     now = time.time()
@@ -200,7 +171,6 @@ def main():
 
     if args.initialize:
         common.main()
-        xb.get_network_info()
 
     if args.initialize_gsm_module:
         lockscript.get_lock('gateway gsm')
@@ -227,7 +197,6 @@ def main():
     if args.send_smsoutbox_memory:
         lockscript.get_lock('gateway gsm')
         send_smsoutbox_memory()
-        send_unsent_msg_outbox()
     if args.purge_memory:
         common.purge_memory(args.purge_memory)
 
@@ -235,9 +204,6 @@ def main():
         set_system_time()
     if args.create_startup_message:
         create_startup_message()
-
-    if args.sample_routers:
-        xb.routine()
      
 
 if __name__ == '__main__':
