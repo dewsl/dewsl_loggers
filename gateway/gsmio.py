@@ -38,8 +38,6 @@ def gsm_debug():
     gsm.close()
 
 def power_gsm(mode="ON"):
-
-    #########SIM900
     print ">> Power GSM", mode
     # reset_pin = common.get_config_handle()['gsmio']['reset_pin']
     sconf = common.get_config_handle()
@@ -77,20 +75,14 @@ def power_gsm(mode="ON"):
 def reset_gsm():
     print ">> Resetting GSM Module"
 
-    #SIM800L
-    sconf = common.get_config_handle()
-    reset_pin = sconf['gsmio']['resetpin']
+    try:
+        power_gsm("OFF")
+        time.sleep(1)
+        power_gsm("ON")
+        print 'done'
 
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(reset_pin, GPIO.OUT)
-
-    GPIO.output(reset_pin, False)
-    time.sleep(1)
-    GPIO.output(reset_pin, True)
-    time.sleep(20)
-
-    return
-
+    except ImportError:
+        return
 
 def init_gsm_serial():
     gsm = serial.Serial()
@@ -197,10 +189,12 @@ def gsmcmd(cmd,gsm=None):
 
 def check_csq():
     csq_reply = gsmcmd('AT+CSQ')
+    mc = common.get_mc_server()
     print csq_reply
 
     try:
         csq_val = int(re.search("(?<=: )\d{1,2}(?=,)",csq_reply).group(0))
+        mc.set("csq_val",csq_val)
         return csq_val
     except ValueError, AttributeError:
         return 0
@@ -212,7 +206,7 @@ def check_network():
     print network_reply
 
     try:
-        network_val = re.search("(globe)|(smart)",csq_reply.lower()).group(0)
+        network_val = re.search("(globe)|(smart)",network_reply.lower()).group(0)
         return 1
     except ValueError, AttributeError:
         return 0
