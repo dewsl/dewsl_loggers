@@ -168,8 +168,7 @@ uint8_t g_datalogger_version = 3;
 
   *SD Card Config Line* usage:
   --- Code
-  brodcast_timeout = 3000
-  ---
+  brodcast_timeout = 3000  ---
 */
 int broad_timeout = 3000;
 
@@ -205,10 +204,9 @@ int g_sampling_max_retry = 3;
   ---
 */
 char g_delim[2] = "~";
-
 // CAN-related
-char g_temp_dump[1250];
-char g_final_dump[2500];
+char g_temp_dump[2500];
+char g_final_dump[5000];
 char g_no_gids_dump[2500];
 
 /* 
@@ -224,7 +222,7 @@ char g_no_gids_dump[2500];
 
   <build_txt_msgs>
 */
-char text_message[5000];
+char text_message[10000];
 
 String g_string;
 String g_string_proc;
@@ -408,13 +406,10 @@ void getATCommand(){
       read_data_from_column(g_final_dump, g_sensor_version,1);
       Serial.println(OKSTR);
     } else if (command == "AT+POLL"){
-      read_data_from_column(g_final_dump, g_sensor_version,1);
+      read_data_from_column(g_final_dump, g_sensor_version,2);
       Serial.println(g_final_dump);
       build_txt_msgs(comm_mode, g_final_dump, text_message);
       Serial.println(OKSTR);
-    } else if (command == "AT+GETDATA"){
-      get_data(11,1,g_final_dump);
-      get_data(12,1,g_final_dump);
     } else if (command == ATSNIFFCAN){
       while (true){
         Serial.println(OKSTR);
@@ -566,7 +561,7 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
     get_data(32,1,column_data);
     get_data(33,1,column_data);
     if (sensor_type == 2){
-      get_data(110,1,column_data);
+      get_data(111,1,column_data);
       get_data(112,1,column_data);
     }
   } else if (sensor_version == 3){
@@ -574,7 +569,7 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
     get_data(12,1,column_data);
     get_data(22,1,column_data);
     if (sensor_type == 2){
-      get_data(111,1,column_data);
+      get_data(110,1,column_data);
       get_data(113,1,column_data);
     }
   } else if (sensor_version == 1){
@@ -1009,9 +1004,11 @@ void build_txt_msgs(char mode[], char* source, char* destination){
           break;
         }
       }
+      if (comm_mode == "XBEE"){
       // Baka dapat kapag V3 ito. 
-      // strncat(dest,"*",1);
-      // strncat(dest,Ctimestamp,12);
+        strncat(dest,"*",1);
+        strncat(dest,Ctimestamp,12);
+      }
       strncat(dest,"<<",2);
       strncat(dest,g_delim,1);
     }
@@ -1078,8 +1075,11 @@ void remove_extra_characters(char* columnData, char idf){
     cmd = 1;
   } else if ((idf == 'p')){
     cmd = 10;
+  } else if (idf=='b'){
+    cmd = 3;
+  } else if (idf == 'c'){
+    cmd = 3;
   }
-
   for (i = 0; i < initlen; i++, columnData++) {
   // for (i = 0; i < 23; i++,) {
     switch (cmd) {
@@ -1089,14 +1089,14 @@ void remove_extra_characters(char* columnData, char idf){
         }
         break;
       }
-      case 2: { // raw soms // 10
+      case 2: { // calib soms // 10
         if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 != 12 && i % 20 < 14 ) {
           strncat(pArray, columnData, 1);
         }
         break;
       }
-      case 3: { //calib soms //7
-          if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 < 10 ) {
+      case 3: { //raw soms //7
+          if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 < 11 ) {
           strncat(pArray, columnData, 1);
         }
         break;
@@ -1138,7 +1138,7 @@ void remove_extra_characters(char* columnData, char idf){
   columnData = start_pointer;
   sprintf(columnData, pArray,strlen(pArray));
 }
-
+ 
 /* 
   Function: check_identifier
 

@@ -172,7 +172,7 @@ void get_data(int cmd, int transmit_id, char* final_dump){
     }
   } else if ( cmd == 255) {
     turn_on_column();
-    Serial.println("PIEZO ni RikZOh!");
+    // Serial.println("PIEZO ni RikZOh!");
     poll_piezo();
     for (retry_count=0; retry_count < g_sampling_max_retry+2; retry_count++){
         Serial.print(" .");
@@ -609,15 +609,10 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
   char temp_id[5],temp_gid[5],temp_data[17];
   int id_int,gid;
   token = strtok(dump, "-");
-  // Serial.print("dump: ");
-  // Serial.println(dump);
   while(token != NULL){
     // get gid
     strncpy(temp_id,token,4);
-    id_int = strtol(temp_id,&last_char,16);
-    // Serial.print("id_int = ");
-    // Serial.println(id_int);
-    gid = convert_uid_to_gid(id_int);
+    id_int = strtol(temp_id,&last_char,16);    gid = convert_uid_to_gid(id_int);
     if (id_int == 255){ // account for piezometer
       gid = 255;
     }
