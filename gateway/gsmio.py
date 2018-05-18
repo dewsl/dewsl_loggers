@@ -75,14 +75,20 @@ def power_gsm(mode="ON"):
 def reset_gsm():
     print ">> Resetting GSM Module"
 
-    try:
-        power_gsm("OFF")
-        time.sleep(1)
-        power_gsm("ON")
-        print 'done'
+    #SIM800L
+    sconf = common.get_config_handle()
+    reset_pin = sconf['gsmio']['resetpin']
 
-    except ImportError:
-        return
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(reset_pin, GPIO.OUT)
+
+    GPIO.output(reset_pin, False)
+    time.sleep(1)
+    GPIO.output(reset_pin, True)
+    time.sleep(30)
+
+    return
+
 
 def init_gsm_serial():
     gsm = serial.Serial()
@@ -306,7 +312,7 @@ def log_error(log):
 
 def delete_read_messages():
     print '>> Deleting read messages ...',
-    print gsmcmd('AT+CMGD=0,2').strip()
+    print gsmcmd('AT+CMGD=1,2').strip()
     print 'done'
     
 def count_msg():

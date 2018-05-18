@@ -115,8 +115,9 @@ def change_running_version(args, row):
     common.save_sms_to_memory(reply, row["contact_id"])
 
 def cycle_gsm(row):
-    gsmio.power_gsm('OFF')
-    gsmio.power_gsm()
+#    gsmio.power_gsm('OFF')
+#    gsmio.power_gsm()
+    gsmio.reset_gsm()
 
     reply = 'Reset GSM success'
     common.save_sms_to_memory(reply, row["contact_id"])
