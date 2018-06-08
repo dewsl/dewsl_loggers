@@ -166,8 +166,11 @@ int b64_identify_params(int msgid, char params[]){
     <process_g_temp_dump>
 */
 void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
-	char temp[5] = {};
-	char temp2[5] = {};
+	char temp[2] = {};
+	// char temp1[1] = {};
+	char temp2[2] = {};
+
+
 	char delim[2] = "-";
 	int gid,msgid,x,y,z,v,somsr,tmp;
 	// kailangang iconsider dito yung -1 na gid 
@@ -185,12 +188,18 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 			y = compute_axis(incoming.data.byte[3],incoming.data.byte[4]);
 			z = compute_axis(incoming.data.byte[5],incoming.data.byte[6]);
 			v = incoming.data.byte[7];
+			// Serial.print("gid: "); Serial.print(gid);
+			// Serial.print("\t x: "); Serial.print(x);
+			// Serial.print("\t y: "); Serial.print(y);
+			// Serial.print("\t z: "); Serial.print(z);
+			// Serial.print("\t v: "); Serial.println(v);
 
   			sprintf(temp2,"%02X",msgid);
 			strcat(dump,temp2);
 
 			to_base64(gid,temp);
 			pad_b64(1,temp,temp2);
+			temp2[1] = '\0'; // append null 
 			strcat(dump,temp2);
 
 			to_base64(x,temp);
@@ -209,6 +218,7 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 			pad_b64(2,temp,temp2);
 			strcat(dump,temp2);
 
+			// Serial.println(dump);
 			break;
 		}
 		case 2: {
@@ -220,6 +230,7 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 
 			to_base64(gid,temp);
 			pad_b64(1,temp,temp2);
+			temp2[1] = '\0'; // append null 
 			strcat(dump,temp2);
 
 			to_base64(somsr,temp);
@@ -237,6 +248,7 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 
 			to_base64(gid,temp);
 			pad_b64(1,temp,temp2);
+			temp2[1] = '\0'; // append null 
 			strcat(dump,temp2);
 
 			to_base64(tmp,temp);
@@ -314,7 +326,9 @@ void b64_process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
 		msgid = strtol(temp_msgid,&last_char,16);
 		dlength = b64_identify_params(msgid,"data_length");
 		Serial.println(msgid);
+
 		sprintf(temp_data,token);
+		Serial.println(temp_data);
 		strncat(final_dump,temp_data,dlength);
 		counter = 1;
   	} else {
@@ -337,8 +351,7 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 
 	b64_ts = b64_timestamp(g_timestamp);
 	while ( token1 != NULL){
-		//get msgidso cutoff can be determined
-
+		Serial.println(token1);
 		token1 = strtok(NULL, g_delim);
 	}
 

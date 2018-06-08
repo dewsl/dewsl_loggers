@@ -414,7 +414,7 @@ void getATCommand(){
       Serial.println(g_final_dump);
 
       g_timestamp = String("180607142000");
-
+      b64_build_text_msgs(comm_mode, g_final_dump, text_message); 
       Serial.println("OK");
     } else if (command == ATGETSENSORDATA){
       read_data_from_column(g_final_dump, g_sensor_version,1);
