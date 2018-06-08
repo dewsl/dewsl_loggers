@@ -1,4 +1,10 @@
 
+struct data_type_params{
+	int type_number;
+	int data_length;
+	int type_cutoff;
+} struct_dtype;
+
 /* 
   Function: to_base64
 
@@ -61,8 +67,6 @@ void reverse_char_order(char* input, uint8_t length){
 	strncpy(input,temp,strlen(temp));
 }
 
-
-
 void pad_b64(uint8_t length_of_output, char* input, char* dest){
 	int num_of_pads = 0;
 	char temp[5] = {};
@@ -80,6 +84,60 @@ void pad_b64(uint8_t length_of_output, char* input, char* dest){
 	}
 }
 
+int b64_identify_params(int msgid, char params[]){
+	char temp[6];
+	if (VERBOSE == 1) { Serial.println("b64_identify_params()"); }
+	switch(msgid){
+		case 255:{
+			struct_dtype.type_number = 1;
+			struct_dtype.data_length = 11;
+			break;
+		} case 11: {
+			struct_dtype.type_number = 1;
+			struct_dtype.data_length = 11;	
+			break;
+		} case 12: {
+			struct_dtype.type_number = 1;
+			struct_dtype.data_length = 11;
+			break;
+		} case 32: {
+			struct_dtype.type_number = 1;
+			struct_dtype.data_length = 11;
+			break;
+		} case 33: {
+			struct_dtype.type_number = 1;
+			struct_dtype.data_length = 11;
+			break;
+		} case 22:{
+			struct_dtype.type_number = 3;
+			struct_dtype.data_length = 5;
+			break;
+		} case 110:{
+			struct_dtype.type_number = 2;
+			struct_dtype.data_length = 5;
+			break;
+		} case 113: {
+			struct_dtype.type_number = 2;
+			struct_dtype.data_length = 5;
+			break;
+		} case 111: {
+			struct_dtype.type_number = 2;
+			struct_dtype.data_length = 5;
+			break;
+		} case 112:{
+			struct_dtype.type_number = 2;
+			struct_dtype.data_length = 5;
+			break;
+		}
+	}
+	if (params == "type_number"){
+		return struct_dtype.type_number;
+	} else if (params == "data_length"){
+		return struct_dtype.data_length;
+	} else if (params == "type_cutoff"){
+		return struct_dtype.type_cutoff;
+	}
+}
 
 /* 
   Function: b64_write_frame_to_dump
@@ -90,11 +148,9 @@ void pad_b64(uint8_t length_of_output, char* input, char* dest){
 	Format:
 	gids - 1 char
 	msgid - 2 chars
-	data - 14 chars
+	data - varies depending on msgid.
 
-	*[gids][msgid][data]*
-
-	The format for data varies depending on msgid.
+	*[msgid][gids][data][-][gid][data][-]. . .*
 
   Parameters:
 
@@ -110,57 +166,103 @@ void pad_b64(uint8_t length_of_output, char* input, char* dest){
     <process_g_temp_dump>
 */
 void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
-  char temp[5] = {};
-  char temp2[5] = {};
-  int gid,msgid,x,y,z,v;
-  gid = convert_uid_to_gid(incoming.id);
-  msgid = incoming.data.byte[0];
+	char temp[5] = {};
+	char temp2[5] = {};
+	char delim[2] = "-";
+	int gid,msgid,x,y,z,v,somsr,tmp;
+	// kailangang iconsider dito yung -1 na gid 
+	// kapag wala yung incoming.id sa columnIDs
+	gid = convert_uid_to_gid(incoming.id); 
+	msgid = incoming.data.byte[0];
 
-  // x = compute_axis(incoming.data.byte[1],incoming.data.byte[2]);
-  // y = compute_axis(incoming.data.byte[3],incoming.data.byte[4]);
-  // z = compute_axis(incoming.data.byte[5],incoming.data.byte[6]);
-  // v = incoming.data.byte[7];
+  	// kailangang ito na yung magdetermine ng format
+	// Tapos pagsulat ng data sa dump, magtatanggal 
+	// na lang ng redundant na msgids.
+	switch(b64_identify_params(msgid,"type_number")) {
+		case 1: {
 
-  to_base64(gid,temp);
-  pad_b64(1,temp,temp2);
-  strcat(dump,temp2);
+			x = compute_axis(incoming.data.byte[1],incoming.data.byte[2]);
+			y = compute_axis(incoming.data.byte[3],incoming.data.byte[4]);
+			z = compute_axis(incoming.data.byte[5],incoming.data.byte[6]);
+			v = incoming.data.byte[7];
 
-  to_base64(msgid,temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
+  			sprintf(temp2,"%02X",msgid);
+			strcat(dump,temp2);
 
-  to_base64(incoming.data.byte[1],temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
+			to_base64(gid,temp);
+			pad_b64(1,temp,temp2);
+			strcat(dump,temp2);
 
-  to_base64(incoming.data.byte[2],temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
+			to_base64(x,temp);
+			pad_b64(2,temp,temp2);
+			strcat(dump,temp2);
 
-  to_base64(incoming.data.byte[3],temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
+			to_base64(y,temp);
+			pad_b64(2,temp,temp2);
+			strcat(dump,temp2);
 
-  to_base64(incoming.data.byte[4],temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
+			to_base64(z,temp);
+			pad_b64(2,temp,temp2);
+			strcat(dump,temp2);
 
-  to_base64(incoming.data.byte[5],temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
+			to_base64(v,temp);
+			pad_b64(2,temp,temp2);
+			strcat(dump,temp2);
 
-  to_base64(incoming.data.byte[6],temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
+			break;
+		}
+		case 2: {
+			// based on v3 sensor code.
+			somsr = compute_axis(incoming.data.byte[1],incoming.data.byte[2]);	
 
-  to_base64(incoming.data.byte[7],temp);
-  pad_b64(2,temp,temp2);
-  strcat(dump,temp2);
+  			sprintf(temp2,"%02X",msgid);
+			strcat(dump,temp2);
 
-  interpret_frame(incoming);
-  return;
+			to_base64(gid,temp);
+			pad_b64(1,temp,temp2);
+			strcat(dump,temp2);
+
+			to_base64(somsr,temp);
+			pad_b64(2,temp,temp2);
+			strcat(dump,temp2);
+
+			break;
+		}
+		case 3:{
+
+			tmp = compute_axis(incoming.data.byte[4],incoming.data.byte[3]);
+  			
+  			sprintf(temp2,"%02X",msgid);
+			strcat(dump,temp2);
+
+			to_base64(gid,temp);
+			pad_b64(1,temp,temp2);
+			strcat(dump,temp2);
+
+			to_base64(tmp,temp);
+			pad_b64(2,temp,temp2);
+			strcat(dump,temp2);			
+			break;
+		}
+	}
+	strncat(dump,delim,1); //place delimiter
+	return;
 }
 
+String b64_timestamp(String timestamp){
+	char temp[2] = {};
+	char temp2[2] = {};
+	char b64_ts[6] = {};
+	int value = 0;
+	for (int i=0; i<= 5; i++){ // year, month, day, hours, mins, secs
+
+		value = timestamp.substring(i*2,(i*2)+2).toInt();
+		to_base64(value,temp);
+		pad_b64(1,temp,temp2);
+		strcat(b64_ts,temp2);
+	}
+	return String(b64_ts);
+}
 
 /* 
   Function: b64_process_g_temp_dump
@@ -201,29 +303,44 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 */
 void b64_process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
   char *token,*last_char;
-  char temp_id[5],temp_gid[5],temp_data[17];
-  int id_int,gid;
+  char temp_msgid[2], temp_data[11];
+  int counter = 0,msgid = 0,dlength=0;
+
   token = strtok(dump, "-");
-
   while(token != NULL){
-    // get gid
-    strncpy(temp_id,token,4);
-    id_int = strtol(temp_id,&last_char,16);
-    gid = convert_uid_to_gid(id_int);
-
-    if ( (gid != 0) & (gid != -1) ){
-      sprintf(temp_gid,"%04X",gid);
-      strncpy(temp_data,token+4,16);
-      // strncat(final_dump,"-",1);
-      strncat(final_dump,temp_gid,4);
-      strncat(final_dump,temp_data,16);
-      
-    } else if (gid == 0) {
-      strncat(no_gids_dump,"=",1);
-      strncat(no_gids_dump,token,20);
-    }
+  	if (counter == 0 ) {
+		strncpy(temp_msgid,token,2);
+		temp_msgid[2] = '\0';
+		msgid = strtol(temp_msgid,&last_char,16);
+		dlength = b64_identify_params(msgid,"data_length");
+		Serial.println(msgid);
+		sprintf(temp_data,token);
+		strncat(final_dump,temp_data,dlength);
+		counter = 1;
+  	} else {
+  		strncpy(temp_data,token+2,9);
+  		temp_data[9] = '\0';
+  		Serial.println(temp_data);
+  		strncat(final_dump,temp_data,dlength-2);
+  	}
     token = strtok(NULL,"-");
   } 
   strncat(final_dump,g_delim,1); // add delimiterfor different data type
+}
+
+void b64_build_text_msgs(char mode[], char* source, char* destination){
+	String b64_ts;
+	char *token1,*token2;
+	for (int i = 0; i < sizeof(destination); i++) {
+	  destination[i] = '\0';
+	}
+
+	b64_ts = b64_timestamp(g_timestamp);
+	while ( token1 != NULL){
+		//get msgidso cutoff can be determined
+
+		token1 = strtok(NULL, g_delim);
+	}
+
 }
 

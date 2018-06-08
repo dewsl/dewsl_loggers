@@ -35,7 +35,8 @@
 #define ENABLE_RTC 0
 #define CAN_ARRAY_BUFFER_SIZE 100
 
-#define comm_mode "XBEE" // 1 for ARQ, 2 XBEE
+// #define comm_mode "ARQ" // 1 for ARQ, 2 XBEE
+char comm_mode[5] = "ARQ";
 
 const char base64[64] PROGMEM = {'A','B','C','D','E','F','G','H','I','J','K','L','M',
 'N','O','P','Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f','g','h',
@@ -83,6 +84,7 @@ ZBRxResponse rx = ZBRxResponse();
 int g_chip_select = SS3;
 uint8_t datalogger_flag = 0;
 
+
 /* 
   Variable: xbee_response
   global variable char array that will hold the command frame received from the xbee
@@ -102,7 +104,6 @@ char xbee_response[200];
   --- Code
   int g_gids[40][2];
   ---
-
 */
 int g_gids[40][2];
 
@@ -238,6 +239,7 @@ CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
  String g_timestamp = "TIMESTAMP000";
   ---
 */
+// String g_timestamp = "180607142000";
 String g_timestamp = "TIMESTAMP000";
 
 //current sensor
@@ -281,11 +283,6 @@ void setup() {
   Serial.begin(BAUDRATE);
   DATALOGGER.begin(9600);
   // powerM.begin(9600);
-  if (comm_mode == "XBEE"){
-    Serial.println(F("XBEE as comms!"));
-    // xbee.begin(DATALOGGER);
-    xbee.setSerial(DATALOGGER);
-  }
   ina219.begin();
   pinMode(RELAYPIN, OUTPUT);
   init_can();
@@ -294,6 +291,15 @@ void setup() {
   init_sd(); 
   open_config();
   print_stored_config();
+
+  if (g_datalogger_version == 3){
+    String("XBEE").toCharArray(comm_mode,4);
+    Serial.println(F("XBEE as comms!"));
+    xbee.setSerial(DATALOGGER);  
+  } else if(g_datalogger_version == 2){
+    String("ARQ").toCharArray(comm_mode,3);
+    Serial.println(F("ARQ as comms!"));
+  }
 }
 
 /* 
@@ -319,27 +325,23 @@ void setup() {
 */
 void loop(){
   int timestart = millis();
-  int timenow = millis();
 
-  while ( (timenow - timestart < 20000) && (datalogger_flag == 0)){
-      timenow = millis();
+  while ( (millis() - timestart < 20000) && (datalogger_flag == 0)){
+    // Serial.println(".");k
+      // timenow = millis();
       if (Serial.available()){
         Serial.println("Debug Mode!");
         getATCommand();  
+        // datalogger_flag = 1; // Kagpag nagdebug, wag na mag ops mode.
+      } else if (comm_mode == "XBEE") { // sira ito // fix by: ilabas yung pagkuha nung string dito tapos ipasa na lang yung cmd.
+        operation(wait_xbee_cmd(60000,xbee_response), comm_mode);
+        shut_down();
         datalogger_flag = 1;
-      } else if (comm_mode == "XBEE") {
-          xbee.readPacket();
-          if (xbee.getResponse().isAvailable()) {
-              operation(wait_xbee_cmd(20000,xbee_response), comm_mode);
-              shut_down();
-              datalogger_flag = 1;
-          }
-      } else if (comm_mode == "ARQ"){
-          if(DATALOGGER.available()){
-              operation(wait_arq_cmd(), comm_mode);
-              shut_down();
-              datalogger_flag = 1;
-          }
+      } else if ( (comm_mode == "ARQ") && (DATALOGGER.available()) ){ // sira ito
+        Serial.println("Arq mode");
+        operation(wait_arq_cmd(), comm_mode);
+        shut_down();
+        datalogger_flag = 1;
       }
   }
   delay (1000);
@@ -381,11 +383,13 @@ void getATCommand(){
       ate = true;
       Serial.println(OKSTR);
     } else if (command == "AT+B64"){
-      extra_parameters = serial_line.substring(i_equals+1);
-      to_base64(extra_parameters.toInt(),converted);
-      pad_b64(1,converted,padded);
-      Serial.print("converted and padded: ");
-      Serial.print(padded);
+      g_timestamp = b64_timestamp(g_timestamp);
+      Serial.println(g_timestamp);
+      // extra_parameters = serial_line.substring(i_equals+1);
+      // to_base64(extra_parameters.toInt(),converted);
+      // pad_b64(1,converted,padded);
+      // Serial.print("converted and padded: ");
+      // Serial.print(padded);
     } else if (command == "AT+RTC"){
       extra_parameters = serial_line.substring(i_equals+1);
       set_rtc_time(extra_parameters);
@@ -402,6 +406,16 @@ void getATCommand(){
         b64 = 1;
       }
       Serial.println("Toggled b64 operations.");
+      get_data(11,1,g_final_dump);
+      get_data(12,1,g_final_dump);
+      get_data(22,1,g_final_dump);
+      get_data(110,1,g_final_dump);
+      get_data(113,1,g_final_dump);
+      Serial.println(g_final_dump);
+
+      g_timestamp = String("180607142000");
+
+      Serial.println("OK");
     } else if (command == ATGETSENSORDATA){
       read_data_from_column(g_final_dump, g_sensor_version,1);
       Serial.println(OKSTR);
@@ -727,49 +741,15 @@ void set_rtc_time(String time_string){
 */
 int wait_arq_cmd(){
   String serial_line; 
-  // String command, temp_time,purged_time;
   char c_serial_line[30];  
-  // char * pch;
-  // char cmd[] = "CMD6";
-  // int cmd_index,slash_index;
-
   while(!DATALOGGER.available());
-  
   arq_start_time = millis(); // Global variable used by arqwait_delay
-
   do{
     serial_line = DATALOGGER.readStringUntil('\r\n');
   } while(serial_line == "");
-  
   serial_line.toCharArray(c_serial_line,serial_line.length());
-
   Serial.println(serial_line);
   return parse_cmd(c_serial_line);
-
-  // if ((pch = strstr(c_serial_line,cmd)) != NULL) {
-  //   if (*(pch+strlen(cmd)) == 'S'){ // SOMS + TILT
-  //     cmd_index = serial_line.indexOf('S',6); // ARQCMD has 6 characters
-  //     temp_time = serial_line.substring(cmd_index+1); 
-  //     slash_index = temp_time.indexOf('/');
-  //     temp_time.remove(slash_index,1);
-  //     g_timestamp = temp_time;
-  //     return 2;
-  //     // Serial.print("g_timestamp: ");
-  //     // Serial.println(g_timestamp);
-  //   } else if (*(pch+strlen(cmd)) == 'T'){ // TILT Only
-  //     cmd_index = serial_line.indexOf('T',6); // ARQCMD has 6 characters
-  //     temp_time = serial_line.substring(cmd_index+1); 
-  //     slash_index = temp_time.indexOf('/');
-  //     temp_time.remove(slash_index,1);
-  //     g_timestamp = temp_time;
-  //     return 1;
-  //     // Serial.print("g_timestamp: ");
-  //     // Serial.println(g_timestamp);
-  //   } else {
-  //     Serial.println("wait_arq_cmd returned 0");
-  //     return 0;
-  //   }
-  // }
 }
 
 /* 
@@ -788,24 +768,31 @@ int wait_arq_cmd(){
     - <parse_cmd> <loop>
 */
 int wait_xbee_cmd(int timeout, char* response_string){
-  xbee_response[0] = '\0';
-  xbee.readPacket(timeout);
   char temp[1];
-  if (xbee.getResponse().isAvailable()) {
-      if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
-          xbee.getResponse().getZBRxResponse(rx);
-          for (int i = 0; i < rx.getDataLength (); i++){
-            temp[0] = (char)rx.getData(i);
-            strncat(response_string,temp,1 ) ;        
-          }
-      }
-  } else if ( xbee.getResponse().isError()){
-        Serial.print("Error ");
-        Serial.println(xbee.getResponse().getErrorCode());
+  xbee_response[0] = '\0';
+  long start = millis();
+  while((millis() - start) < 180000){ // hardcode na 3 minutes of waiting time
+    xbee.readPacket(); 
+    if (xbee.getResponse().isAvailable()) {
+      // Serial.println("xbee.getResponse().isAvailable() <--")
+        if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
+            xbee.getResponse().getZBRxResponse(rx);
+            for (int i = 0; i < rx.getDataLength (); i++){
+              temp[0] = (char)rx.getData(i);
+              strncat(response_string,temp,1 ) ;        
+            }
+        }
+        Serial.print("response_string: ");
+        Serial.println(response_string);
+        return parse_cmd(response_string);
+    } else if ( xbee.getResponse().isError()){
+          Serial.print("Error ");
+          Serial.println(xbee.getResponse().getErrorCode());
+    }
   }
   Serial.print("response_string: ");
   Serial.println(response_string);
-  return parse_cmd(response_string);
+  return 0;
 }
 
 /* 
@@ -994,8 +981,6 @@ void build_txt_msgs(char mode[], char* source, char* destination){
           strncat(dest,identifier,2);
           strncat(dest,"*", 2);
       }
-      // Serial.print("cutoff: ");
-      // Serial.println(cutoff);
       for (j=0; j < (cutoff); j++ ){
         strncat(dest,token1,1);
         c++;
@@ -1096,7 +1081,7 @@ void remove_extra_characters(char* columnData, char idf){
         break;
       }
       case 3: { //raw soms //7
-          if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 < 11 ) {
+          if (i % 20 != 0 && i % 20 != 1 && i % 20 != 8 && i % 20 < 13 ) { // dating 11 yung last na number
           strncat(pArray, columnData, 1);
         }
         break;

@@ -65,7 +65,7 @@ void init_strings(){
 /* 
   Function: init_char_arrays
 
-    Clear the global char arrays used for storage 
+    Clear the global char a
   
   Parameters:
   
@@ -80,10 +80,10 @@ void init_strings(){
     <setup>
 */
 void init_char_arrays(){
-  for (int i = 0; i < 1250; i++){
+  for (int i = 0; i < 2500; i++){
     g_temp_dump[i] = '\0';
   }
-  for (int a = 0; a < 2500; a++){
+  for (int a = 0; a < 5000; a++){
     g_final_dump[a] = '\0';
   }
   for (int b = 0; b < 1250; b++){
@@ -110,7 +110,7 @@ void init_char_arrays(){
 */
 void clear_can_buffer(CAN_FRAME can_buffer[]){
   for(int i = 0; i< CAN_ARRAY_BUFFER_SIZE; i++){
-    can_buffer[i] = {}; // clear all elements in buffer?
+    can_buffer[i] = {};
   }
 }
 
@@ -214,8 +214,18 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   strcat(g_temp_dump, '\0');
   Serial.print("g_temp_dump: ");
   Serial.println(g_temp_dump);
-  process_g_temp_dump(g_temp_dump,final_dump,g_no_gids_dump);
-  g_temp_dump[0] = '\0';
+  if (b64 == 1){
+    b64_process_g_temp_dump(g_temp_dump,final_dump,g_no_gids_dump);
+  } else {
+    process_g_temp_dump(g_temp_dump,final_dump,g_no_gids_dump);
+  }
+  
+  for (int i = 0; i < 2500; i++){
+    g_temp_dump[i] = '\0';
+  }
+  // for (int a = 0; a < 5000; a++){
+  //   g_final_dump[a] = '\0';
+  // }
 
   clear_can_buffer(g_can_buffer);
   Serial.println(F("================================="));
@@ -557,7 +567,7 @@ void write_frame_to_dump(CAN_FRAME incoming, char* dump){
 int convert_uid_to_gid(int uid){
   int gid = 0;
   if ((uid == 0) | (uid == -1)){
-    return -1;
+      return -1;
   }
   for (int i=0; i< g_num_of_nodes;i++){
     if (g_gids[i][0] == uid){
@@ -612,7 +622,8 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
   while(token != NULL){
     // get gid
     strncpy(temp_id,token,4);
-    id_int = strtol(temp_id,&last_char,16);    gid = convert_uid_to_gid(id_int);
+    id_int = strtol(temp_id,&last_char,16);    
+    gid = convert_uid_to_gid(id_int);
     if (id_int == 255){ // account for piezometer
       gid = 255;
     }
@@ -664,9 +675,11 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
     <write_frame_to_dump>
 */
 void interpret_frame(CAN_FRAME incoming){
-  int id,d1,d2,d3,d4,d5,d6,d7,d8,x,y,z;
+  int id,d1,d2,d3,d4,d5,d6,d7,d8,x,y,z,somsr;
+  int tilt = 0;
+  int soms = 1;
   char temp[6];
-  if (VERBOSE == 1) { Serial.println("process_frame()"); }
+
   id = incoming.id;
   d1 = incoming.data.byte[0];
   d2 = incoming.data.byte[1];
@@ -676,21 +689,33 @@ void interpret_frame(CAN_FRAME incoming){
   d6 = incoming.data.byte[5];
   d7 = incoming.data.byte[6];
   d8 = incoming.data.byte[7]; 
-  x = compute_axis(d2,d3);
-  y = compute_axis(d4,d5);
-  z = compute_axis(d6,d7);
-  
-  Serial.print("\t");
-  Serial.print(id,HEX); Serial.print("\t"); 
-  Serial.print(id); Serial.print('\t');
-  Serial.print(convert_uid_to_gid(id)); Serial.print('\t');
-  sprintf(temp, "%5d", x); Serial.print(temp);
-  temp[0] = '\0';
-  Serial.print(" "); 
-  sprintf(temp, "%5d", y); Serial.print(temp);
-  temp[0] = '\0';
-  sprintf(temp, "%5d", z);
-  Serial.print(" "); Serial.println(temp);
+
+  if (VERBOSE == 1) { Serial.println("process_frame()"); }
+  if (tilt == 1){
+
+    x = compute_axis(d2,d3);
+    y = compute_axis(d4,d5);
+    z = compute_axis(d6,d7);
+    Serial.print("\t");
+    Serial.print(id,HEX); Serial.print("\t"); 
+    Serial.print(id); Serial.print('\t');
+    Serial.print(convert_uid_to_gid(id)); Serial.print('\t');
+    sprintf(temp, "%5d", x); Serial.print(temp);
+    temp[0] = '\0';
+    Serial.print(" "); 
+    sprintf(temp, "%5d", y); Serial.print(temp);
+    temp[0] = '\0';
+    sprintf(temp, "%5d", z);
+    Serial.print(" "); Serial.println(temp);
+  } else if(soms == 1) {
+    somsr = compute_axis(d3,d2);  
+    Serial.print("\t");
+    Serial.print(id,HEX); Serial.print("\t"); 
+    Serial.print(id); Serial.print('\t');
+    Serial.print(convert_uid_to_gid(id)); Serial.print('\t');
+    Serial.print("somsr: "); Serial.println(somsr);
+
+  }
 }
 
 /* 
@@ -712,21 +737,21 @@ void interpret_frame(CAN_FRAME incoming){
 
     <interpret_frame>
 */
-int compute_axis(int d1, int d2){
+int compute_axis(int low, int high){
   int value = 5000;
   if (!b64){
-    if (d2 >= 240) {
-      d2 = d2 - 240;
-      value = (d1 + (d2*256)) - 4095;
+    if (high >= 240) {
+      high = high - 240;
+      value = (low + (high*256)) - 4095;
     } else {
-      value = (d1 + (d2*256));
+      value = (low + (high*256));
     } 
     return value;
   } else if (b64) {
-    if (d2 >= 240) {
-      d2 = d2 - 240;
+    if (high >= 240) {
+      high = high - 240;
     } 
-    value = (d1 + (d2*256));
+    value = (low + (high*256));
     return value;
   }
 }
