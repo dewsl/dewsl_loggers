@@ -405,6 +405,9 @@ void getATCommand(){
     } else if (command == ATECMDTRUE){
       ate = true;
       Serial.println(OKSTR);
+    } else if (command == "AT+LOOPBACK"){
+      serial_loopback();
+      Serial.println(OKSTR);
     } else if (command == "AT+B64"){
       // g_timestamp = b64_timestamp(g_timestamp);
       // Serial.println(g_timestamp);
@@ -1483,6 +1486,18 @@ bool send_thru_xbee(char* load_data) {
   return successFlag;
 }
 
-
+void serial_loopback(){
+  Serial1.begin(9600);
+  while(1){
+    if (Serial.available()) {
+      int inByte = Serial.read();
+      Serial1.write(inByte);
+    }
+    if (Serial1.available()) {
+      int inByte = Serial1.read();
+      Serial.write(inByte);
+    }
+  }
+}
 
 
