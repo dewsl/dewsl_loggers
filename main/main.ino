@@ -148,8 +148,7 @@ uint8_t g_turn_on_delay = 10;
   *SD Card Config Line* usage:
   --- Code
   sensorVersion = 3
-  ---
-*/
+  ---*/
 uint8_t g_sensor_version = 3;
 
 /*
@@ -293,13 +292,19 @@ void setup() {
   print_stored_config();
 
   if (g_datalogger_version == 3){
-    String("XBEE").toCharArray(comm_mode,4);
-    Serial.println(F("XBEE as comms!"));
+    strncpy(comm_mode,"XBEE",4);
+    // if (strcmp(comm_mode,"XBEE") == 0){
+    //   Serial.print("Comms: "); Serial.println(comm_mode);
+    // }
     xbee.setSerial(DATALOGGER);  
   } else if(g_datalogger_version == 2){
-    String("ARQ").toCharArray(comm_mode,3);
-    Serial.println(F("ARQ as comms!"));
+    strncpy(comm_mode,"ARQ",3);
+    // if (strcmp(comm_mode,"ARQ") == 0){
+    //   Serial.print("Comms: "); Serial.println(comm_mode);
+    // }
+
   }
+    Serial.print("Comms: "); Serial.println(comm_mode);
 }
 
 /* 
@@ -327,24 +332,42 @@ void loop(){
   int timestart = millis();
 
   while ( (millis() - timestart < 20000) && (datalogger_flag == 0)){
-    // Serial.println(".");k
-      // timenow = millis();
       if (Serial.available()){
         Serial.println("Debug Mode!");
         getATCommand();  
         // datalogger_flag = 1; // Kagpag nagdebug, wag na mag ops mode.
-      } else if (comm_mode == "XBEE") { // sira ito // fix by: ilabas yung pagkuha nung string dito tapos ipasa na lang yung cmd.
-        operation(wait_xbee_cmd(60000,xbee_response), comm_mode);
-        shut_down();
-        datalogger_flag = 1;
-      } else if ( (comm_mode == "ARQ") && (DATALOGGER.available()) ){ // sira ito
-        Serial.println("Arq mode");
+      } else if (strcmp(comm_mode,"XBEE") == 0){// sira ito // fix by: ilabas yung pagkuha nung string dito tapos ipasa na lang yung cmd.
+
+        char temp[1];
+        xbee_response[0] = '\0';
+        xbee.readPacket(); 
+        // Serial.println(".");
+        if (xbee.getResponse().isAvailable()) {
+          Serial.println("xbee.getResponse().isAvailable()!!!!");
+            if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
+                xbee.getResponse().getZBRxResponse(rx);
+                for (int i = 0; i < rx.getDataLength (); i++){
+                  temp[0] = (char)rx.getData(i);
+                  strncat(xbee_response,temp,1 ) ;        
+                }
+            }
+            Serial.print("response_string: ");
+            Serial.println(xbee_response);
+            operation(parse_cmd(xbee_response), comm_mode);
+            datalogger_flag = 1;
+            shut_down();
+            // return parse_cmd(response_string);
+        } else if ( xbee.getResponse().isError()){
+              Serial.print("Error ");
+              Serial.println(xbee.getResponse().getErrorCode());
+        }
+      } else if ((strcmp(comm_mode,"ARQ") == 0) && (DATALOGGER.available()) ){ // sira ito
         operation(wait_arq_cmd(), comm_mode);
         shut_down();
         datalogger_flag = 1;
       }
   }
-  delay (1000);
+  delay (100);
 }
 
 void hard_code(){
@@ -383,13 +406,13 @@ void getATCommand(){
       ate = true;
       Serial.println(OKSTR);
     } else if (command == "AT+B64"){
-      g_timestamp = b64_timestamp(g_timestamp);
-      Serial.println(g_timestamp);
-      // extra_parameters = serial_line.substring(i_equals+1);
-      // to_base64(extra_parameters.toInt(),converted);
-      // pad_b64(1,converted,padded);
-      // Serial.print("converted and padded: ");
-      // Serial.print(padded);
+      // g_timestamp = b64_timestamp(g_timestamp);
+      // Serial.println(g_timestamp);
+      extra_parameters = serial_line.substring(i_equals+1);
+      to_base64(extra_parameters.toInt(),converted);
+      pad_b64(1,converted,padded);
+      Serial.print("converted and padded: ");
+      Serial.print(padded);
     } else if (command == "AT+RTC"){
       extra_parameters = serial_line.substring(i_equals+1);
       set_rtc_time(extra_parameters);
