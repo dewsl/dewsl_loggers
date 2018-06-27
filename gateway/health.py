@@ -27,7 +27,7 @@ def main():
     ts_str = ts.strftime("%x,%X,")
 
     try:
-        # csq = str(gsmio.check_csq())
+        gsmio.check_csq()
         csq = int(mc.get("csq_val"))
         csq = str(csq)
     except TypeError:
