@@ -434,12 +434,14 @@ void getATCommand(){
       get_data(11,1,g_final_dump);
       get_data(12,1,g_final_dump);
       get_data(22,1,g_final_dump);
-      get_data(110,1,g_final_dump);
-      get_data(113,1,g_final_dump);
-      Serial.println(g_final_dump);
+      // get_data(110,1,g_final_dump);
+      // get_data(113,1,g_final_dump);
+      // Serial.println(g_final_dump);
 
       g_timestamp = String("180607142000");
-      b64_build_text_msgs(comm_mode, g_final_dump, text_message); 
+      b64_build_text_msgs(comm_mode, g_final_dump, text_message);
+      // Serial.println(text_message); 
+      // Serial.println(g_final_dump);
       Serial.println("OK");
     } else if (command == ATGETSENSORDATA){
       read_data_from_column(g_final_dump, g_sensor_version,1);

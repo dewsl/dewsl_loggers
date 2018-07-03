@@ -3,6 +3,7 @@ struct data_type_params{
 	int type_number;
 	int data_length;
 	int type_cutoff;
+	char identifier;
 } struct_dtype;
 
 /* 
@@ -95,11 +96,13 @@ int b64_identify_params(int msgid, char params[]){
 			struct_dtype.type_number = 1;
 			struct_dtype.data_length = 11;
 			struct_dtype.type_cutoff = 144; // 9 chars per node tilt data	
+			struct_dtype.identifier = 'x';
 			break;
 		} case 12: {
 			struct_dtype.type_number = 1;
 			struct_dtype.data_length = 11;
 			struct_dtype.type_cutoff = 144; // 9 chars per node tilt data	
+			struct_dtype.identifier = 'y';
 			break;
 		} case 32: {
 			struct_dtype.type_number = 1;
@@ -114,6 +117,8 @@ int b64_identify_params(int msgid, char params[]){
 		} case 22:{
 			struct_dtype.type_number = 3;
 			struct_dtype.data_length = 5;
+			struct_dtype.type_cutoff = 144;
+			struct_dtype.identifier = 'd';
 
 			break;
 		} case 110:{
@@ -144,6 +149,8 @@ int b64_identify_params(int msgid, char params[]){
 		return struct_dtype.data_length;
 	} else if (params == "type_cutoff"){
 		return struct_dtype.type_cutoff;
+	} else if (params == "identifier"){
+		return struct_dtype.identifier;
 	}
 }
 
@@ -196,11 +203,6 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 			y = compute_axis(incoming.data.byte[3],incoming.data.byte[4]);
 			z = compute_axis(incoming.data.byte[5],incoming.data.byte[6]);
 			v = incoming.data.byte[7];
-			// Serial.print("gid: "); Serial.print(gid);
-			// Serial.print("\t x: "); Serial.print(x);
-			// Serial.print("\t y: "); Serial.print(y);
-			// Serial.print("\t z: "); Serial.print(z);
-			// Serial.print("\t v: "); Serial.println(v);
 
   			sprintf(temp2,"%02X",msgid);
 			strcat(dump,temp2);
@@ -352,19 +354,106 @@ void b64_process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
 
 void b64_build_text_msgs(char mode[], char* source, char* destination){
 	String b64_ts;
-	int token_length;
-	char *token1,*token2;
-	for (int i = 0; i < sizeof(destination); i++) {
-	  destination[i] = '\0';
+	int token_length,msgid,cutoff,num_text_per_dtype,name_len;
+	int c=0,char_cnt=0,num_text_to_send=0;
+	char *token1,*token2,*last_char;
+	char temp_msgid[2];
+	char dest[5000] = {};
+	char temp[6];
+	char idf;
+	char pad[12] = "___________";
+	char master_name[8] = "";
+	char Ctimestamp[6] = "";
+	char identifier[2] = {};
+	for (int i = 0; i < sizeof(dest); i++) {
+	  dest[i] = '\0';
 	}
 
 	b64_ts = b64_timestamp(g_timestamp);
+	for (int i = 0; i < 6; i++) {
+		Ctimestamp[i] = b64_ts[i];
+	}
+	Ctimestamp[12] = '\0';
 	token1 = strtok(source, g_delim);
 	while ( token1 != NULL){
-		token_length = strlen(token1);
-		// determine number of messages to be sent
-		// Serial.println(token1);
+		token_length = strlen(token1)-2;
+		// determine identifier ( same as b16 identifiers)
+		// get first 2 chars of token1, they are the hex msgid that will determine
+		strncpy(temp_msgid,token1,2);
+		temp_msgid[2] = '\0';
+		msgid = strtol(temp_msgid,&last_char,16);
+		idf = b64_identify_params(msgid,"identifier");
+		identifier[0] = idf;
+		identifier[1] = '\0';
+		// determine number of messages to be sent per data type
+		cutoff = b64_identify_params(msgid,"type_cutoff");
+		num_text_per_dtype = ( (strlen(token1) - 2) / cutoff );
+		if ((strlen(token1) % cutoff) != 0){
+			num_text_per_dtype++;
+		}
+		// determine mastername
+	    if (g_sensor_version == 1){
+	        name_len = 8;
+	        strncpy(master_name,g_mastername,4);
+	        strncat(master_name,"DUE",4);
+	    } else if ( idf == 'p'){
+	        name_len = 8;
+	        strncpy(master_name,g_mastername,6);
+	        strncat(master_name,"PZ",2);
+	    } else {
+	        name_len = 6;
+	        strncpy(master_name,g_mastername,6);
+	    }
+		// copy parts of the message
+		//increment token1 twice to skip over the HEX msgid
+		for (int i = 0; i < num_text_per_dtype; i++){		
+			strncat(dest,pad,11);
+			strncat(dest,master_name, name_len);
+			strncat(dest,"*", 2);
+			if (idf != 'p'){ // except piezo
+			  strncat(dest,identifier,2);
+			  strncat(dest,"*", 2);
+			}
+			for (int j=0; j < (cutoff); j++ ){
+				strncat(dest,token1+2,1);
+				c++;
+				token1++;
+				if (c == (token_length)){
+				  break;
+				}
+			}
+			if (strcmp(comm_mode,"XBEE") == 0){
+			// Baka dapat kapag V3 ito. 
+				strncat(dest,"*",1);
+				strncat(dest,Ctimestamp,6);
+			}
+			strncat(dest,"<<",2);
+			strncat(dest,g_delim,1);
+		}
+		num_text_to_send = num_text_to_send + num_text_per_dtype;
 		token1 = strtok(NULL, g_delim);
+	}
+	Serial.println(num_text_to_send);
+	token2 = strtok(dest, g_delim);
+	c=0;
+	while( token2 != NULL ){
+		c++;
+		char_cnt = strlen(token2) + name_len - 24;
+		idf = check_identifier(token1,2);
+		identifier[0] = idf;
+		identifier[1] = '\0';
+		sprintf(pad, "%03d", char_cnt);
+		strncat(pad,">>",3);
+		sprintf(temp, "%02d/", c);
+		strncat(pad,temp,4);
+		sprintf(temp,"%02d#",num_text_to_send);
+		strncat(pad,temp,4);
+		strncpy(token2,pad,11);
+		// strncat(token2,"<<",3);
+		Serial.println(token2);
+		strncat(destination,token2, strlen(token2));
+		strncat(destination, g_delim, 2);
+		token2 = strtok(NULL, g_delim);
 	}
 
 }
