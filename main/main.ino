@@ -356,7 +356,6 @@ void loop(){
             operation(parse_cmd(xbee_response), comm_mode);
             datalogger_flag = 1;
             shut_down();
-            // return parse_cmd(response_string);
         } else if ( xbee.getResponse().isError()){
               Serial.print("Error ");
               Serial.println(xbee.getResponse().getErrorCode());
@@ -534,9 +533,9 @@ void operation(int sensor_type, char communication_mode[]){
   while (token1 != NULL){
     Serial.print("Sending ::::");
     Serial.println(token1);
-    if (communication_mode == "ARQ") { // ARQ
+    if (strcmp(comm_mode,"ARQ") == 0) {
       send_data(false, token1);    
-    } else if(communication_mode == "XBEE") { // XBEE
+    } else if(strcmp(comm_mode,"XBEE") == 0) {
       while (send_thru_xbee(token1) == false){
         if (counter == 10)
           break;
@@ -668,11 +667,11 @@ String getTimestamp(char communication_mode[]){
 
   if (communication_mode == 0){ //internal rtc
     return g_timestamp;
-  } else if (communication_mode == "ARQ"){ // ARQ
-    Serial.print("g_timestamp: ");
-    Serial.println(g_timestamp);
+  } else if (strcmp(comm_mode,"ARQ") == 0){ // ARQ
+    // Serial.print("g_timestamp: ");
+    // Serial.println(g_timestamp);
     return g_timestamp;
-  } else if(communication_mode == "XBEE"){ //xbee
+  } else if(strcmp(comm_mode,"XBEE") == 0){ //xbee
     return g_timestamp;
     /*
     char timestamp[20] = "";    
@@ -1015,7 +1014,7 @@ void build_txt_msgs(char mode[], char* source, char* destination){
           break;
         }
       }
-      if (comm_mode == "XBEE"){
+      if (strcmp(comm_mode,"XBEE") == 0){
       // Baka dapat kapag V3 ito. 
         strncat(dest,"*",1);
         strncat(dest,Ctimestamp,12);
@@ -1340,7 +1339,7 @@ void turn_off_column(){
 */
 void arqwait_delay(int milli_secs){
   int func_start = 0;
-  if (comm_mode == "ARQ"){
+  if (strcmp(comm_mode,"ARQ") == 0){
     while ( (millis() - func_start ) < milli_secs ){
       if ( (millis() - arq_start_time) >= ARQTIMEOUT ) {
         arq_start_time = millis();
