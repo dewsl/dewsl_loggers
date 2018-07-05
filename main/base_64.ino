@@ -3,7 +3,7 @@ struct data_type_params{
 	int type_number;
 	int data_length;
 	int type_cutoff;
-	char identifier;
+	char identifier[3];
 } struct_dtype;
 
 /* 
@@ -84,9 +84,12 @@ void pad_b64(uint8_t length_of_output, char* input, char* dest){
 	}
 }
 
-int b64_identify_params(int msgid, char params[]){
-	char temp[6];
+struct data_type_params b64_identify_params(int msgid){
+	char temp[3],temp1[3];
 	if (VERBOSE == 1) { Serial.println("b64_identify_params()"); }
+	to_base64(msgid,temp);
+	pad_b64(2,temp,temp1);
+	temp1[2] = '\0';
 	switch(msgid){
 		case 255:{
 			struct_dtype.type_number = 1;
@@ -96,13 +99,15 @@ int b64_identify_params(int msgid, char params[]){
 			struct_dtype.type_number = 1;
 			struct_dtype.data_length = 11;
 			struct_dtype.type_cutoff = 144; // 9 chars per node tilt data	
-			struct_dtype.identifier = 'x';
+			// struct_dtype.identifier = 'x';
+			strncpy(struct_dtype.identifier,temp1,2);
 			break;
 		} case 12: {
 			struct_dtype.type_number = 1;
 			struct_dtype.data_length = 11;
 			struct_dtype.type_cutoff = 144; // 9 chars per node tilt data	
-			struct_dtype.identifier = 'y';
+			// struct_dtype.identifier = 'y';
+			strncpy(struct_dtype.identifier,temp1,2);
 			break;
 		} case 32: {
 			struct_dtype.type_number = 1;
@@ -118,7 +123,8 @@ int b64_identify_params(int msgid, char params[]){
 			struct_dtype.type_number = 3;
 			struct_dtype.data_length = 5;
 			struct_dtype.type_cutoff = 144;
-			struct_dtype.identifier = 'd';
+			// struct_dtype.identifier = 'd';
+			strncpy(struct_dtype.identifier,temp1,2);
 
 			break;
 		} case 110:{
@@ -143,15 +149,16 @@ int b64_identify_params(int msgid, char params[]){
 			break;
 		}
 	}
-	if (params == "type_number"){
-		return struct_dtype.type_number;
-	} else if (params == "data_length"){
-		return struct_dtype.data_length;
-	} else if (params == "type_cutoff"){
-		return struct_dtype.type_cutoff;
-	} else if (params == "identifier"){
-		return struct_dtype.identifier;
-	}
+	return struct_dtype;
+	// if (params == "type_number"){
+	// 	return struct_dtype.type_number;
+	// } else if (params == "data_length"){
+	// 	return struct_dtype.data_length;
+	// } else if (params == "type_cutoff"){
+	// 	return struct_dtype.type_cutoff;
+	// } else if (params == "identifier"){
+	// 	return struct_dtype.identifier;
+	// }
 }
 
 /* 
@@ -186,17 +193,15 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 	char temp2[3] = {};
 
 
+
 	char delim[2] = "-";
 	int gid,msgid,x,y,z,v,somsr,tmp;
 	// kailangang iconsider dito yung -1 na gid 
 	// kapag wala yung incoming.id sa columnIDs
 	gid = convert_uid_to_gid(incoming.id); 
 	msgid = incoming.data.byte[0];
-
-  	// kailangang ito na yung magdetermine ng format
-	// Tapos pagsulat ng data sa dump, magtatanggal 
-	// na lang ng redundant na msgids.
-	switch(b64_identify_params(msgid,"type_number")) {
+	struct data_type_params dtype = b64_identify_params(msgid);
+	switch(dtype.type_number) {
 		case 1: {
 
 			x = compute_axis(incoming.data.byte[1],incoming.data.byte[2]);
@@ -334,7 +339,9 @@ void b64_process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
 		strncpy(temp_msgid,token,2);
 		temp_msgid[2] = '\0';
 		msgid = strtol(temp_msgid,&last_char,16);
-		dlength = b64_identify_params(msgid,"data_length");
+		struct data_type_params dtype = b64_identify_params(msgid);
+		dlength = dtype.data_length;
+		// dlength = b64_identify_params(msgid,"data_length");
 		Serial.println(msgid);
 
 		sprintf(temp_data,token);
@@ -364,7 +371,7 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 	char pad[12] = "___________";
 	char master_name[8] = "";
 	char Ctimestamp[6] = "";
-	char identifier[2] = {};
+	char identifier[3] = {};
 	for (int i = 0; i < sizeof(dest); i++) {
 	  dest[i] = '\0';
 	}
@@ -382,11 +389,13 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 		strncpy(temp_msgid,token1,2);
 		temp_msgid[2] = '\0';
 		msgid = strtol(temp_msgid,&last_char,16);
-		idf = b64_identify_params(msgid,"identifier");
-		identifier[0] = idf;
-		identifier[1] = '\0';
+		struct data_type_params dtype = b64_identify_params(msgid);
+		strncpy(identifier,dtype.identifier,2);
+		// idf = dtype.identifier;
+		// identifier[0] = idf;
+		// identifier[1] = '\0';
 		// determine number of messages to be sent per data type
-		cutoff = b64_identify_params(msgid,"type_cutoff");
+		cutoff = dtype.type_cutoff;
 		num_text_per_dtype = ( (strlen(token1) - 2) / cutoff );
 		if ((strlen(token1) % cutoff) != 0){
 			num_text_per_dtype++;
@@ -439,9 +448,6 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 	while( token2 != NULL ){
 		c++;
 		char_cnt = strlen(token2) + name_len - 24;
-		idf = check_identifier(token1,2);
-		identifier[0] = idf;
-		identifier[1] = '\0';
 		sprintf(pad, "%03d", char_cnt);
 		strncat(pad,">>",3);
 		sprintf(temp, "%02d/", c);
