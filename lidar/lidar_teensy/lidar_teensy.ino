@@ -20,21 +20,16 @@
 #define PAYLEN 200
 #define ISRPIN 22
 #define PWRPIN 23
-#define LEDPIN 12
-#define ARM_RTC 10 //default 50
-#define ALARM 12  //set time interval of alarm
+#define LEDPIN 6
 
-uint8_t mm = 20;   //store alarm
+uint8_t store_rtc = 0;   //store alarm
 
 SnoozeDigital digital;    // Load drivers
-// SnoozeSPI     sdCard;
 SnoozeBlock config(digital);    // install drivers to a SnoozeBlock
 
 int xbFlag=0;
 int exc=0;
 int parts=0;
-unsigned char i=0;
-unsigned char j=0;
 int length=0;
 int paylength=200;
 int datalen=0;
@@ -59,7 +54,6 @@ char l_GRx[6] = "";
 char l_GRy[6] = "";
 char l_GRz[6] = "";
 
-static uint8_t prevSecond = 0;	//iterrupt
 const int numReadings = 100;   //max reading average
 
 bool TRIG = false;
@@ -87,19 +81,20 @@ ZBRxResponse rx = ZBRxResponse();   // create reusable response objects for resp
 ModemStatusResponse msr = ModemStatusResponse();
 
 void setup() {
+  
   pinMode(LEDPIN, OUTPUT);
 
 	Serial.begin(BAUDRATE);
 	Serial3.begin(9600);
 	xbee.setSerial(Serial3);
-  
+
+  // init_9dof();
+ 
   init_sd();
 	ina219.begin();
 	rtc.begin();
-	// init_lidar();
 	pinMode(ISRPIN, INPUT);
 	init_pwrPin();
-  // init_9dof();
 
   /******************Snooze Driver Config******************/
   // Configure pin 21 for Snooze wakeup, also used by bounce
@@ -111,118 +106,141 @@ void setup() {
   //for external interrupt pin
 	// attachInterrupt(21, ISR0_ISR, FALLING);
 
-  // rtc_alarm(19);
-  rtc.enableInterrupts(mm, 00);    // interrupt at (m,s)
+  rtc.enableInterrupts(store_rtc, 00);    // interrupt at (m,s)
 	// Enable Interrupt 
-    // rtc.enableInterrupts(Every10Minute); //interrupt at  EverySecond, EveryMinute, EveryHour
-    // or this
-    //Enable HH/MM/SS interrupt on /INTA pin. All interrupts works like single-shot counter
-    // rtc.enableInterrupts(10,53,20);    // interrupt at (h,m,s)
-  // rtc.enableInterrupts(51,0);    // interrupt at (h,m,s)
-	//Disable Interrupts. This is equivalent to begin() method.
-    // rtc.disableInterrupts();
-    //Clears the interrrupt flag in status register. 
-	//This is equivalent to preparing the DS3231 /INT pin to high for MCU to get ready for recognizing the next INT0 interrupt
-    // rtc.clearINTStatus();
+  // rtc.enableInterrupts(Every10Minute); //interrupt at  EverySecond, EveryMinute, EveryHour
+  //Enable HH/MM/SS interrupt on /INTA pin. All interrupts works like single-shot counter
+  // rtc.enableInterrupts(10,53,20);    // interrupt at (h,m,s)
 }
 
 void setAlarm(){
-
-  if(mm == 50){    //deafult 50
-    mm = 00;
-  }
-  else{
-    mm += ARM_RTC;  //10
-  }
-
-  rtc.enableInterrupts(mm, 00);    // interrupt at (m,s)
-
-  Serial.print(mm);
-  Serial.print("-");
   DateTime now = rtc.now(); //get the current date-time
-  Serial.println(now.minute());
+  Serial.print("Minutes: ");
+  Serial.print(now.minute());
+  // if (DEBUG == 1) {Serial.print("Minutes: ");}
+  // if (DEBUG == 1) {Serial.println(now.minute());}  
+
+  if((now.minute() >= 0) && (now.minute() <=9)){
+    store_rtc = 10;
+    // rtc.enableInterrupts(store_rtc, 00);    // interrupt at (m,s)
+  }
+  else if((now.minute() >= 10) && (now.minute() <=19)){
+    store_rtc = 20;
+    // rtc.enableInterrupts(store_rtc, 00);    // interrupt at (m,s)
+  }
+  else if((now.minute() >= 20) && (now.minute() <=29)){
+    store_rtc = 30;
+    // rtc.enableInterrupts(store_rtc, 00);    // interrupt at (m,s)
+  }
+  else if((now.minute() >= 30) && (now.minute() <=39)){
+    store_rtc = 40;
+    // rtc.enableInterrupts(store_rtc, 00);    // interrupt at (m,s)
+  }
+  else if((now.minute() >= 40) && (now.minute() <=49)){
+    store_rtc = 50;
+    // rtc.enableInterrupts(store_rtc, 00);    // interrupt at (m,s)
+  }
+  else if((now.minute() >= 50) && (now.minute() <=59)){
+    store_rtc = 0;
+  }  
+  // else{
+  //   store_rtc = 0;
+    // rtc.enableInterrupts(store_rtc, 00);    // interrupt at (m,s)
+  // }
+
+  rtc.enableInterrupts(store_rtc, 00);    // interrupt at (m,s)
+  Serial.print(" - next alarm: ");
+  Serial.println(store_rtc);
+  // if (DEBUG == 1) {Serial.print(" - next alarm: ");}
+  // if (DEBUG == 1) {Serial.println(store_rtc);}
 }
 
-void ISR0_ISR(){
-	Serial.println("ISR Triggered ...");
-  TRIG = true;
-}
 
 void loop() {
   sleepDataLogger();
+  // getAtcommand();
+}
+
+void trig(){
 /*
   if(TRIG){
     Serial.print("ISR Triggered: ");
     // readTimeStamp();
     // setAlarm();
-    // read_9dof();
-    // flashLed(LEDPIN, 5, 100);
-      turnOn_pwr();
-      delay(500);
-      readTimeStamp();
-      // readTemp();
-      init_lidar();
-      lidar();
-      read_voltage();
-      read_current();
-      init_9dof();
-      read_9dof();
-      build_message();
-      delay(1000);
+    turnOn_pwr();
+    delay(500);
+    readTimeStamp();
+    // readTemp();
+    init_lidar();
+    lidar();
+    read_voltage();
+    read_current();
+    init_9dof();
+    read_9dof();
+    build_message();
+    delay(1000);
       
-      sendMessage();
-      logData();
-      delay(7000);
-      turnOff_pwr();
+     sendMessage();
+    logData();
+    delay(7000);
+    turnOff_pwr();
 
     TRIG = false;
     rtc.clearINTStatus();   //preparing rtc to alarm trigger
     }
-  */
-	// getAtcommand();
+  */  
+}
+
+void delay_1sec(){
+  int timestart = millis();
+  int timenow = millis();
+  timenow= millis();
+  timestart= millis();
+
+  while ( timenow - timestart < 500 ) {
+    timenow = millis();
+
+    // init_lidar();
+    init_9dof();
+  }
+
+  timenow= millis();
+  timestart= millis();
 }
 
 inline void sleepDataLogger() {
   /********************************************************
   feed the sleep function its wakeup parameters. Then go
   to deepSleep.
-  ********************************************************/  
-  Serial.println("Logger Will Sleep Now...");
-  // delay to finish usb print before sleeping
+  ********************************************************/
+  // delay_1sec();
   delay(100);
-      setAlarm();
+  Serial.println("Powering logger.");
+  readTimeStamp();
+  turnOn_pwr(); //power system
+  delay(1000);
+  init_lidar();
+  init_9dof();
+  flashLed(LEDPIN, 5, 100);
+  
+  lidar();
+  read_voltage();
+  read_current();
+  read_9dof();
 
-      turnOn_pwr();
-      delay(500);
-      readTimeStamp();
+  delay(1000);
+  build_message();
 
-      init_lidar();
-      lidar();
-      read_voltage();
-      read_current();
-      init_9dof();
-      read_9dof();
-      build_message();
-      delay(1000);
-      send_thru_xbee(streamBuffer);
-      // sendMessage();
-      logData();
-      delay(7000);
-      turnOff_pwr();  
-  // flashLed(LEDPIN, 5, 100);
-  //setup
-  // readTimeStamp();
-  // readTemp();
-  // init_lidar();
-  // lidar();
-  // read_voltage();
-  // read_current();
-  // init_9dof();
-  // read_9dof();
-  // build_message();
-  // delay(3000);
-  // sendMessage();
-  rtc.clearINTStatus(); // needed for the rtc to trigger
+  delay(3000);
+  setAlarm();
+  send_thru_xbee(streamBuffer);
+  logData();
+  delay(2000);
+  turnOff_pwr();
+  Serial.println("Logger Will Sleep Now...");
+  delay(100);  
+
+  rtc.clearINTStatus(); // needed for the rtc to re-trigger
   // put Teensy into low power sleep mode
   Snooze.deepSleep( config );
 }
@@ -305,7 +323,7 @@ void lidar(){
   for(int i = 0; i < numReadings; i++)
   {
     // Serial.println(myLidarLite.distance());
-    total = total + myLidarLite.distance();
+    total = total + myLidarLite.distance(true);
   }
 
   ave_distance = total/numReadings;
@@ -380,7 +398,7 @@ void build_message(){
     strncat(streamBuffer, "*", 1);
     strncat(streamBuffer, Ctimestamp, sizeof(Ctimestamp));
     strncat(streamBuffer, "<<", 2);
-    Serial.println(streamBuffer);
+    // Serial.println(streamBuffer);
    // dataString.toCharArray(streamBuffer, sizeof(dataString));
    // Serial.println(dataString);
 }
@@ -411,7 +429,7 @@ void init_9dof(){
     Serial.println("Oops ... unable to initialize the LSM9DS1. Check your wiring!");
     while (1);
   }
-  Serial.println("Found LSM9DS1 9DOF");
+  // Serial.println("Found LSM9DS1 9DOF");
 
   // 1.) Set the accelerometer range
   lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_2G);
@@ -514,6 +532,7 @@ void send_thru_xbee(char* load_data) {
   int length = strlen(load_data);
 
   Serial.println(F("Sending data to gateway!"));
+  Serial.println(load_data);
   // Serial.print(F("length = "));
   // Serial.println(length);
   int i=0, j=0;    
