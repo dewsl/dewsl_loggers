@@ -367,13 +367,13 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 	char temp_msgid[2];
 	char dest[5000] = {};
 	char temp[6];
-	char idf;
 	char pad[12] = "___________";
 	char master_name[8] = "";
 	char Ctimestamp[6] = "";
 	char identifier[3] = {};
-	for (int i = 0; i < sizeof(dest); i++) {
-	  dest[i] = '\0';
+
+	for (int i = 0; i < 5000; i++) {
+	  destination[i] = '\0';
 	}
 
 	b64_ts = b64_timestamp(g_timestamp);
@@ -391,9 +391,6 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 		msgid = strtol(temp_msgid,&last_char,16);
 		struct data_type_params dtype = b64_identify_params(msgid);
 		strncpy(identifier,dtype.identifier,2);
-		// idf = dtype.identifier;
-		// identifier[0] = idf;
-		// identifier[1] = '\0';
 		// determine number of messages to be sent per data type
 		cutoff = dtype.type_cutoff;
 		num_text_per_dtype = ( (strlen(token1) - 2) / cutoff );
@@ -405,24 +402,21 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 	        name_len = 8;
 	        strncpy(master_name,g_mastername,4);
 	        strncat(master_name,"DUE",4);
-	    } else if ( idf == 'p'){
-	        name_len = 8;
-	        strncpy(master_name,g_mastername,6);
-	        strncat(master_name,"PZ",2);
 	    } else {
 	        name_len = 6;
 	        strncpy(master_name,g_mastername,6);
 	    }
 		// copy parts of the message
 		//increment token1 twice to skip over the HEX msgid
+		c=0;
 		for (int i = 0; i < num_text_per_dtype; i++){		
 			strncat(dest,pad,11);
 			strncat(dest,master_name, name_len);
 			strncat(dest,"*", 2);
-			if (idf != 'p'){ // except piezo
-			  strncat(dest,identifier,2);
-			  strncat(dest,"*", 2);
-			}
+			// if (idf != 'p'){ // except piezo
+				strncat(dest,identifier,2);
+				strncat(dest,"*", 2);
+			// }
 			for (int j=0; j < (cutoff); j++ ){
 				strncat(dest,token1+2,1);
 				c++;
@@ -442,7 +436,6 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 		num_text_to_send = num_text_to_send + num_text_per_dtype;
 		token1 = strtok(NULL, g_delim);
 	}
-	Serial.println(num_text_to_send);
 	token2 = strtok(dest, g_delim);
 	c=0;
 	while( token2 != NULL ){
