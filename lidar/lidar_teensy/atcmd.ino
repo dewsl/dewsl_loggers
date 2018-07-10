@@ -4,7 +4,6 @@
 #define OKSTR     "OK"
 #define ERRORSTR  "ERROR"
 
-
 bool ate=false;
 
 void getArguments(String at_cmd, String *arguments){
@@ -87,33 +86,37 @@ void getAtcommand(){
 	  	flashLed(LEDPIN, 5, 100);
 	  }  
 	  else if (command == "AT+LDR"){
+	  	turnOn_pwr();
 	  	init_lidar();
+	  	delay(2000);
 	  	lidar();
+	  	delay(2000);
+	  	turnOff_pwr();
 	  }
 	  else if (command == "AT+TEXT"){
 	  	turnOn_pwr();
+	  	delay_1sec();
 	  	delay(500);
 	  	readTimeStamp();
 	  	// readTemp();
-	  	init_lidar();
+	  	// init_lidar();
 	  	lidar();
 	  	read_voltage();
 	  	read_current();
-	  	init_9dof();
+	  	// init_9dof();
 	  	read_9dof();
 	  	build_message();
 	  	delay(1000);
 	  	logData();
-	  	// sendMessage();
 	  	send_thru_xbee(streamBuffer);
 	  	delay(2000);
 	  	turnOff_pwr();
 	  }       
 	  else if (command == "AT+SENDTEXT"){
 	  	turnOn_pwr();
-	  	delay(2000);	  	
-	  	// sendMessage();
 	  	delay(1000);
+	  	send_thru_xbee(streamBuffer);
+	  	delay(2000);
 	  	turnOff_pwr();
 	  }     
 	  else if (command == "AT+9DOF"){
@@ -123,6 +126,9 @@ void getAtcommand(){
 	  else if (command == "AT+SD"){
 	  	logData();
 	  }		  
+	  else if (command == "AT+DELAY"){
+	  	delay_1sec();
+	  }	  
 	  else{
 	    Serial.println(ERRORSTR);
 		}
@@ -139,9 +145,42 @@ String getDateTime(){
 }
 
 void setupTime() {
+
 	int MM = 0, DD = 0, YY = 0, hh = 0, mm = 0, ss = 0, dd = 0;
+
+	/*
+	int timestart = millis();
+  	int timenow = millis();
+  	timenow= millis();
+  	timestart= millis();
+
+  	while ( timenow - timestart < 3000 ) {
+    	timenow = millis();
+
+		Serial.println(F("\nSet time and date in this format: YY,MM,DD,hh,mm,ss,dd[0-6]Mon-Sun"));
+		//2018,06,27,19,54,50,2
+		while (!Serial.available()) {}
+		if (Serial.available()) {
+			YY = Serial.parseInt();
+			MM  = Serial.parseInt();
+			DD = Serial.parseInt();
+			hh = Serial.parseInt();
+			mm = Serial.parseInt();
+			ss = Serial.parseInt();
+			dd = Serial.parseInt();
+
+				adjustDate(YY, MM, DD, hh, mm, ss, dd);
+			Serial.print(F("Time now is: "));
+			Serial.println(Ctimestamp);
+		}
+  	}
+
+	timenow= millis();
+	timestart= millis();
+	*/
+
 	Serial.println(F("\nSet time and date in this format: YY,MM,DD,hh,mm,ss,dd[0-6]Mon-Sun"));
-	delay (5000);
+	delay (2000);
 	//2018,06,27,19,54,50,2
 	while (!Serial.available()) {}
 	if (Serial.available()) {
@@ -153,10 +192,11 @@ void setupTime() {
 		ss = Serial.parseInt();
 		dd = Serial.parseInt();
 	}
-  
+
 	adjustDate(YY, MM, DD, hh, mm, ss, dd);
-	Serial.print(F("Time now is: "));
-	Serial.println(Ctimestamp);
+	// Serial.print(F("Time now is: "));
+	// Serial.println(Ctimestamp);		  	
+	readTimeStamp();
 }
 
 void adjustDate(int year, int month, int date, int hour, int min, int sec, int weekday){
@@ -182,31 +222,31 @@ void readTimeStamp(){
 
 	String ts = String(now.year());
 	
-	if (now.month() < 10){
+	if (now.month() <= 9){
 		ts += "0" + String(now.month());
 	}else{
 		ts += String(now.month());
 	}
 
-	if (now.date() < 10){
+	if (now.date() <= 9){
 		ts += "0" + String(now.date());
 	}else{
 		ts += String(now.date());
 	}
 
-	if (now.hour() < 10){
+	if (now.hour() <= 9){
 		ts += "0" + String(now.hour());
 	}else{
 		ts += String(now.hour());
 	}
 
-	if (now.minute() < 10){
+	if (now.minute() <= 9){
 		ts += "0" + String(now.minute());
 	}else{
 		ts += String(now.minute());
 	}
 
-	if (now.second() < 10){
+	if (now.second() <= 9){
 		ts += "0" + String(now.second());
 	}else{
 		ts += String(now.second());
