@@ -181,6 +181,7 @@ def main():
         cmd = msg_args[0].lower()
         if cmd == "coordname":
             change_coord_name(row)
+            common.spawn_process('python /home/pi/gateway/common.py')
         elif cmd == "version":
             change_running_version(msg_args, row)
 
@@ -216,7 +217,8 @@ def main():
             ts = dt.today().strftime("%c")
             cmd_reply = "USER initiated sensorpoll at %s" % (ts)
             common.save_sms_to_memory(cmd_reply, row['contact_id'])
-            subprocess.Popen(["python","/home/pi/gateway/xbeegate.py -s"])                
+            #subprocess.Popen(["python","/home/pi/gateway/xbeegate.py -s"])
+            common.spawn_process('python /home/pi/gateway/gateway.py -sr')                
         elif cmd == 'interval':
             change_report_interval(row)
         elif cmd == 'xbeetimeout':

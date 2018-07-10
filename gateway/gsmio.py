@@ -202,7 +202,7 @@ def check_csq():
         csq_val = int(re.search("(?<=: )\d{1,2}(?=,)",csq_reply).group(0))
         mc.set("csq_val",csq_val)
         return csq_val
-    except ValueError, AttributeError:
+    except (ValueError, AttributeError):
         return 0
     except TypeError:
         return 0
@@ -214,7 +214,7 @@ def check_network():
     try:
         network_val = re.search("(globe)|(smart)",network_reply.lower()).group(0)
         return 1
-    except ValueError, AttributeError:
+    except (ValueError, AttributeError):
         return 0
     except TypeError:
         return 0
@@ -238,7 +238,8 @@ def send_msg(msg, number):
 
     if check_count >= 10:
         print ">> No connection to network. Aborting ..."
-        raise CustomGSMResetException
+        return -2
+        #raise CustomGSMResetException
 
     # resolve sim_num from number
     mc = common.get_mc_server()
@@ -268,10 +269,15 @@ def send_msg(msg, number):
             time.sleep(0.5)
             print '.',
 
-        if time.time()>now+3 or a.find("ERROR") > -1:  
+        if time.time()>now+20:
+            print '>> Error: timeout reached'
+            return -1
+        elif a.find("ERROR") > -1:  
             print '>> Error: GSM Unresponsive at finding >'
             print a
-            print '^^ a ^^'
+            network_stat = check_network()
+            if network_stat == 0:
+                return -2
             return -1
         else:
             print '>'
@@ -292,7 +298,8 @@ def send_msg(msg, number):
             network_stat = check_network()
             if network_stat == 0:
                 # no network connection (AT+COPS?)
-                raise CustomGSMResetException
+                return -2
+                #raise CustomGSMResetException
 
             return -1
         else:
@@ -341,7 +348,7 @@ def count_msg():
         except ValueError:
             print '>> ValueError:'
             print b
-            print '>> Retryring message reading'
+            print '>> Retrying message reading'
             # logError(b)
             # return -2   
 

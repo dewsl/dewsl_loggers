@@ -97,14 +97,23 @@ def send_smsoutbox_memory():
         
         if stat == 0: 
             smsoutbox.loc[index, 'stat'] = resend_limit
-            '>> Message sent'
+            print '>> Message sent'
+        elif stat == -2:
+            print '>> Message sending failed'
+            smsoutbox_updated = mc.get("smsoutbox")
+            ts_latest = smsoutbox.ts.max()
+            smsoutbox_new_inserts = smsoutbox_updated[smsoutbox_updated.ts > ts_latest]
+            smsoutbox = smsoutbox.append(smsoutbox_new_inserts, ignore_index = True) 
+            mc.set("smsoutbox",smsoutbox)
+
+            raise gsmio.CustomGSMResetException
         else:
             print '>> Message sending failed'
             print '>> Writing to mysql for sending later'
             smsoutbox.loc[index, 'stat'] += 1
 
             if smsoutbox.loc[index, 'stat'] >= resend_limit:
-                dbio.write_sms_to_inbox(sms_msg, sim_num)
+                dbio.write_sms_to_outbox(sms_msg, sim_num)
                 mc.set("sms_in_db", True)
 
     print smsoutbox

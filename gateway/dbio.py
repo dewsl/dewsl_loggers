@@ -155,18 +155,24 @@ def write_sms_to_outbox(sms_msg,pb_id=None,send_status=0):
     
     tsw = dt.today().strftime("%Y-%m-%d %H:%M:%S")
 
+    mc = common.get_mc_server()
+    inv_pb_names = mc.get('phonebook_inv')
 
     # default send to server if sim_num is empty
     if not pb_id:
-        mc = common.get_mc_server()
+        #mc = common.get_mc_server()
         s_conf = common.get_config_handle()
 
-        pb_names = mc.get('pb_names')
-        sendto = s_conf['serverinfo']['sendto']
+        #pb_names = mc.get('pb_names')
+        #sendto = s_conf['serverinfo']['sendto']
 
-        inv_pb_names = {v: k for k, v in pb_names.items()}
-        print inv_pb_names
-        pb_id = inv_pb_names[sendto]
+        #inv_pb_names = {v: k for k, v in pb_names.items()}
+        #print inv_pb_names
+        #pb_id = inv_pb_names[sendto]
+
+        pb_id = s_conf['serverinfo']['simnum']
+
+    pb_id = inv_pb_names[str(pb_id)]
 
     query += "('%s','%s','%s','%s')" % (tsw,pb_id,sms_msg,send_status)
     
