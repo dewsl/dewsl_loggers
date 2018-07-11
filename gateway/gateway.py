@@ -246,6 +246,7 @@ def main():
         create_startup_message()
 
     if args.sample_routers:
+        lockscript.get_lock('xbeegate')
         xb.routine()
      
 
