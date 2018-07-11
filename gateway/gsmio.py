@@ -243,7 +243,7 @@ def send_msg(msg, number):
 
     # resolve sim_num from number
     mc = common.get_mc_server()
-    pb_numbers = mc.get('pb_numbers')
+    pb_numbers = mc.get('phonebook')
 
     try:
         if type(number) == int or type(number) == long:
