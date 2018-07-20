@@ -35,26 +35,26 @@ int paylength=200;
 int datalen=0;
 int count_success=0;
 int verify_send[24]={0};
+           
 
-
-char g_mastername[6] = "PHILA";
+char g_mastername[6] = "IMULA";
 char streamBuffer[250];
 char s_ave_distance[10] = "";     //store average distance reading
 char l_loadvoltage[10] = "";      //store load voltage
 char l_current_mA[10] = "";       //store load current reading
 char l_temp[10] = "";       //store RTC temperature
 char Ctimestamp[13] = "";	//store currrent timestamp
-char l_ACx[6] = "";
-char l_ACy[6] = "";
-char l_ACz[6] = "";
-char l_MGx[6] = "";
-char l_MGy[6] = "";
-char l_MGz[6] = "";
-char l_GRx[6] = "";
-char l_GRy[6] = "";
-char l_GRz[6] = "";
+char l_ACx[7] = "";
+char l_ACy[7] = "";
+char l_ACz[7] = "";
+char l_MGx[7] = "";
+char l_MGy[7] = "";
+char l_MGz[7] = "";
+char l_GRx[7] = "";
+char l_GRy[7] = "";
+char l_GRz[7] = "";
 
-const int numReadings = 100;   //max reading average
+const int numReadings = 1000;   //max reading average
 
 bool TRIG = false;
 
@@ -91,7 +91,9 @@ void setup() {
   // init_9dof();
  
   init_sd();
-	ina219.begin();
+	// ina219.begin();
+
+
 	rtc.begin();
 	pinMode(ISRPIN, INPUT);
 	init_pwrPin();
@@ -111,6 +113,11 @@ void setup() {
   // rtc.enableInterrupts(Every10Minute); //interrupt at  EverySecond, EveryMinute, EveryHour
   //Enable HH/MM/SS interrupt on /INTA pin. All interrupts works like single-shot counter
   // rtc.enableInterrupts(10,53,20);    // interrupt at (h,m,s)
+}
+
+void init_in219(){
+  uint32_t currentFrequency;
+  ina219.setCalibration_16V_400mA();  
 }
 
 void setAlarm(){
@@ -216,16 +223,22 @@ inline void sleepDataLogger() {
   // delay_1sec();
   delay(100);
   Serial.println("Powering logger.");
-  readTimeStamp();
+  
   turnOn_pwr(); //power system
   delay(1000);
+  init_in219();
   init_lidar();
-  init_9dof();
+
   flashLed(LEDPIN, 5, 100);
   
-  lidar();
+  lidar();             
+  readTimeStamp();
+  delay(100);
+  readTemp();
+
   read_voltage();
   read_current();
+  init_9dof();
   read_9dof();
 
   delay(1000);
@@ -299,7 +312,7 @@ void init_lidar(){
 }
 
 void lidar(){
-  int total;
+  float total;
   float ave_distance;     //distance lidar
   /*
     distance(bool biasCorrection, char lidarliteAddress)
@@ -330,7 +343,7 @@ void lidar(){
   // Serial.println(total);
   // Serial.println(ave_distance);
 
-  dtostrf(ave_distance, 3, 0, s_ave_distance);
+  dtostrf(ave_distance, 3, 3, s_ave_distance);
   if (DEBUG == 1) {Serial.print("LIDAR Distance: ");}
   if (DEBUG == 1) {Serial.println(s_ave_distance);}
 }
@@ -393,8 +406,8 @@ void build_message(){
     strncat(streamBuffer, ",", 1);
     strncat(streamBuffer, l_GRz, sizeof(l_GRz));
 
-    // strncat(streamBuffer, "*TP:", 4);
-    // strncat(streamBuffer, l_temp, sizeof(l_temp)); 
+    strncat(streamBuffer, "*TP:", 4);
+    strncat(streamBuffer, l_temp, sizeof(l_temp)); 
     strncat(streamBuffer, "*", 1);
     strncat(streamBuffer, Ctimestamp, sizeof(Ctimestamp));
     strncat(streamBuffer, "<<", 2);
@@ -462,47 +475,47 @@ void read_9dof(){
   lsm.getEvent(&a, &m, &g, &temp); 
 
   ACx = (a.acceleration.x);
-  dtostrf(ACx, 3, 2, l_ACx);  
+  dtostrf(ACx, 3, 4, l_ACx);  
   if (DEBUG == 1) {Serial.print("Accel X: ");}
   if (DEBUG == 1) {Serial.print(l_ACx);}
 
   ACy = (a.acceleration.y);
-  dtostrf(ACy, 5, 2, l_ACy);  
+  dtostrf(ACy, 5, 4, l_ACy);  
   if (DEBUG == 1) {Serial.print("\tY: ");}
   if (DEBUG == 1) {Serial.print(l_ACy);}
 
   ACz = (a.acceleration.z);
-  dtostrf(ACz, 3, 2, l_ACz);  
+  dtostrf(ACz, 3, 4, l_ACz);  
   if (DEBUG == 1) {Serial.print("\tZ: ");}
   if (DEBUG == 1) {Serial.println(l_ACz);}
 
   MGx = (m.magnetic.x);
-  dtostrf(MGx, 5, 2, l_MGx);  
+  dtostrf(MGx, 5, 4, l_MGx);  
   if (DEBUG == 1) {Serial.print("Mag X: ");}
   if (DEBUG == 1) {Serial.print(l_MGx);}
 
   MGy = (m.magnetic.y);
-  dtostrf(MGy, 3, 2, l_MGy);  
+  dtostrf(MGy, 3, 4, l_MGy);  
   if (DEBUG == 1) {Serial.print("\tY: ");}
   if (DEBUG == 1) {Serial.print(l_MGy);}
 
   MGz = (m.magnetic.z);
-  dtostrf(MGz, 3, 2, l_MGz);  
+  dtostrf(MGz, 3, 4, l_MGz);  
   if (DEBUG == 1) {Serial.print("\tZ: ");}
   if (DEBUG == 1) {Serial.println(l_MGz);}
 
   GRx = (g.gyro.x);
-  dtostrf(GRx, 3, 2, l_GRx);  
+  dtostrf(GRx, 3, 4, l_GRx);  
   if (DEBUG == 1) {Serial.print("Gyro X: ");}
   if (DEBUG == 1) {Serial.print(l_GRx);}
 
   GRy = (g.gyro.y);
-  dtostrf(GRy, 3, 2, l_GRy);  
+  dtostrf(GRy, 3, 4, l_GRy);  
   if (DEBUG == 1) {Serial.print("\tY: ");}
   if (DEBUG == 1) {Serial.print(l_GRy);}
 
   GRz = (g.gyro.z);
-  dtostrf(GRz, 3, 2, l_GRz);  
+  dtostrf(GRz, 3, 4, l_GRz);  
   if (DEBUG == 1) {Serial.print("\tY: ");}
   if (DEBUG == 1) {Serial.println(l_GRz);}
 

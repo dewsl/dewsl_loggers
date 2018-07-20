@@ -72,10 +72,23 @@ void getAtcommand(){
 	  	readTemp();
 	  }    
 	  else if (command == "AT+VOLTAGE"){
+	  	turnOn_pwr();
+	  	 init_in219();
+	  	flashLed(LEDPIN, 5, 100);
 	  	read_voltage();
+	  	delay(2000);
+	  	turnOff_pwr();
+	  	flashLed(LEDPIN, 5, 100);
 	  }  
 	  else if (command == "AT+CURRENT"){
+	  	turnOn_pwr();
+	  	 init_in219();
+	  	flashLed(LEDPIN, 5, 100);
+
 	  	read_current();
+	  	delay(2000);
+	  	turnOff_pwr();	 
+	  	flashLed(LEDPIN, 5, 100); 	
 	  }    
 	  else if (command == "AT+ONPWR"){
 	  	turnOn_pwr();
@@ -95,15 +108,17 @@ void getAtcommand(){
 	  }
 	  else if (command == "AT+TEXT"){
 	  	turnOn_pwr();
-	  	delay_1sec();
+	  	// delay_1sec();
+	  	init_lidar();
+	  	init_in219();
 	  	delay(500);
 	  	readTimeStamp();
-	  	// readTemp();
-	  	// init_lidar();
+	  	readTemp();
+	  	
 	  	lidar();
 	  	read_voltage();
 	  	read_current();
-	  	// init_9dof();
+	  	init_9dof();
 	  	read_9dof();
 	  	build_message();
 	  	delay(1000);
@@ -120,8 +135,11 @@ void getAtcommand(){
 	  	turnOff_pwr();
 	  }     
 	  else if (command == "AT+9DOF"){
+	  	turnOn_pwr();
+	  	delay(1000);
 	  	init_9dof();
 	  	read_9dof();
+	  	turnOff_pwr();
 	  }	  
 	  else if (command == "AT+SD"){
 	  	logData();
