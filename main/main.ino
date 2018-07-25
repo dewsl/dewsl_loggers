@@ -170,7 +170,7 @@ uint8_t g_datalogger_version = 3;
   --- Code
   brodcast_timeout = 3000  ---
 */
-int broad_timeout = 3000;
+int broad_timeout = 5000;
 
 /* 
   Variable: has_piezo
@@ -192,7 +192,7 @@ bool has_piezo = false;
   sampling_max_retry = 3
   ---
 */
-int g_sampling_max_retry = 3;
+int g_sampling_max_retry = 5;
 
 /* 
   Variable: g_delim
@@ -610,8 +610,8 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
     get_data(12,1,column_data);
     get_data(22,1,column_data);
     if (sensor_type == 2){
-      get_data(110,1,column_data);
-      get_data(113,1,column_data);
+      get_data(10,1,column_data);
+      get_data(13,1,column_data);
     }
   } else if (sensor_version == 1){
     Serial.println("Not yet supported");
