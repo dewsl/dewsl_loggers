@@ -149,7 +149,7 @@ uint8_t g_turn_on_delay = 10;
   --- Code
   sensorVersion = 3
   ---*/
-uint8_t g_sensor_version = 3;
+uint8_t g_sensor_version = 2;
 
 /*
   Variable: g_datalogger_version
@@ -170,7 +170,7 @@ uint8_t g_datalogger_version = 3;
   --- Code
   brodcast_timeout = 3000  ---
 */
-int broad_timeout = 5000;
+int broad_timeout = 3000;
 
 /* 
   Variable: has_piezo
@@ -192,7 +192,7 @@ bool has_piezo = false;
   sampling_max_retry = 3
   ---
 */
-int g_sampling_max_retry = 5;
+int g_sampling_max_retry = 3;
 
 /* 
   Variable: g_delim
@@ -293,16 +293,9 @@ void setup() {
 
   if (g_datalogger_version == 3){
     strncpy(comm_mode,"XBEE",4);
-    // if (strcmp(comm_mode,"XBEE") == 0){
-    //   Serial.print("Comms: "); Serial.println(comm_mode);
-    // }
     xbee.setSerial(DATALOGGER);  
   } else if(g_datalogger_version == 2){
     strncpy(comm_mode,"ARQ",3);
-    // if (strcmp(comm_mode,"ARQ") == 0){
-    //   Serial.print("Comms: "); Serial.println(comm_mode);
-    // }
-
   }
     Serial.print("Comms: "); Serial.println(comm_mode);
 }
@@ -341,7 +334,6 @@ void loop(){
         char temp[1];
         xbee_response[0] = '\0';
         xbee.readPacket(); 
-        // Serial.println(".");
         if (xbee.getResponse().isAvailable()) {
           Serial.println("xbee.getResponse().isAvailable()!!!!");
             if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
@@ -434,8 +426,8 @@ void getATCommand(){
       get_data(11,1,g_final_dump);
       get_data(12,1,g_final_dump);
       get_data(22,1,g_final_dump);
-      // get_data(110,1,g_final_dump);
-      // get_data(113,1,g_final_dump);
+      get_data(10,1,g_final_dump);
+      get_data(13,1,g_final_dump);
       // Serial.println(g_final_dump);
 
       g_timestamp = String("180607142000");
@@ -449,7 +441,11 @@ void getATCommand(){
     } else if (command == "AT+POLL"){
       read_data_from_column(g_final_dump, g_sensor_version,2);
       Serial.println(g_final_dump);
-      build_txt_msgs(comm_mode, g_final_dump, text_message);
+      if (b64 == 1) {
+        b64_build_text_msgs(comm_mode, g_final_dump, text_message);
+      } else {
+        build_txt_msgs(comm_mode, g_final_dump, text_message); 
+      }
       Serial.println(OKSTR);
     } else if (command == ATSNIFFCAN){
       while (true){
@@ -529,7 +525,11 @@ void operation(int sensor_type, char communication_mode[]){
   int counter= 0;
   int num_of_tokens = 0;
   read_data_from_column(g_final_dump, g_sensor_version, sensor_type);// matagal ito.
-  build_txt_msgs(communication_mode, g_final_dump, text_message); 
+  if (b64 == 1) {
+    b64_build_text_msgs(comm_mode, g_final_dump, text_message);
+  } else {
+    build_txt_msgs(comm_mode, g_final_dump, text_message); 
+  }
   char *token1 = strtok(text_message,"~");
     
   while (token1 != NULL){
@@ -801,7 +801,6 @@ int wait_xbee_cmd(int timeout, char* response_string){
   while((millis() - start) < 180000){ // hardcode na 3 minutes of waiting time
     xbee.readPacket(); 
     if (xbee.getResponse().isAvailable()) {
-      // Serial.println("xbee.getResponse().isAvailable() <--")
         if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
             xbee.getResponse().getZBRxResponse(rx);
             for (int i = 0; i < rx.getDataLength (); i++){
@@ -1381,6 +1380,7 @@ void send_data(bool isDebug, char* columnData){
   int timestart = millis();
   int timenow = millis();
   bool OKFlag = false;
+  uint8_t send_retry_limit = 0; 
   if (isDebug == true){
     // Serial.print("Sending: ");
     // Serial.println(columnData);
@@ -1404,8 +1404,8 @@ void send_data(bool isDebug, char* columnData){
     } while (OKFlag == false);
   } else {
       do{   
-      Serial.print("Sending: ");
-      Serial.println(columnData);
+        Serial.print("Sending: ");
+        Serial.println(columnData);
         DATALOGGER.println(columnData);
         timestart = millis();
         timenow = millis();
@@ -1424,8 +1424,14 @@ void send_data(bool isDebug, char* columnData){
           DATALOGGER.println(columnData);       
         }
 
+        send_retry_limit++;
+        if (send_retry_limit == 10){
+          Serial.println("send_retry_limit reached.");
+          OKFlag = true;
+        }
       } while (OKFlag == false);
   }
+  return;
 } 
 
 /* 
@@ -1448,8 +1454,6 @@ bool send_thru_xbee(char* load_data) {
   delay(500);
   int length = strlen(load_data);
 
-  // Serial.print(F("length = "));
-  // Serial.println(length);
   int i=0, j=0;    
 
   for (j=0;j<200;j++){
@@ -1463,7 +1467,6 @@ bool send_thru_xbee(char* load_data) {
     xbee.send(zbTx);
 
     if (xbee.readPacket(2000)) {
-      // Serial.println(F("Got a response!"));
         if (xbee.getResponse().getApiId() == ZB_TX_STATUS_RESPONSE) {
             xbee.getResponse().getZBTxStatusResponse(txStatus);
             if (txStatus.getDeliveryStatus() == SUCCESS) {

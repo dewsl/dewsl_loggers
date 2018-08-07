@@ -90,6 +90,7 @@ struct data_type_params b64_identify_params(int msgid){
 	to_base64(msgid,temp);
 	pad_b64(2,temp,temp1);
 	temp1[2] = '\0';
+	strncpy(struct_dtype.identifier,temp1,2);
 	switch(msgid){
 		case 255:{
 			struct_dtype.type_number = 1;
@@ -98,67 +99,61 @@ struct data_type_params b64_identify_params(int msgid){
 		} case 11: {
 			struct_dtype.type_number = 1;
 			struct_dtype.data_length = 11;
-			struct_dtype.type_cutoff = 144; // 9 chars per node tilt data	
-			// struct_dtype.identifier = 'x';
-			strncpy(struct_dtype.identifier,temp1,2);
+			struct_dtype.type_cutoff = 135; // 9 chars per node tilt data	
 			break;
 		} case 12: {
 			struct_dtype.type_number = 1;
 			struct_dtype.data_length = 11;
-			struct_dtype.type_cutoff = 144; // 9 chars per node tilt data	
-			// struct_dtype.identifier = 'y';
-			strncpy(struct_dtype.identifier,temp1,2);
+			struct_dtype.type_cutoff = 135; // 9 chars per node tilt data	
 			break;
 		} case 32: {
 			struct_dtype.type_number = 1;
 			struct_dtype.data_length = 11;
-			struct_dtype.type_cutoff = 144; // 9 chars per node tilt data	
+			struct_dtype.type_cutoff = 135; // 9 chars per node tilt data	
 			break;
 		} case 33: {
 			struct_dtype.type_number = 1;
 			struct_dtype.data_length = 11;
-			struct_dtype.type_cutoff = 144; // 9 chars per node tilt data	
+			struct_dtype.type_cutoff = 135; // 9 chars per node tilt data	
 			break;
 		} case 22:{
 			struct_dtype.type_number = 3;
 			struct_dtype.data_length = 5;
-			struct_dtype.type_cutoff = 144;
-			// struct_dtype.identifier = 'd';
-			strncpy(struct_dtype.identifier,temp1,2);
-
+			struct_dtype.type_cutoff = 135;
 			break;
 		} case 110:{
 			struct_dtype.type_number = 2;
 			struct_dtype.data_length = 5;
-			struct_dtype.type_cutoff = 144; // 4 chars per node soms data	
+			struct_dtype.type_cutoff = 135; // 4 chars per node soms data	
 			break;
 		} case 113: {
 			struct_dtype.type_number = 2;
 			struct_dtype.data_length = 5;
-			struct_dtype.type_cutoff = 144; // 4 chars per node soms data	
+			struct_dtype.type_cutoff = 135; // 4 chars per node soms data	
 			break;
 		} case 111: {
 			struct_dtype.type_number = 2;
 			struct_dtype.data_length = 5;
-			struct_dtype.type_cutoff = 144; // 4 chars per node soms data	
+			struct_dtype.type_cutoff = 135; // 4 chars per node soms data	
 			break;
 		} case 112:{
 			struct_dtype.type_number = 2;
 			struct_dtype.data_length = 5;
-			struct_dtype.type_cutoff = 144; // 4 chars per node soms data	
+			struct_dtype.type_cutoff = 135; // 4 chars per node soms data	
+			break;
+		} case 10:{
+			struct_dtype.type_number = 2;
+			struct_dtype.data_length = 6;
+			struct_dtype.type_cutoff = 120; // 4 chars per node soms data	
+			break;
+		} case 13:{
+			struct_dtype.type_number = 2;
+			struct_dtype.data_length = 6;
+			struct_dtype.type_cutoff = 120; // 4 chars per node soms data	
 			break;
 		}
 	}
 	return struct_dtype;
-	// if (params == "type_number"){
-	// 	return struct_dtype.type_number;
-	// } else if (params == "data_length"){
-	// 	return struct_dtype.data_length;
-	// } else if (params == "type_cutoff"){
-	// 	return struct_dtype.type_cutoff;
-	// } else if (params == "identifier"){
-	// 	return struct_dtype.identifier;
-	// }
 }
 
 /* 
@@ -233,13 +228,11 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 			pad_b64(2,temp,temp2);
 			strcat(dump,temp2);
 
-			// Serial.println(dump);
 			break;
 		}
 		case 2: {
 			// based on v3 sensor code.
 			somsr = compute_axis(incoming.data.byte[1],incoming.data.byte[2]);	
-			Serial.print("soms_value: ");
   			sprintf(temp2,"%02X",msgid);
 			strcat(dump,temp2);
 
@@ -383,12 +376,14 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 	Ctimestamp[12] = '\0';
 	token1 = strtok(source, g_delim);
 	while ( token1 != NULL){
+		// get first 2 chars of token1, they are the hex msgid that will determine
 		token_length = strlen(token1)-2;
 		// determine identifier ( same as b16 identifiers)
-		// get first 2 chars of token1, they are the hex msgid that will determine
+		// convert the string to integer
 		strncpy(temp_msgid,token1,2);
 		temp_msgid[2] = '\0';
 		msgid = strtol(temp_msgid,&last_char,16);
+
 		struct data_type_params dtype = b64_identify_params(msgid);
 		strncpy(identifier,dtype.identifier,2);
 		// determine number of messages to be sent per data type
@@ -409,6 +404,7 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 		// copy parts of the message
 		//increment token1 twice to skip over the HEX msgid
 		c=0;
+
 		for (int i = 0; i < num_text_per_dtype; i++){		
 			strncat(dest,pad,11);
 			strncat(dest,master_name, name_len);
@@ -417,7 +413,7 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 				strncat(dest,identifier,2);
 				strncat(dest,"*", 2);
 			// }
-			for (int j=0; j < (cutoff); j++ ){
+			for (int j=0; j <= (cutoff); j++ ){
 				strncat(dest,token1+2,1);
 				c++;
 				token1++;
@@ -433,6 +429,8 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 			strncat(dest,"<<",2);
 			strncat(dest,g_delim,1);
 		}
+		Serial.print("chars written: ");
+		Serial.println(c);
 		num_text_to_send = num_text_to_send + num_text_per_dtype;
 		token1 = strtok(NULL, g_delim);
 	}

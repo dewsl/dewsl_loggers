@@ -169,6 +169,10 @@ unsigned int process_config_line(char *one_line){
 		g_num_of_nodes = process_column_ids(str1);
 		return 0;
 
+	} else if(str1.startsWith("b64")){
+		b64 = get_value_from_line(str1).toInt();
+		return 0;
+
 	} else if((str1.startsWith("endofconfig")) | (str1.startsWith("ENDOFCONFIG"))){
 		return 1;
 

@@ -203,10 +203,10 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   // write frames to String or char array
   for (int i = 0;i<count;i++){
     if (g_can_buffer[i].id != 0){
-      if (!b64){
-        write_frame_to_dump(g_can_buffer[i],g_temp_dump);
-      } else if (b64){
+      if (b64 == 1){
         b64_write_frame_to_dump(g_can_buffer[i],g_temp_dump);
+      } else {
+        write_frame_to_dump(g_can_buffer[i],g_temp_dump);
       }
     }
   }
@@ -278,6 +278,7 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
         can_buffer[i].data.byte[6] = incoming.data.byte[6];
         can_buffer[i].data.byte[7] = incoming.data.byte[7];
         i++;
+        interpret_frame(incoming);
         if (i == expected_frames){
           process_all_frames(g_can_buffer);
           i = count_frames(g_can_buffer);
@@ -676,8 +677,8 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
 */
 void interpret_frame(CAN_FRAME incoming){
   int id,d1,d2,d3,d4,d5,d6,d7,d8,x,y,z,somsr;
-  int tilt = 0;
-  int soms = 1;
+  int tilt = 1;
+  int soms = 0;
   char temp[6];
 
   id = incoming.id;
@@ -691,7 +692,7 @@ void interpret_frame(CAN_FRAME incoming){
   d8 = incoming.data.byte[7]; 
 
   if (VERBOSE == 1) { Serial.println("process_frame()"); }
-  if (tilt == 1){
+  if ((d1 == 11)|(d1 == 12)|(d1==32)|(d1==33)){ 
 
     x = compute_axis(d2,d3);
     y = compute_axis(d4,d5);
@@ -707,8 +708,9 @@ void interpret_frame(CAN_FRAME incoming){
     temp[0] = '\0';
     sprintf(temp, "%5d", z);
     Serial.print(" "); Serial.println(temp);
-  } else if(soms == 1) {
-    somsr = compute_axis(d3,d2);  
+
+  } else if( (d1==10) | (d1==13) | (d1==110) | (d1==113)) {
+    somsr = compute_axis(d2,d3);  
     Serial.print("\t");
     Serial.print(id,HEX); Serial.print("\t"); 
     Serial.print(id); Serial.print('\t');
