@@ -15,9 +15,6 @@ struct data_type_params{
 
     input - integer to be converted
     dest - pointer to char array where the converted input will be stored
-    length - number of resulting characters from the conversion. If
-    length > character count of result, the result will be padded with 'A'
-    (which represent 0 in base64).
 
   Returns:
 
@@ -54,6 +51,26 @@ void to_base64(int input, char* dest){
 	// pad here
 }
 
+/* 
+  Function: reverse_char_order
+
+    Reverse the order in which a string is written. For example a 3 char
+    array with "ABC" will result in "CBA". Limited to 4 characters only.
+    Hardcoded restriction.
+
+  Parameters:
+
+    input - pointer to char array to be reversed
+    length - length of input
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <to_base_64>
+*/
 void reverse_char_order(char* input, uint8_t length){
 	char temp[4] = {0};
 	char temp1[2] = {0};
@@ -66,6 +83,27 @@ void reverse_char_order(char* input, uint8_t length){
 	strncpy(input,temp,strlen(temp));
 }
 
+/* 
+  Function: pad_b64
+
+	Pad the input given the length_of_output and write it on the dest.
+	Limited to 5 characters only.
+    Hardcoded restriction.
+
+  Parameters:
+
+    length_of_output - integer expected length of output
+    input - pointer to char array that contains the input
+    dest - pointer to char array where the padded output will be written
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    <to_base_64>
+*/
 void pad_b64(uint8_t length_of_output, char* input, char* dest){
 	int num_of_pads = 0;
 	char temp[5] = {};
@@ -84,6 +122,26 @@ void pad_b64(uint8_t length_of_output, char* input, char* dest){
 	}
 }
 
+/* 
+  Function: b64_identify_params
+
+	
+
+  Parameters:
+
+	msgid - integer message id /command
+
+  Returns:
+
+    data_type_params - struct with members:
+    struct_dtype.indetifier - 2 char identifier - converted msgid to b64
+    struct_dtype.type_number - 1 - tilt, 2 - soms, 3 - diagnostics
+    struct_dytpe.data_length - total number of characters that represent the data
+
+  See Also:
+
+    <to_base_64>
+*/
 struct data_type_params b64_identify_params(int msgid){
 	char temp[3],temp1[3];
 	if (VERBOSE == 1) { Serial.println("b64_identify_params()"); }
