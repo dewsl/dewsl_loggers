@@ -8,185 +8,228 @@
 
 <body onload="NDLoader.OnLoad('Content');" class="NDPage NDContentPage">
 
-<a name="Global_Variables"></a><a name="Topic69"></a><div class="CTopic TGroup LC first">
+<a name="Global_Variables"></a><a name="Topic10"></a><div class="CTopic TGroup LC first">
  <div class="CTitle">Global Variables</div>
  <div class="CBody"><p>These are the variables declared globally.</p></div>
 </div>
 
-<a name="b64"></a><a name="Topic6"></a><div class="CTopic TVariable LC">
+<a name="b64"></a><a name="Topic11"></a><div class="CTopic TVariable LC">
  <div class="CTitle">b64</div>
  <div class="CBody"><p>global variable that turns on the b64 data representation mode. 0 by default.</p><p>An AT Command can be used to toggle this. <b>AT+SWITCHB64</b> command toggles on and off the b64 data representation.</p><p>Variable declaration:</p><pre>uint8_t b64 = <span class="SHNumber">0</span>;</pre></div>
 </div>
 
-<a name="g_gids"></a><a name="Topic68"></a><div class="CTopic TVariable LC">
+<a name="payload"></a><a name="Topic12"></a><div class="CTopic TVariable LC">
+ <div class="CTitle">payload</div>
+ <div class="CBody"><p>global variable uint8_t array that will hold the data from xbee</p><p>Variable declaration:</p><pre>uint8_t payload[<span class="SHNumber">200</span>];</pre></div>
+</div>
+
+<a name="xbee_response"></a><a name="Topic13"></a><div class="CTopic TVariable LC">
+ <div class="CTitle">xbee_response</div>
+ <div class="CBody"><p>global variable char array that will hold the command frame received from the xbee</p><p>Variable declaration:</p><pre><span class="SHKeyword">char</span> xbee_response[<span class="SHNumber">200</span>];</pre></div>
+</div>
+
+<a name="g_gids"></a><a name="Topic14"></a><div class="CTopic TVariable LC">
  <div class="CTitle">g_gids</div>
  <div class="CBody"><p>2 dimensional integer array that stores the links the unique id with the geographic id</p><p>Variable declaration:</p><pre><span class="SHKeyword">int</span> g_gids[<span class="SHNumber">40</span>][<span class="SHNumber">2</span>];</pre></div>
 </div>
 
-<a name="g_num_of_nodes"></a><a name="Topic72"></a><div class="CTopic TVariable LC">
+<a name="g_num_of_nodes"></a><a name="Topic15"></a><div class="CTopic TVariable LC">
  <div class="CTitle">g_num_of_nodes</div>
- <div class="CBody"><p>integer that stores the number of nodes. This variable is overwritten by <b><a href="../index.html#File:sd_library.ino:process_config_line" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,5);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >process_config_line</a></b>. This variable is also used by <b><a href="../index.html#File:can_library.ino:init_char_arrays" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,28);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >init_char_arrays</a></b>.</p><p>Variable declaration:</p><pre>uint8_t g_num_of_nodes = <span class="SHNumber">40</span>;</pre></div>
+ <div class="CBody"><p>integer that stores the number of nodes. This variable is overwritten by <b><a href="../index.html#File:sd_library.ino:process_config_line" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,5);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >process_config_line</a></b>. This variable is also used by <b><a href="../index.html#File:can_library.ino:init_char_arrays" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,58);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >init_char_arrays</a></b>.</p><p>Variable declaration:</p><pre>uint8_t g_num_of_nodes = <span class="SHNumber">40</span>;</pre></div>
 </div>
 
-<a name="g_mastername"></a><a name="Topic67"></a><div class="CTopic TVariable LC">
+<a name="g_mastername"></a><a name="Topic16"></a><div class="CTopic TVariable LC">
  <div class="CTitle">g_mastername</div>
  <div class="CBody"><p>global char array that holds the 5 char mastername. This variable is overwrittern by <b><a href="../index.html#File:sd_library.ino:process_config_line" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,5);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >process_config_line</a></b>. This variable defaults to &quot;XXXXX&quot;.</p><p><b>SD Card Config Line</b> usage:</p><pre>mastername = INATA</pre></div>
 </div>
 
-<a name="g_turn_on_delay"></a><a name="Topic74"></a><div class="CTopic TVariable LC">
+<a name="g_turn_on_delay"></a><a name="Topic17"></a><div class="CTopic TVariable LC">
  <div class="CTitle">g_turn_on_delay</div>
  <div class="CBody"><p>integer that determines the delay in centi seconds ( ie. 100 centiseconds = 1 sec ) introduced by the firmware after the column switch turns on.&nbsp; This ensures the voltage stability for the column.</p><p><b>SD Card Config Line</b> usage:</p><pre>turn_on_delay = <span class="SHNumber">100</span></pre></div>
 </div>
 
-<a name="g_sensor_version"></a><a name="Topic71"></a><div class="CTopic TVariable LC">
+<a name="g_sensor_version"></a><a name="Topic18"></a><div class="CTopic TVariable LC">
  <div class="CTitle">g_sensor_version</div>
  <div class="CBody"><p>integer that determines the sensor version ( 1, 2, or 3 ). This variable is overwrittern by <b><a href="../index.html#File:sd_library.ino:process_config_line" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,5);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >process_config_line</a></b>.</p><p><b>SD Card Config Line</b> usage:</p><pre>sensorVersion = <span class="SHNumber">3</span></pre></div>
 </div>
 
-<a name="g_datalogger_version"></a><a name="Topic76"></a><div class="CTopic TVariable LC">
+<a name="g_datalogger_version"></a><a name="Topic19"></a><div class="CTopic TVariable LC">
  <div class="CTitle">g_datalogger_version</div>
  <div class="CBody"><p>integer that determines the datalogger version ( 2 ARQ or 3 Regular,V3 ). This variable is overwrittern by <b><a href="../index.html#File:sd_library.ino:process_config_line" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,5);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >process_config_line</a></b>.</p><p>Variable declaration:</p><pre>uint8_t g_datalogger_version = <span class="SHNumber">3</span>;</pre></div>
 </div>
 
-<a name="TIMEOUT"></a><a name="Topic75"></a><div class="CTopic TVariable LC">
- <div class="CTitle">TIMEOUT</div>
- <div class="CBody"><p>integer that determines the tumeout duration of broadcast (in milliseconds ). This variable is overwrittern by <b><a href="../index.html#File:sd_library.ino:process_config_line" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,5);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >process_config_line</a></b>.</p><p><b>SD Card Config Line</b> usage:</p><pre>brodcast_timeout = <span class="SHNumber">3000</span></pre></div>
+<a name="broad_timeout"></a><a name="Topic20"></a><div class="CTopic TVariable LC">
+ <div class="CTitle">broad_timeout</div>
+ <div class="CBody"><p>integer that determines the timeout duration of broadcast (in milliseconds ). This variable is overwrittern by <b><a href="../index.html#File:sd_library.ino:process_config_line" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,5);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >process_config_line</a></b>.</p><p><b>SD Card Config Line</b> usage:</p><pre>brodcast_timeout = <span class="SHNumber">3000</span>  ---</pre></div>
 </div>
 
-<a name="g_timestamp"></a><a name="Topic70"></a><div class="CTopic TVariable LC">
+<a name="has_piezo"></a><a name="Topic21"></a><div class="CTopic TVariable LC">
+ <div class="CTitle">has_piezo</div>
+ <div class="CBody"><p>boolean variable that decides the sampling of the piezometer readout board</p><p><b>SD Card Config Line</b> usage:</p><pre>PIEZO = <span class="SHNumber">1</span></pre></div>
+</div>
+
+<a name="g_sampling_max_retry"></a><a name="Topic22"></a><div class="CTopic TVariable LC">
+ <div class="CTitle">g_sampling_max_retry</div>
+ <div class="CBody"><p>integer that determines the number of column sampling retry</p><p><b>SD Card Config Line</b> usage:</p><pre>sampling_max_retry = <span class="SHNumber">3</span></pre></div>
+</div>
+
+<a name="g_delim"></a><a name="Topic23"></a><div class="CTopic TVariable LC">
+ <div class="CTitle">g_delim</div>
+ <div class="CBody"><p>global char array that holds the delimiter used for separating data from different commands</p><p>Variable declaration:</p><pre><span class="SHKeyword">char</span> g_delim[<span class="SHNumber">2</span>] = <span class="SHString">&quot;~&quot;</span>;</pre></div>
+</div>
+
+<a name="text_message"></a><a name="Topic24"></a><div class="CTopic TVariable LC">
+ <div class="CTitle">text_message</div>
+ <div class="CBody"><p>char array that holds the formatted messages to be sent</p><p>Intial Variable declaration:</p><pre><span class="SHKeyword">char</span> text_message[<span class="SHNumber">5000</span>];</pre><div class="CHeading">See Also</div><p><a href="../index.html#File:main.ino:build_txt_msgs" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,43);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >build_txt_msgs</a></p></div>
+</div>
+
+<a name="g_timestamp"></a><a name="Topic25"></a><div class="CTopic TVariable LC">
  <div class="CTitle">g_timestamp</div>
- <div class="CBody"><p>global String that holds the timestamp.This variable is overwritten by the timestamp from the string sent by the ARQ. This variable defaults to &quot;TIMESTAMP000&quot;.</p></div>
+ <div class="CBody"><p>global String that holds the timestamp.This variable is overwritten by the timestamp from the string sent by the ARQ. This variable defaults to &quot;TIMESTAMP000&quot;.</p><p>Intial Variable declaration:</p><pre>String g_timestamp = <span class="SHString">&quot;TIMESTAMP000&quot;</span>;</pre></div>
 </div>
 
-<a name="setup"></a><a name="Topic11"></a><div class="CTopic TFunction LC">
+<a name="Main_Loop_Functions"></a><a name="Topic26"></a><div class="CTopic TGroup LC">
+ <div class="CTitle">Main Loop Functions</div>
+</div>
+
+<a name="setup"></a><a name="Topic27"></a><div class="CTopic TFunction LC">
  <div class="CTitle">setup</div>
- <div class="CBody"><ul><li><p>Sets the baudrate for the Serial communications.</p></li><li><p>Initializes the CAN-related functions.</p></li><li><p>Initializes the global Strings objects used to compile data.</p></li><li><p>Initialize the gids ( geographic ids ) array before use.</p></li><li><p>Initializes the SD-related functions.</p></li><li><p>Open the CONFIG.txt file, read and load to ram.</p></li><li><p>Display the settings read from CONFIG.txt.</p></li><li><p>Set the GPIO RELAYPIN to output.</p></li></ul><div class="CHeading">Parameters</div><p>n/a</p><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p><a href="../index.html#File:can_library.ino:init_can" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,26);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >init_can</a> <a href="../index.html#File:can_library.ino:init_strings" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,27);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >init_strings</a> <a href="../index.html#File:sd_library.ino:init_gids" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,3);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >init_gids</a> &lt;init_sd&gt; <a href="../index.html#File:sd_library.ino:open_config" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,4);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >open_config</a></p></div>
+ <div class="CBody"><ul><li><p>Sets the baudrate for the Serial communications.</p></li><li><p>Initializes the CAN-related functions.</p></li><li><p>Initializes the global Strings objects used to compile data.</p></li><li><p>Initialize the gids ( geographic ids ) array before use.</p></li><li><p>Initializes the SD-related functions.</p></li><li><p>Open the CONFIG.txt file, read and load to ram.</p></li><li><p>Display the settings read from CONFIG.txt.</p></li><li><p>Set the GPIO RELAYPIN to output.</p></li></ul><div class="CHeading">Parameters</div><p>n/a</p><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p><a href="../index.html#File:can_library.ino:init_can" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,56);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >init_can</a> <a href="../index.html#File:can_library.ino:init_strings" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,57);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >init_strings</a> <a href="../index.html#File:sd_library.ino:init_gids" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,3);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >init_gids</a> &lt;init_sd&gt; <a href="../index.html#File:sd_library.ino:open_config" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,4);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >open_config</a></p></div>
 </div>
 
-<a name="loop"></a><a name="Topic12"></a><div class="CTopic TFunction LC">
+<a name="loop"></a><a name="Topic28"></a><div class="CTopic TFunction LC">
  <div class="CTitle">loop</div>
- <div class="CBody"><p>Run the <a href="../index.html#File:main.ino:getATCommand" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,13);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >getATcommand</a> in loop.</p></div>
+ <div class="CBody"><ul><li><p>Waits for any activity in the DATALOGGER Serial or xbee Serial for 20 secs.</p></li><li><p>Calls <a href="../index.html#File:main.ino:operation" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,30);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >operation</a></p></li><li><p>Sets the datalogger_flag</p></li></ul><div class="CHeading">Parameters</div><p>n/a</p><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p><a href="../index.html#File:main.ino:operation" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,30);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >operation</a> <a href="../index.html#File:main.ino:getATCommand" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,29);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >getATCommand</a></p></div>
 </div>
 
-<a name="getATCommand"></a><a name="Topic13"></a><div class="CTopic TFunction LC">
+<a name="getATCommand"></a><a name="Topic29"></a><div class="CTopic TFunction LC">
  <div class="CTitle">getATCommand</div>
  <div class="CBody"><p>Take in-line serial input and execute AT command</p></div>
 </div>
 
-<a name="operation"></a><a name="Topic63"></a><div class="CTopic TFunction LC">
+<a name="operation"></a><a name="Topic30"></a><div class="CTopic TFunction LC">
  <div class="CTitle">operation</div>
- <div class="CBody"><p>Remove specific characters unnecessary for data interpretation.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">types</td><td class="CDLDefinition"><p>integer that determines the kind of data requested from the sensor. <b>1 - tilt</b> <b>2 - tilt + soms</b></p></td></tr><tr><td class="CDLEntry">mode</td><td class="CDLDefinition"><p>integer that determines which DATALOGGER receives the sent data. <b>1- ARQ</b> <b>2- Xbee</b></p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p><a href="../index.html#File:main.ino:loop" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,12);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >loop</a></p><div class="CHeading">Global Variables</div><p>g_final_dump, g_sensor_version, text_message</p></div>
+ <div class="CBody"><p>Remove specific characters unnecessary for data interpretation.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">types</td><td class="CDLDefinition"><p>integer that determines the kind of data requested from the sensor. <b>1 - tilt</b> <b>2 - tilt + soms</b></p></td></tr><tr><td class="CDLEntry">communication_mode</td><td class="CDLDefinition"><p>char array that determines which DATALOGGER receives the sent data. <b>ARQ</b> or <b>XBEE</b></p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p><a href="../index.html#File:main.ino:loop" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,28);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >loop</a></p><div class="CHeading">Global Variables</div><p>&lt;g_final_dump&gt;, <a href="../index.html#File:main.ino:g_sensor_version" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,18);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >g_sensor_version</a>, <a href="../index.html#File:main.ino:text_message" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,24);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >text_message</a></p></div>
 </div>
 
-<a name="getArguments"></a><a name="Topic14"></a><div class="CTopic TFunction LC">
+<a name="getArguments"></a><a name="Topic31"></a><div class="CTopic TFunction LC">
  <div class="CTitle">getArguments</div>
  <div class="CBody"><p>Read in-line serial AT command.</p></div>
 </div>
 
-<a name="Data_Gathering_Functions"></a><a name="Topic17"></a><div class="CTopic TGroup LC">
- <div class="CTitle">Data Gathering Functions</div>
+<a name="Sensor_Data_Gathering_Functions"></a><a name="Topic32"></a><div class="CTopic TGroup LC">
+ <div class="CTitle">Sensor Data Gathering Functions</div>
 </div>
 
-<a name="read_data_from_column"></a><a name="Topic25"></a><div class="CTopic TFunction LC">
+<a name="read_data_from_column"></a><a name="Topic33"></a><div class="CTopic TFunction LC">
  <div class="CTitle">read_data_from_column</div>
- <div class="CBody"><p>Sequentially samples data from the sensor column.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">column_data</td><td class="CDLDefinition"><p>char array that will store the raw data received from the sensors</p></td></tr><tr><td class="CDLEntry">sensor_version</td><td class="CDLDefinition"><p>integer that states the sensor version</p></td></tr><tr><td class="CDLEntry">types</td><td class="CDLDefinition"><p>integer that determines the kind of data requested from the sensor</p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p><a href="../index.html#File:main.ino:operation" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,63);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >operation</a></p></div>
+ <div class="CBody"><p>Sequentially samples data from the sensor column.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">column_data</td><td class="CDLDefinition"><p>char array that will store the raw data received from the sensors</p></td></tr><tr><td class="CDLEntry">sensor_version</td><td class="CDLDefinition"><p>integer that states the sensor version</p></td></tr><tr><td class="CDLEntry">types</td><td class="CDLDefinition"><p>integer that determines the kind of data requested from the sensor</p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p><a href="../index.html#File:main.ino:operation" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,30);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >operation</a></p></div>
 </div>
 
-<a name="read_current"></a><a name="Topic51"></a><div class="CTopic TFunction LC">
+<a name="read_current"></a><a name="Topic34"></a><div class="CTopic TFunction LC">
  <div class="CTitle">read_current()</div>
  <div class="CBody"><p>Reads the current draw from the onboard ina219.</p></div>
 </div>
 
-<a name="read_voltage"></a><a name="Topic52"></a><div class="CTopic TFunction LC">
+<a name="read_voltage"></a><a name="Topic35"></a><div class="CTopic TFunction LC">
  <div class="CTitle">read_voltage()</div>
  <div class="CBody"><p>Reads the <b>Bus Voltage</b>, <b>Shunt Voltage</b>, <b>Load Voltage</b> from the onboard ina219.</p></div>
 </div>
 
-<a name="getTimestamp"></a><a name="Topic59"></a><div class="CTopic TFunction LC">
+<a name="getTimestamp"></a><a name="Topic36"></a><div class="CTopic TFunction LC">
  <div class="CTitle">getTimestamp()</div>
  <div class="CBody"><p>Extract the timestamp from either the ARQCMD or power module.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">mode</td><td class="CDLDefinition"><p>integer, 1 from arq, 2 if from xbee</p></td></tr></table><div class="CHeading">Returns</div><p>timestamp or String &quot;0TIMESTAMP&quot;</p><div class="CHeading">See Also</div><p>&lt;poll_data&gt;</p></div>
 </div>
 
-<a name="set_rtc_time"></a><a name="Topic54"></a><div class="CTopic TFunction LC">
+<a name="set_rtc_time"></a><a name="Topic37"></a><div class="CTopic TFunction LC">
  <div class="CTitle">set_rtc_time()</div>
  <div class="CBody"><p>Set the time of the customDue internal rtc.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">time_str</td><td class="CDLDefinition"><p>String</p></td></tr></table><div class="CHeading">Returns</div><p>timestamp or String &quot;0TIMESTAMP&quot;</p><div class="CHeading">See Also</div><p>&lt;poll_data&gt;</p></div>
 </div>
 
-<a name="wait_arq_cmd"></a><a name="Topic65"></a><div class="CTopic TFunction LC">
+<a name="Command_Gathering_Functions"></a><a name="Topic38"></a><div class="CTopic TGroup LC">
+ <div class="CTitle">Command Gathering Functions</div>
+</div>
+
+<a name="wait_arq_cmd"></a><a name="Topic39"></a><div class="CTopic TFunction LC">
  <div class="CTitle">wait_arq_cmd</div>
- <div class="CBody"><p>Determine the types of data to be sampled from the sensors based on given ARQCMD.&nbsp; ARQCMD is read from the defined DATALOGGER.</p><div class="CHeading">Parameters</div><p>n/a</p><div class="CHeading">Returns</div><table class="CDefinitionList"><tr><td class="CDLEntry">1</td><td class="CDLDefinition"><p>tilt</p></td></tr><tr><td class="CDLEntry">2</td><td class="CDLDefinition"><p>tilt and soil moisture</p></td></tr></table><div class="CHeading">See Also</div><ul><li><p>&lt;loop,arqwait_delay&gt;</p></li></ul></div>
+ <div class="CBody"><p>Determine the types of data to be sampled from the sensors based on given ARQCMD.&nbsp; ARQCMD is read from the defined DATALOGGER.</p><div class="CHeading">Parameters</div><p>n/a</p><div class="CHeading">Returns</div><table class="CDefinitionList"><tr><td class="CDLEntry">1</td><td class="CDLDefinition"><p>tilt</p></td></tr><tr><td class="CDLEntry">2</td><td class="CDLDefinition"><p>tilt and soil moisture</p></td></tr></table><div class="CHeading">See Also</div><ul><li><p><a href="../index.html#File:main.ino:loop" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,28);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >loop</a> <a href="../index.html#File:main.ino:parse_cmd" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,41);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >parse_cmd</a></p></li></ul></div>
 </div>
 
-<a name="arqwait_delay"></a><a name="Topic37"></a><div class="CTopic TFunction LC">
- <div class="CTitle">arqwait_delay()</div>
- <div class="CBody"><p>A delay function that sends ARQWAIT every</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">milli_secs</td><td class="CDLDefinition"><p>int milliseconds of delay</p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p><a href="../index.html#File:can_library.ino:process_g_string" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,47);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >process_g_string</a></p></div>
+<a name="wait_xbee_cmd"></a><a name="Topic40"></a><div class="CTopic TFunction LC">
+ <div class="CTitle">wait_xbee_cmd</div>
+ <div class="CBody"><p>Waits for a frame from the xbee and writes it to the response_string</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">timeout</td><td class="CDLDefinition"><p>integer in milliseconds that determines the timeout value for waitig</p></td></tr><tr><td class="CDLEntry">response_string</td><td class="CDLDefinition"><p>char array that will contain the response from the xbee</p></td></tr></table><div class="CHeading">See Also</div><ul><li><p><a href="../index.html#File:main.ino:parse_cmd" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,41);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >parse_cmd</a> <a href="../index.html#File:main.ino:loop" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,28);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >loop</a></p></li></ul></div>
 </div>
 
-<a name="Data_parsing_functions"></a><a name="Topic10"></a><div class="CTopic TGroup LC">
+<a name="parse_cmd"></a><a name="Topic41"></a><div class="CTopic TFunction LC">
+ <div class="CTitle">parse_cmd</div>
+ <div class="CBody"><p>Determine the types of data to be sampled from the sensors based on input command_string.&nbsp; <a href="../index.html#File:main.ino:wait_arq_cmd" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,39);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >wait_arq_cmd</a> and <a href="../index.html#File:main.ino:wait_xbee_cmd" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,40);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >wait_xbee_cmd</a> both return a call to <a href="../index.html#File:main.ino:parse_cmd" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,41);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >parse_cmd</a>.</p><p><b>From <a href="../index.html#File:main.ino:wait_arq_cmd" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,39);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >wait_arq_cmd</a>:</b></p><pre><span class="SHKeyword">return</span> parse_cmd(c_serial_line);</pre><p><b>From <a href="../index.html#File:main.ino:wait_xbee_cmd" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,40);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >wait_xbee_cmd</a></b></p><pre><span class="SHKeyword">return</span> parse_cmd(response_string);</pre><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">command_string</td><td class="CDLDefinition"><p>char* to char array that contains the command to be interpreted</p></td></tr></table><div class="CHeading">Returns</div><table class="CDefinitionList"><tr><td class="CDLEntry">1</td><td class="CDLDefinition"><p>tilt</p></td></tr><tr><td class="CDLEntry">2</td><td class="CDLDefinition"><p>tilt and soil moisture</p></td></tr></table><div class="CHeading">See Also</div><ul><li><p><a href="../index.html#File:main.ino:wait_arq_cmd" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,39);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >wait_arq_cmd</a> <a href="../index.html#File:main.ino:wait_xbee_cmd" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,40);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >wait_xbee_cmd</a></p></li></ul></div>
+</div>
+
+<a name="Data_parsing_functions"></a><a name="Topic42"></a><div class="CTopic TGroup LC">
  <div class="CTitle">Data parsing functions</div>
 </div>
 
-<a name="build_txt_msgs"></a><a name="Topic38"></a><div class="CTopic TFunction LC">
+<a name="build_txt_msgs"></a><a name="Topic43"></a><div class="CTopic TFunction LC">
  <div class="CTitle">build_txt_msgs</div>
- <div class="CBody"><p>Build the text messages to be sent.</p><ul><li><p>Splits the data though the delimiter defined by <b>&lt;g_delim&gt;</b></p></li><li><p>The identifier, and cutoff are identified based on the type of data.</p></li><li><p>Extra characters are removed via <a href="../index.html#File:main.ino:remove_extra_characters" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,19);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >remove_extra_characters</a>.</p></li><li><p>Data is stored in SD card via <a href="../index.html#File:sd_library.ino:writeData" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,9);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >writeData</a>.</p></li><li><p>The following are appended to the data split as text messages to be sent:</p><ul><li><p>delimiters</p></li><li><p>mastername</p></li><li><p>padding for the numerator /&nbsp; denominator</p></li><li><p>identifier</p></li><li><p>timestamp</p></li></ul></li><li><p>The appended data is copied per character to a temporary buffer.</p></li><li><p>The temporary buffer is split per message.</p></li><li><p>The pads are overwritten with the proper text message length, numerator and denominator.</p></li><li><p>These are then stored to the <b>destination</b> variable.</p></li></ul><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">source</td><td class="CDLDefinition"><p>char array that contains the aggregated data</p></td></tr><tr><td class="CDLEntry">destination</td><td class="CDLDefinition"><p>char array that will contain the text messages to be sent separated by the delimiter <b>&lt;g_delim&gt;</b></p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><ul><li><p><a href="../index.html#File:main.ino:check_cutoff" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,24);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >check_cutoff</a></p></li><li><p><a href="../index.html#File:main.ino:remove_extra_characters" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,19);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >remove_extra_characters</a></p></li><li><p><a href="../index.html#File:sd_library.ino:writeData" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,9);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >writeData</a></p></li></ul></div>
+ <div class="CBody"><p>Build the text messages to be sent.</p><ul><li><p>Splits the data though the delimiter defined by <b><a href="../index.html#File:main.ino:g_delim" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,23);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >g_delim</a></b></p></li><li><p>The identifier, and cutoff are identified based on the type of data.</p></li><li><p>A special case for the piezometer data is also considered.</p></li><li><p>Extra characters are removed via <a href="../index.html#File:main.ino:remove_extra_characters" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,44);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >remove_extra_characters</a>.</p></li><li><p>Data is stored in SD card via <a href="../index.html#File:sd_library.ino:writeData" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,9);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >writeData</a>.</p></li><li><p>The following are appended to the data split as text messages to be sent:</p><ul><li><p>delimiters</p></li><li><p>mastername</p></li><li><p>padding for the numerator /&nbsp; denominator</p></li><li><p>identifier</p></li><li><p>timestamp</p></li></ul></li><li><p>The appended data is copied per character to a temporary buffer.</p></li><li><p>The temporary buffer is split per message.</p></li><li><p>The pads are overwritten with the proper text message length, numerator and denominator.</p></li><li><p>These are then stored to the <b>destination</b> parameter.</p></li></ul><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">source</td><td class="CDLDefinition"><p>char array that contains the aggregated data</p></td></tr><tr><td class="CDLEntry">destination</td><td class="CDLDefinition"><p>char array that will contain the text messages to be sent separated by the delimiter <b><a href="../index.html#File:main.ino:g_delim" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,23);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >g_delim</a></b></p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><ul><li><p><a href="../index.html#File:main.ino:check_cutoff" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,46);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >check_cutoff</a></p></li><li><p><a href="../index.html#File:main.ino:remove_extra_characters" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,44);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >remove_extra_characters</a></p></li><li><p><a href="../index.html#File:sd_library.ino:writeData" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,9);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >writeData</a></p></li></ul></div>
 </div>
 
-<a name="remove_extra_characters"></a><a name="Topic19"></a><div class="CTopic TFunction LC">
+<a name="remove_extra_characters"></a><a name="Topic44"></a><div class="CTopic TFunction LC">
  <div class="CTitle">remove_extra_characters</div>
  <div class="CBody"><p>Remove specific characters unnecessary for data interpretation.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">columnData</td><td class="CDLDefinition"><p>char array that contains data split by datatype.</p></td></tr><tr><td class="CDLEntry">cmd</td><td class="CDLDefinition"><p>integer that determines which format is executed</p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p>&lt;poll_data&gt;</p></div>
 </div>
 
-<a name="check_identifier"></a><a name="Topic23"></a><div class="CTopic TFunction LC">
+<a name="check_identifier"></a><a name="Topic45"></a><div class="CTopic TFunction LC">
  <div class="CTitle">check_identifier</div>
- <div class="CBody"><p>Determine the identifier based on the message id of the message.&nbsp; The starting position of the message id is determined by the index_msgid.</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">token</td><td class="CDLDefinition"><p>char array containing the data split by data type.</p></td></tr><tr><td class="CDLEntry">index_msgid</td><td class="CDLDefinition"><p>integer index of the start of the message id.</p></td></tr></table><div class="CHeading">Returns</div><table class="CDefinitionList"><tr><td class="CDLEntry">idfier</td><td class="CDLDefinition"><p>char identifier</p></td></tr></table><div class="CHeading">See Also</div><ul><li><p>&lt;message_content_parameters&gt;</p></li></ul></div>
+ <div class="CBody"><p>Determine the identifier based on the message id of the message.&nbsp; The starting position of the message id is determined by the index_msgid.&nbsp; A check is performed on the initial 4 characters ( contains the id ).&nbsp; This checks for data with id ( first 4 chars correspond to id ) 255 (piezo).</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">token</td><td class="CDLDefinition"><p>char array containing the data split by data type.</p></td></tr><tr><td class="CDLEntry">index_msgid</td><td class="CDLDefinition"><p>integer index of the start of the message id.</p></td></tr></table><div class="CHeading">Returns</div><table class="CDefinitionList"><tr><td class="CDLEntry">idfier</td><td class="CDLDefinition"><p>char identifier</p></td></tr></table><div class="CHeading">See Also</div><ul><li><p>&lt;message_content_parameters&gt;</p></li></ul></div>
 </div>
 
-<a name="check_cutoff"></a><a name="Topic24"></a><div class="CTopic TFunction LC">
+<a name="check_cutoff"></a><a name="Topic46"></a><div class="CTopic TFunction LC">
  <div class="CTitle">check_cutoff</div>
  <div class="CBody"><p>Determine the number of characters depending on the identifier</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">idf</td><td class="CDLDefinition"><p>char identifier</p></td></tr></table><div class="CHeading">Returns</div><table class="CDefinitionList"><tr><td class="CDLEntry">cutoff</td><td class="CDLDefinition"><p>integer number of characters per message</p></td></tr></table><div class="CHeading">See Also</div><ul><li><p>&lt;message_content_parameters&gt;</p></li></ul></div>
 </div>
 
-<a name="no_data_parsed"></a><a name="Topic48"></a><div class="CTopic TFunction LC">
+<a name="no_data_parsed"></a><a name="Topic47"></a><div class="CTopic TFunction LC">
  <div class="CTitle">no_data_parsed</div>
  <div class="CBody"><ul><li><p>Writes &quot;*0*ERROR: no data parsed&lt;&lt;+&quot; to the input char array if there is no availabe data from the sensor</p></li></ul><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">message</td><td class="CDLDefinition"><p>empty char array</p></td></tr></table></div>
 </div>
 
-<a name="Auxilliary_Control_Functions"></a><a name="Topic57"></a><div class="CTopic TGroup LC">
+<a name="Auxilliary_Control_Functions"></a><a name="Topic48"></a><div class="CTopic TGroup LC">
  <div class="CTitle">Auxilliary Control Functions</div>
 </div>
 
-<a name="shut_down"></a><a name="Topic55"></a><div class="CTopic TFunction LC">
+<a name="shut_down"></a><a name="Topic49"></a><div class="CTopic TFunction LC">
  <div class="CTitle">shut_down()</div>
  <div class="CBody"><p>Sends a shutdown command to the 328 PowerModule.</p></div>
 </div>
 
-<a name="turn_on_column"></a><a name="Topic15"></a><div class="CTopic TFunction LC">
+<a name="turn_on_column"></a><a name="Topic50"></a><div class="CTopic TFunction LC">
  <div class="CTitle">turn_on_column</div>
  <div class="CBody"><p>Assert GPIO ( defined by RELAYPIN ) high to turn on sensor column.</p></div>
 </div>
 
-<a name="turn_off_column"></a><a name="Topic16"></a><div class="CTopic TFunction LC">
+<a name="turn_off_column"></a><a name="Topic51"></a><div class="CTopic TFunction LC">
  <div class="CTitle">turn_off_column</div>
  <div class="CBody"><p>Assert GPIO ( defined by RELAYPIN ) low to turn off sensor column.</p></div>
 </div>
 
-<a name="Sending_Related_Functions"></a><a name="Topic58"></a><div class="CTopic TGroup LC">
+<a name="arqwait_delay"></a><a name="Topic52"></a><div class="CTopic TFunction LC">
+ <div class="CTitle">arqwait_delay()</div>
+ <div class="CBody"><p>A delay function that sends ARQWAIT every</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">milli_secs</td><td class="CDLDefinition"><p>int milliseconds of delay</p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><p><a href="../index.html#File:can_library.ino:process_g_string" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,79);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >process_g_string</a></p></div>
+</div>
+
+<a name="Sending_Related_Functions"></a><a name="Topic53"></a><div class="CTopic TGroup LC">
  <div class="CTitle">Sending Related Functions</div>
 </div>
 
-<a name="send_data"></a><a name="Topic62"></a><div class="CTopic TFunction LC">
+<a name="send_data"></a><a name="Topic54"></a><div class="CTopic TFunction LC">
  <div class="CTitle">send_data</div>
- <div class="CBody"><ul><li><p>Sends data to the defined DATALOGGER serial.</p></li><li><p>Manages the retry for sending.</p></li></ul><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">isDebug</td><td class="CDLDefinition"><p>boolean that states whether in debug mode or not.</p></td></tr><tr><td class="CDLEntry">columnData</td><td class="CDLDefinition"><p>array of characters that contain the messages to be sent</p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><ul><li><p><a href="../index.html#File:main.ino:operation" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,63);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >operation</a></p></li></ul></div>
+ <div class="CBody"><ul><li><p>Sends data to the defined DATALOGGER serial.</p></li><li><p>Manages the retry for sending.</p></li></ul><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">isDebug</td><td class="CDLDefinition"><p>boolean that states whether in debug mode or not.</p></td></tr><tr><td class="CDLEntry">columnData</td><td class="CDLDefinition"><p>array of characters that contain the messages to be sent</p></td></tr></table><div class="CHeading">Returns</div><p>n/a</p><div class="CHeading">See Also</div><ul><li><p><a href="../index.html#File:main.ino:operation" target="_top" onmouseover="NDContentPage.OnLinkMouseOver(event,30);" onmouseout="NDContentPage.OnLinkMouseOut(event);" >operation</a></p></li></ul></div>
 </div>
 
-<a name="send_thru_xbee"></a><a name="Topic53"></a><div class="CTopic TFunction LC">
+<a name="send_thru_xbee"></a><a name="Topic55"></a><div class="CTopic TFunction LC last">
  <div class="CTitle">send_thru_xbee</div>
  <div class="CBody"><p>Sends data thru designated xbee Serial port</p><div class="CHeading">Parameters</div><table class="CDefinitionList"><tr><td class="CDLEntry">load_data</td><td class="CDLDefinition"><p>char array to be forwarded to sbee</p></td></tr></table><div class="CHeading">Returns</div><table class="CDefinitionList"><tr><td class="CDLEntry">boolean</td><td class="CDLDefinition"><p>States whether data is successfully sent or nor</p></td></tr></table></div>
-</div>
-
-<a name="get_xbee_flag"></a><a name="Topic64"></a><div class="CTopic TFunction LC last">
- <div class="CTitle">get_xbee_flag</div>
- <div class="CBody"><ul><li><p>Sets the xbee flag 1 if received acknowledgement from the coordinator</p></li></ul></div>
 </div>
 
 </body></html>

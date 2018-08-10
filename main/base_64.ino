@@ -1,4 +1,19 @@
+/*
+	Struct: data_type_params
 
+	Members:
+
+		identifier - 2 char identifier; converted msgid to b64
+
+		type_number - 1 for tilt, 2 for soms, 3 for diagnostics
+
+		data_length - total number of characters to represent data.
+		2 is added to account for the hex represented msgid. 
+
+		type_cutoff - number of characters allowable for a text message 
+		for the particular data type.  
+
+*/
 struct data_type_params{
 	int type_number;
 	int data_length;
@@ -69,7 +84,7 @@ void to_base64(int input, char* dest){
 
   See Also:
 
-    <to_base_64>
+    <to_base64>
 */
 void reverse_char_order(char* input, uint8_t length){
 	char temp[4] = {0};
@@ -102,7 +117,7 @@ void reverse_char_order(char* input, uint8_t length){
 
   See Also:
 
-    <to_base_64>
+    <to_base64>
 */
 void pad_b64(uint8_t length_of_output, char* input, char* dest){
 	int num_of_pads = 0;
@@ -125,7 +140,7 @@ void pad_b64(uint8_t length_of_output, char* input, char* dest){
 /* 
   Function: b64_identify_params
 
-	
+  	returns a data_type
 
   Parameters:
 
@@ -133,14 +148,11 @@ void pad_b64(uint8_t length_of_output, char* input, char* dest){
 
   Returns:
 
-    data_type_params - struct with members:
-    struct_dtype.indetifier - 2 char identifier - converted msgid to b64
-    struct_dtype.type_number - 1 - tilt, 2 - soms, 3 - diagnostics
-    struct_dytpe.data_length - total number of characters that represent the data
+    data_type_params - struct with members
 
   See Also:
 
-    <to_base_64>
+    <to_base64>
 */
 struct data_type_params b64_identify_params(int msgid){
 	char temp[3],temp1[3];
@@ -152,61 +164,61 @@ struct data_type_params b64_identify_params(int msgid){
 	switch(msgid){
 		case 255:{
 			struct_dtype.type_number = 1;
-			struct_dtype.data_length = 11;
+			struct_dtype.data_length = 9;
 			break;
 		} case 11: {
 			struct_dtype.type_number = 1;
-			struct_dtype.data_length = 11;
+			struct_dtype.data_length = 9;
 			struct_dtype.type_cutoff = 135; // 9 chars per node tilt data	
 			break;
 		} case 12: {
 			struct_dtype.type_number = 1;
-			struct_dtype.data_length = 11;
+			struct_dtype.data_length = 9;
 			struct_dtype.type_cutoff = 135; // 9 chars per node tilt data	
 			break;
 		} case 32: {
 			struct_dtype.type_number = 1;
-			struct_dtype.data_length = 11;
+			struct_dtype.data_length = 9;
 			struct_dtype.type_cutoff = 135; // 9 chars per node tilt data	
 			break;
 		} case 33: {
 			struct_dtype.type_number = 1;
-			struct_dtype.data_length = 11;
+			struct_dtype.data_length = 9;
 			struct_dtype.type_cutoff = 135; // 9 chars per node tilt data	
 			break;
 		} case 22:{
 			struct_dtype.type_number = 3;
-			struct_dtype.data_length = 5;
-			struct_dtype.type_cutoff = 135;
+			struct_dtype.data_length = 3;
+			struct_dtype.type_cutoff = 120;
 			break;
 		} case 110:{
 			struct_dtype.type_number = 2;
-			struct_dtype.data_length = 5;
+			struct_dtype.data_length = 4;
 			struct_dtype.type_cutoff = 135; // 4 chars per node soms data	
 			break;
 		} case 113: {
 			struct_dtype.type_number = 2;
-			struct_dtype.data_length = 5;
+			struct_dtype.data_length = 4;
 			struct_dtype.type_cutoff = 135; // 4 chars per node soms data	
 			break;
 		} case 111: {
 			struct_dtype.type_number = 2;
-			struct_dtype.data_length = 5;
+			struct_dtype.data_length = 4;
 			struct_dtype.type_cutoff = 135; // 4 chars per node soms data	
 			break;
 		} case 112:{
 			struct_dtype.type_number = 2;
-			struct_dtype.data_length = 5;
+			struct_dtype.data_length = 4;
 			struct_dtype.type_cutoff = 135; // 4 chars per node soms data	
 			break;
 		} case 10:{
 			struct_dtype.type_number = 2;
-			struct_dtype.data_length = 6;
+			struct_dtype.data_length = 4;
 			struct_dtype.type_cutoff = 120; // 4 chars per node soms data	
 			break;
 		} case 13:{
 			struct_dtype.type_number = 2;
-			struct_dtype.data_length = 6;
+			struct_dtype.data_length = 4;
 			struct_dtype.type_cutoff = 120; // 4 chars per node soms data	
 			break;
 		}
@@ -218,18 +230,23 @@ struct data_type_params b64_identify_params(int msgid){
   Function: b64_write_frame_to_dump
 
     Write the frames as b64 encoded char array.
-    This differs from *<write_frame_to_dump>* primarily because this function converts the uids to gids.
+    This differs from *<b64_process_g_temp_dump>* primarily because 
+    this function converts the uids to gids.
+
+    It also differs from its original counterpart *<write_frame_to_dump>*
+    because <b64_write_frame_to_dump> computes the exact value of the sensor
+    data to be transmitted.  
 	
 	Format:
+	msgid - 2 chars ( still in Hex )
 	gids - 1 char
-	msgid - 2 chars
-	data - varies depending on msgid.
+	data - varies depending on <type_number>.
 
 	*[msgid][gids][data][-][gid][data][-]. . .*
 
   Parameters:
 
-    incoming- CAN_FRAME struct to be written in dump
+    incoming - CAN_FRAME struct to be written in dump
     dump - pointer to char buffer
 
   Returns:
@@ -238,14 +255,11 @@ struct data_type_params b64_identify_params(int msgid){
 
   See Also:
 
-    <process_g_temp_dump>
+    <process_g_temp_dump, b64_process_g_temp_dump, get_data>
 */
 void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 	char temp[3] = {};
-	// char temp1[1] = {};
 	char temp2[3] = {};
-
-
 
 	char delim[2] = "-";
 	int gid,msgid,x,y,z,v,somsr,tmp;
@@ -263,28 +277,28 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 			v = incoming.data.byte[7];
 
   			sprintf(temp2,"%02X",msgid);
-			strcat(dump,temp2);
+			strncat(dump,temp2,2);
 
 			to_base64(gid,temp);
 			pad_b64(1,temp,temp2);
 			temp2[1] = '\0'; // append null 
-			strcat(dump,temp2);
+			strncat(dump,temp2,1);
 
 			to_base64(x,temp);
 			pad_b64(2,temp,temp2);
-			strcat(dump,temp2);
+			strncat(dump,temp2,2);
 
 			to_base64(y,temp);
 			pad_b64(2,temp,temp2);
-			strcat(dump,temp2);
+			strncat(dump,temp2,2);
 
 			to_base64(z,temp);
 			pad_b64(2,temp,temp2);
-			strcat(dump,temp2);
+			strncat(dump,temp2,2);
 
 			to_base64(v,temp);
 			pad_b64(2,temp,temp2);
-			strcat(dump,temp2);
+			strncat(dump,temp2,2);
 
 			break;
 		}
@@ -297,11 +311,11 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 			to_base64(gid,temp);
 			pad_b64(1,temp,temp2);
 			temp2[1] = '\0'; // append null
-			strcat(dump,temp2);
+			strncat(dump,temp2,1);
 
 			to_base64(somsr,temp);
 			pad_b64(3,temp,temp2);
-			strcat(dump,temp2);
+			strncat(dump,temp2,3);
 
 			break;
 		}
@@ -315,11 +329,11 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 			to_base64(gid,temp);
 			pad_b64(1,temp,temp2);
 			temp2[1] = '\0'; // append null 
-			strcat(dump,temp2);
+			strncat(dump,temp2,1);
 
 			to_base64(tmp,temp);
 			pad_b64(2,temp,temp2);
-			strcat(dump,temp2);			
+			strncat(dump,temp2,2);			
 			break;
 		}
 	}
@@ -382,7 +396,7 @@ String b64_timestamp(String timestamp){
 void b64_process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
   char *token,*last_char;
   char temp_msgid[2], temp_data[11];
-  int counter = 0,msgid = 0,dlength=0;
+  int counter = 0,msgid = 0, dlength=0;
 
   token = strtok(dump, "-");
   while(token != NULL){
@@ -391,18 +405,19 @@ void b64_process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
 		temp_msgid[2] = '\0';
 		msgid = strtol(temp_msgid,&last_char,16);
 		struct data_type_params dtype = b64_identify_params(msgid);
-		dlength = dtype.data_length;
+		dlength = dtype.data_length + 2;
 		// dlength = b64_identify_params(msgid,"data_length");
-		Serial.println(msgid);
+		// Serial.println(msgid);
 
 		sprintf(temp_data,token);
-		Serial.println(temp_data);
+		temp_data[dlength] = '\0';
+		// Serial.println(temp_data);
 		strncat(final_dump,temp_data,dlength);
 		counter = 1;
   	} else {
-  		strncpy(temp_data,token+2,9);
-  		temp_data[9] = '\0';
-  		Serial.println(temp_data);
+  		strncpy(temp_data,token+2,dlength);
+  		temp_data[dlength] = '\0';
+  		// Serial.println(temp_data);
   		strncat(final_dump,temp_data,dlength-2);
   	}
     token = strtok(NULL,"-");
@@ -428,28 +443,34 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 	}
 
 	b64_ts = b64_timestamp(g_timestamp);
-	for (int i = 0; i < 6; i++) {
-		Ctimestamp[i] = b64_ts[i];
+	// for (int i = 0; i < 6; i++) {
+	// 	Ctimestamp[i] = b64_ts[i];
+	// }
+	String timestamp = getTimestamp(mode);
+	for (int i = 0; i < 12; i++) {
+	  	Ctimestamp[i] = timestamp[i];
 	}
 	Ctimestamp[12] = '\0';
 	token1 = strtok(source, g_delim);
 	while ( token1 != NULL){
 		// get first 2 chars of token1, they are the hex msgid that will determine
 		token_length = strlen(token1)-2;
+
 		// determine identifier ( same as b16 identifiers)
 		// convert the string to integer
 		strncpy(temp_msgid,token1,2);
 		temp_msgid[2] = '\0';
 		msgid = strtol(temp_msgid,&last_char,16);
-
 		struct data_type_params dtype = b64_identify_params(msgid);
 		strncpy(identifier,dtype.identifier,2);
+
 		// determine number of messages to be sent per data type
 		cutoff = dtype.type_cutoff;
-		num_text_per_dtype = ( (strlen(token1) - 2) / cutoff );
-		if ((strlen(token1) % cutoff) != 0){
+		num_text_per_dtype = ( token_length / cutoff );
+		if ((token_length % cutoff) != 0){
 			num_text_per_dtype++;
 		}
+		writeData(b64_ts,String(token1));
 		// determine mastername
 	    if (g_sensor_version == 1){
 	        name_len = 8;
@@ -462,7 +483,7 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 		// copy parts of the message
 		//increment token1 twice to skip over the HEX msgid
 		c=0;
-
+		writeData(timestamp,String(token1));
 		for (int i = 0; i < num_text_per_dtype; i++){		
 			strncat(dest,pad,11);
 			strncat(dest,master_name, name_len);
@@ -471,7 +492,7 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 				strncat(dest,identifier,2);
 				strncat(dest,"*", 2);
 			// }
-			for (int j=0; j <= (cutoff); j++ ){
+			for (int j=0; j < (cutoff); j++ ){
 				strncat(dest,token1+2,1);
 				c++;
 				token1++;
@@ -487,8 +508,6 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 			strncat(dest,"<<",2);
 			strncat(dest,g_delim,1);
 		}
-		Serial.print("chars written: ");
-		Serial.println(c);
 		num_text_to_send = num_text_to_send + num_text_per_dtype;
 		token1 = strtok(NULL, g_delim);
 	}

@@ -404,7 +404,7 @@ void getATCommand(){
       // Serial.println(g_timestamp);
       extra_parameters = serial_line.substring(i_equals+1);
       to_base64(extra_parameters.toInt(),converted);
-      pad_b64(1,converted,padded);
+      pad_b64(5,converted,padded);
       Serial.print("converted and padded: ");
       Serial.print(padded);
     } else if (command == "AT+RTC"){
@@ -525,6 +525,8 @@ void operation(int sensor_type, char communication_mode[]){
   int counter= 0;
   int num_of_tokens = 0;
   read_data_from_column(g_final_dump, g_sensor_version, sensor_type);// matagal ito.
+  Serial.print("g_final_dump: ");
+  Serial.println(g_final_dump);
   if (b64 == 1) {
     b64_build_text_msgs(comm_mode, g_final_dump, text_message);
   } else {
