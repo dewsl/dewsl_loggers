@@ -160,7 +160,7 @@ uint8_t g_sensor_version = 2;
   uint8_t g_datalogger_version = 3;
   ---
 */
-uint8_t g_datalogger_version = 3;
+uint8_t g_datalogger_version = 2;
 
 /* 
   Variable: broad_timeout
@@ -296,9 +296,14 @@ void setup() {
     xbee.setSerial(DATALOGGER);  
   } else if(g_datalogger_version == 2){
     strncpy(comm_mode,"ARQ",3);
+  } else {
+    Serial.print("g_datalogger_version == ");
+    Serial.println(g_datalogger_version);
+    strncpy(comm_mode,"ARQ",3);
   }
     Serial.print("Comms: "); Serial.println(comm_mode);
 }
+
 
 /* 
   Function: loop
