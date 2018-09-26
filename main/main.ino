@@ -149,7 +149,7 @@ uint8_t g_turn_on_delay = 10;
   --- Code
   sensorVersion = 3
   ---*/
-uint8_t g_sensor_version = 2;
+uint8_t g_sensor_version = 3;
 
 /*
   Variable: g_datalogger_version
