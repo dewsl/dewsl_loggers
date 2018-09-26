@@ -27,6 +27,7 @@
 
 #define VERBOSE 0
 #define RELAYPIN 44
+#define LED1 48
 #define POLL_TIMEOUT 5000
 #define BAUDRATE 9600
 #define ARQTIMEOUT 30000
@@ -284,6 +285,7 @@ void setup() {
   // powerM.begin(9600);
   ina219.begin();
   pinMode(RELAYPIN, OUTPUT);
+  pinMode(LED1, OUTPUT);
   init_can();
   init_char_arrays();
   init_gids();
@@ -367,8 +369,8 @@ void loop(){
 }
 
 void hard_code(){
-  String str1 = "column1 = 2748,1105,1098,1073,1069,971,942,925,920,888,873,827,807,671";
-  String str2 = "MasterName = BOLTA";
+  String str1 = "column1 = 1644,1710,2022,1915,749,1691,1724,1742,1906,1921,1923,1983,2021,2024,2079,2107,2137,2160,2255,2282,2307,2329,2429,2570,2553,2544,2460,2459,2455,1717,1708,2598,2581,2577,2308,2239,2409,2369,2442,2076";
+  String str2 = "MasterName = PHITA";
 
   g_num_of_nodes = process_column_ids(str1);
   get_value_from_line(str2).toCharArray(g_mastername,6); 
@@ -631,9 +633,13 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
 //Function: read_current()
 // Reads the current draw from the onboard ina219.
 void read_current(){
+  turn_on_column();
+  delay(1000);
   float current_mA = 0;
   current_mA = ina219.getCurrent_mA();
   Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
+  delay(1000);
+  turn_off_column();
 }
 
 /* 
@@ -1318,6 +1324,7 @@ void shut_down(){
 // Assert GPIO ( defined by RELAYPIN ) high to turn on sensor column.
 void turn_on_column(){
   digitalWrite(RELAYPIN, HIGH);
+  digitalWrite(LED1,HIGH);
   arqwait_delay(g_turn_on_delay);
 }
 
@@ -1325,6 +1332,7 @@ void turn_on_column(){
 // Assert GPIO ( defined by RELAYPIN ) low to turn off sensor column.
 void turn_off_column(){
   digitalWrite(RELAYPIN, LOW);
+  digitalWrite(LED1, LOW);
   arqwait_delay(1000);
 }
 
