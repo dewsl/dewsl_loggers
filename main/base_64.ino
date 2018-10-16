@@ -341,6 +341,25 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
 	return;
 }
 
+/*
+  Function: b64_timestamp
+
+	Converts a 12 character String timestamp with format `yymmddhhmmss` to
+	b64 encoded 6 character timestamp with format `ymdhms`
+
+  Parameters:
+
+    timestamp - String object with format yymmddhhmmss
+
+  Returns:
+
+    Timestamp as a String object with format ymdhms.
+
+  See Also:
+
+    <get_data>
+*/
+
 String b64_timestamp(String timestamp){
 	char temp[2] = {};
 	char temp2[2] = {};
