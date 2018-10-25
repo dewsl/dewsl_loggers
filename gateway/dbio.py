@@ -179,6 +179,17 @@ def write_sms_to_outbox(sms_msg,pb_id=None,send_status=0):
     print query
     
     commit_to_db(query, "WriteOutboxMessageToDb")
+
+def update_smsoutbox_send_status(sms_id, send_status=15):
+    now = dt.today().strftime("%Y-%m-%d %H:%M:%S")
+
+    query = ("update smsoutbox set send_status = '%s',"
+        " ts_sent ='%s' where sms_id = '%s' ") % (send_status, 
+        now, sms_id)
+    print query
+
+    commit_to_db(query,"UpdateSendStatus", instance='GSM')    
+
     
 def get_db_inbox(read_status):
     db, cur = db_connect()

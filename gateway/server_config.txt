@@ -7,25 +7,26 @@ dbname = senslopedb
 [Serial]
 baudrate = 57600
 sunport = 
-globeport = /dev/gsmusbport
+globeport = /dev/ttyAMA0
 timeout = 5
-smartport = /dev/gsmusbport
+smartport = /dev/ttyAMA0
 
 [coordinfo]
-name = LUN
+name = INA
+#name = PHI
 
 [serverinfo]
-#simnum = 639176321023
-simnum = 639988448687
+simnum = 639175972526
+#simnum = 639088125642
 
 [gsmio]
-port = /dev/gsmusbport
+port = /dev/ttyAMA0
 baudrate = 9600
 timeout = 5
 sendretry = 15
-resetpin = 38
+resetpin = 15
 statpin = 37
-ripin = 35
+ripin = 13
 purgeafter = 60
 
 [mysql]
@@ -45,7 +46,8 @@ timeout = 5
 [xbee]
 port = /dev/xbeeusbport
 baud = 9600
-sampletimeout = 120
+sampletimeout = 360
+utslidartimeout = 110
 
 [rain]
 mmpertip = 0.5

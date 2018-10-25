@@ -75,7 +75,10 @@ def reset_memory(valuestr):
 
 def print_memory(valuestr):
 	sms_df = mc.get(valuestr)
-	print_mem_df(sms_df)
+	try:
+		print_mem_df(sms_df)
+	except AttributeError:
+		print sms_df
 
 def spawn_process(process_text):
 	print process_text
@@ -90,7 +93,6 @@ def print_mem_df(sms_df):
 		print "Status:", sms_df.loc[index, 'stat']
 		print "Message:", sms_df.loc[index, 'msg']
 		print ""
-
 	# print out, err
 
 def save_smsinbox_to_memory():
@@ -162,7 +164,7 @@ def save_sms_to_memory(msg_str, contact_id = None):
 
 	# set to an empty df if empty
 	if smsoutbox is None:
-		reset_smsoutbox_memory()
+		reset_memory("smsoutbox")
 	# else:
 	# 	print smsoutbox
 

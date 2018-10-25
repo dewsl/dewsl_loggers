@@ -6,20 +6,23 @@ import gsmio
 import gateway as gw
 
 def ring_isr(channel):
-	print dt.now()
-	time.sleep(1)
-
-	# check if RI from call
-	if GPIO.input(channel) == 0:
-		print ">> Dropping call...",
-		gsmio.gsmcmd("ATH")
-		print 'done'
-	else:
-		common.save_smsinbox_to_memory()
-        print "spawning process ...", 
-        # common.spawn_process("sudo python /home/pi/gateway/command.py > /home/pi/gateway/command_out.txt 2>&1")
-        common.spawn_process("python /home/pi/gateway/command.py")
-        print "done"
+    print dt.now()
+    time.sleep(1)
+    mc = common.get_mc_server()
+    if mc.get('rst_gsm_done') * mc.get('init_gsm_done'):
+        # check if RI from call
+        if GPIO.input(channel) == 0:
+            print ">> Dropping call...",
+            gsmio.gsmcmd("ATH")
+            print 'done'
+        else:
+            common.save_smsinbox_to_memory()
+            print "spawning process ...", 
+            # common.spawn_process("sudo python /home/pi/gateway/command.py > /home/pi/gateway/command_out.txt 2>&1")
+            common.spawn_process("python /home/pi/gateway/command.py")
+            print "done"
+    else:
+        print ">> GSM reset ongoing..."
 
     
 def main():

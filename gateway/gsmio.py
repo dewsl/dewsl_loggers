@@ -75,6 +75,9 @@ def power_gsm(mode="ON"):
 def reset_gsm():
     print ">> Resetting GSM Module"
 
+    mc = common.get_mc_server()
+    mc.set('rst_gsm_done',False)
+
     #SIM800L
     sconf = common.get_config_handle()
     reset_pin = sconf['gsmio']['resetpin']
@@ -83,9 +86,11 @@ def reset_gsm():
     GPIO.setup(reset_pin, GPIO.OUT)
 
     GPIO.output(reset_pin, False)
-    time.sleep(1)
+    time.sleep(0.5)
     GPIO.output(reset_pin, True)
-    time.sleep(30)
+    time.sleep(45)
+
+    mc.set('rst_gsm_done',True)
 
     return
 
@@ -120,6 +125,9 @@ def init_gsm_serial():
 def init_gsm():
     print 'Connecting to GSM modem'
     
+    mc = common.get_mc_server()
+    mc.set('init_gsm_done',False)
+
     gsm = init_gsm_serial()
 
     reset_gsm()
@@ -131,11 +139,10 @@ def init_gsm():
     time.sleep(0.5)    
     print 'Switching to no-echo mode', gsmcmd('ATE0').strip('\r\n')
     print 'Switching to text mode', gsmcmd('AT+CMGF=1').rstrip('\r\n')
-    mc = common.get_mc_server()
-    mc.set('init_gsm',True)
+    mc.set('init_gsm_done',True)
 
     gsm.close()
-    
+
 def gsm_flush():
     """Removes any pending inputs from the GSM modem and checks if it is alive."""
     gsm = init_gsm_serial()
@@ -269,16 +276,10 @@ def send_msg(msg, number):
             time.sleep(0.5)
             print '.',
 
-        if time.time()>now+20:
-            print '>> Error: timeout reached'
-            return -1
-        elif a.find("ERROR") > -1:  
+        if time.time()>now+20 or a.find("ERROR") > -1:  
             print '>> Error: GSM Unresponsive at finding >'
             print a
-            network_stat = check_network()
-            if network_stat == 0:
-                return -2
-            return -1
+            return -2
         else:
             print '>'
         

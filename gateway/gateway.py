@@ -98,15 +98,6 @@ def send_smsoutbox_memory():
         if stat == 0: 
             smsoutbox.loc[index, 'stat'] = resend_limit
             print '>> Message sent'
-        elif stat == -2:
-            print '>> Message sending failed'
-            smsoutbox_updated = mc.get("smsoutbox")
-            ts_latest = smsoutbox.ts.max()
-            smsoutbox_new_inserts = smsoutbox_updated[smsoutbox_updated.ts > ts_latest]
-            smsoutbox = smsoutbox.append(smsoutbox_new_inserts, ignore_index = True) 
-            mc.set("smsoutbox",smsoutbox)
-
-            raise gsmio.CustomGSMResetException
         else:
             print '>> Message sending failed'
             print '>> Writing to mysql for sending later'
@@ -115,6 +106,17 @@ def send_smsoutbox_memory():
             if smsoutbox.loc[index, 'stat'] >= resend_limit:
                 dbio.write_sms_to_outbox(sms_msg, sim_num)
                 mc.set("sms_in_db", True)
+            
+            if stat == -2:
+                print '>> Updating smsoutbox before GSM reset'
+                smsoutbox_updated = mc.get("smsoutbox")
+                ts_latest = smsoutbox.ts.max()
+                smsoutbox_new_inserts = smsoutbox_updated[smsoutbox_updated.ts > ts_latest]
+                smsoutbox = smsoutbox.append(smsoutbox_new_inserts, ignore_index = True) 
+                mc.set("smsoutbox",smsoutbox)
+                print '>> Done updating smsoutbox'
+
+                raise gsmio.CustomGSMResetException
 
     print smsoutbox
 
@@ -153,8 +155,12 @@ def send_unsent_msg_outbox():
 
     try:
         for sms in all_sms:
-            # print type(sms.sid)
-            gsmio.send_msg(sms.msg,sms.sid)  
+            sms_id = sms.sid
+            stat = gsmio.send_msg(sms.msg,sms.simnum)  
+            if stat == 0:
+                print "Updating send status in database..."
+                dbio.update_smsoutbox_send_status(sms_id)
+                print "Done updating send status in database"
     except TypeError:
         print '>> Aborting'
         mc.set("sms_in_db", False)
@@ -238,6 +244,7 @@ def main():
         send_smsoutbox_memory()
         send_unsent_msg_outbox()
     if args.purge_memory:
+        lockscript.get_lock('gateway gsm')
         common.purge_memory(args.purge_memory)
 
     if args.set_system_time:

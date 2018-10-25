@@ -7,6 +7,7 @@ import gsmio
 import common
 import argparse
 import raindetect as rd
+import xbeegate as xb
 
 def main():
     parser = argparse.ArgumentParser(description = "Health routine [-options]")
@@ -27,18 +28,26 @@ def main():
     ts_str = ts.strftime("%x,%X,")
 
     try:
-        gsmio.check_csq()
-        csq = int(mc.get("csq_val"))
-        csq = str(csq)
-    except TypeError:
+        if mc.get('rst_gsm_done') * mc.get('init_gsm_done'):
+            gsmio.check_csq()
+            csq = int(mc.get("csq_val"))
+            csq = str(csq)
+        else:
+            print ">> GSM is busy"
+            csq = "98"
+    except:
         print ">> Error reading GSM CSQ. Setting CSQ to error value"
         csq = "98"
 
     cfg = mc.get("server_config")
+    
+    try:
+        mmpertip = float(cfg['rain']['mmpertip'])
+    except:
+        os.system('sudo shutdown -r +1')
+        sys.exit()
 
-    mmpertip = float(cfg['rain']['mmpertip'])
-
-    rainval = "%0.2f" % (rd.check_rain_value(reset_rain = True) * 0.5) 
+    rainval = "%0.2f" % (rd.check_rain_value(reset_rain = True) * mmpertip) 
     sysvol = "%0.2f" % (pmon.read()["bus_voltage"])
     
     msgtosend = cfg["coordinfo"]["name"] + "W," + ts_str
@@ -48,6 +57,7 @@ def main():
 
     if not args.read_only:
         print ">> Saving to memory:"
+        time.sleep(5)
         print msgtosend
         common.save_sms_to_memory(msgtosend)
     

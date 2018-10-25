@@ -13,7 +13,7 @@ import signal
 import lockscript
 from datetime import datetime as dt
 
-DEST_ADDR_LONG = "\x00\x00\x00\x00\x00\x00\xff\xff" #
+DEST_ADDR_LONG = "\x00\x00\x00\x00\x00\x00\xff\xff"
 
 def get_network_info():
 	sc = common.get_config_handle()
@@ -52,6 +52,26 @@ def get_network_info():
 	print network_info
 	common.mc.set('network_info',network_info)
 
+def power_on(xbee):
+	print '>> CustomDue Power ON ..'
+
+	#drive XBEE pin 19 low, inverter logic
+	xbee.remote_at(
+	dest_addr_long=DEST_ADDR_LONG, 			
+		command="D1",
+		parameter='\x04')
+	return
+
+def power_off(xbee):
+	print '>> CustomDue Power OFF ..'
+
+	#drive XBEE pin 19 high, inverter logic
+	xbee.remote_at(
+	dest_addr_long=DEST_ADDR_LONG, 			
+		command="D1",
+		parameter='\x05')
+	return
+
 def reset(xbee):
 	print '>> Sending reset command to routers ..'
 
@@ -78,6 +98,38 @@ def reset(xbee):
 
 # def routine():
 # 	reset()
+
+def transmit_test(xbee):
+	print '>> Transmitting initial test data'
+
+	router_msg = 'ARQCMD6T'
+	router_msg += dt.now().strftime("%y%m%d%H%M%S")
+
+	xbee.tx(
+		dest_addr_long=DEST_ADDR_LONG, 			
+		data=router_msg,
+		dest_addr = "\xff\xfe")
+
+	response=xbee.wait_read_frame()
+
+	print '>> Transmit done ..'
+	return
+
+def transmit_time(xbee):
+	print '>> Transmitting timestamp'
+
+	router_msg = 'ARQCMD6T'
+	router_msg += dt.now().strftime("%y%m%d%H%M%S")
+
+	xbee.tx(
+		dest_addr_long=DEST_ADDR_LONG, 			
+		data=router_msg,
+		dest_addr = "\xff\xfe")
+
+	response=xbee.wait_read_frame()
+
+	print '>> Transmit done ..'
+	return
 
 def get_rssi(xbee):
 	net_info = common.mc.get('network_info')
@@ -154,7 +206,7 @@ def receive(xbee):
 
 		try:
 			response = xbee.wait_read_frame()
-		except SampleTimeoutException, KeyboardInterrupt:
+		except (SampleTimeoutException, KeyboardInterrupt):
 			print 'Timeout!'
 			break
 
@@ -188,7 +240,7 @@ def receive(xbee):
 			# voltage info packet
 			try:
 				volt = re.search("(?<=\#)[0-9\.]+(?=\<)",rf).group(0)
-			except NameError, TypeError:
+			except (NameError, TypeError):
 				volt = ""
 				print ">> Error in volt conversion", rf
 			# volt= re.sub('[^.0-9\*]',"",volt)
@@ -198,8 +250,8 @@ def receive(xbee):
 			# tilt or soms packet
 
 			msg = rf[hashStart+1:-1]
-			msg = re.sub('[^A-Zxyabc0-9\*]',"",msg)
-			rf = re.sub('[^A-Zxyabc0-9\*<>\#\/]',"",rf)
+			msg = re.sub('[^A-Za-z0-9\*\:\.\-\,\+\/]',"",msg)
+			rf = re.sub('[^A-Za-z0-9\*<>\#\/\:\.\-\,\+]',"",rf)
 
 			if re.search("\d{2,3}>>\d{1,2}\/\d{1,2}#.*<<",rf):
 				print ">> Sending complete message"
@@ -233,6 +285,8 @@ def get_arguments():
         help = "retrieves rssi data from routers")
     parser.add_argument("-s", "--sample_routers", 
         help = "execute sampling routine for routers", action = 'store_true')
+    parser.add_argument("-x", "--listen", 
+        help = "listen for extensometer data", action = 'store_true')
 
     try:
         args = parser.parse_args()
@@ -253,11 +307,19 @@ def routine(xbee = None):
 	if not xbee:
 		xbee = get_xbee_handle()
 
-	reset(xbee)
-	time.sleep(5)
+	#reset(xbee)
+
+	power_off(xbee)
+	time.sleep(10)
+	power_on(xbee)
+	time.sleep(10)
 	rssi_info = get_rssi(xbee)
 	time.sleep(2)
-	wakeup(xbee)
+	#transmit_test(xbee) #double sending is being fixed
+	#time.sleep(2)
+	transmit_time(xbee)
+
+	#wakeup(xbee)
 
 	sc = common.get_config_handle()
 
@@ -288,6 +350,20 @@ def routine(xbee = None):
 	rssi_msg += dt.now().strftime("*%y%m%d%H%M%S")
 	print rssi_msg
 	common.save_sms_to_memory(rssi_msg)
+	power_off(xbee)
+
+def listen(xbee):
+	sc = common.get_config_handle()
+	signal.signal(signal.SIGALRM,signal_handler)
+	signal.alarm(sc['xbee']['utslidartimeout'])
+
+
+	router_tsm_msgs, voltage_info = receive(xbee)
+
+#	for key in router_tsm_msgs.keys():
+#		for msg in router_tsm_msgs[key].split(",")[:-1]:
+#			print msg
+#			common.save_sms_to_memory(msg)
 
 def get_xbee_handle():
 	sc = common.get_config_handle()
@@ -318,7 +394,8 @@ def main():
 			print get_rssi(xbee)
 	if args.sample_routers:
 		routine(xbee)
-
+	if args.listen:
+		listen(xbee)
 
 	# ser.close()
 
