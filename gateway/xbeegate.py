@@ -14,6 +14,7 @@ import lockscript
 from datetime import datetime as dt
 
 DEST_ADDR_LONG = "\x00\x00\x00\x00\x00\x00\xff\xff"
+tstamp = ''
 
 def get_network_info():
 	sc = common.get_config_handle()
@@ -96,30 +97,13 @@ def reset(xbee):
 	print '>> Reset done ..'
 	return
 
-# def routine():
-# 	reset()
-
-def transmit_test(xbee):
-	print '>> Transmitting initial test data'
-
-	router_msg = 'ARQCMD6T'
-	router_msg += dt.now().strftime("%y%m%d%H%M%S")
-
-	xbee.tx(
-		dest_addr_long=DEST_ADDR_LONG, 			
-		data=router_msg,
-		dest_addr = "\xff\xfe")
-
-	response=xbee.wait_read_frame()
-
-	print '>> Transmit done ..'
-	return
-
 def transmit_time(xbee):
 	print '>> Transmitting timestamp'
-
-	router_msg = 'ARQCMD6T'
-	router_msg += dt.now().strftime("%y%m%d%H%M%S")
+	
+	global tstamp
+	tstamp = dt.now().strftime("%y%m%d%H%M%S")
+	router_msg = 'ARQCMD6T' + tstamp
+	print router_msg
 
 	xbee.tx(
 		dest_addr_long=DEST_ADDR_LONG, 			
@@ -132,6 +116,7 @@ def transmit_time(xbee):
 	return
 
 def get_rssi(xbee):
+#	time.sleep(1)
 	net_info = common.mc.get('network_info')
 
 	rssi_msg = "GATEWAY*RSSI,"
@@ -150,10 +135,18 @@ def get_rssi(xbee):
 			frame_id="A")
 		
 		# parse response
-		response=xbee.wait_read_frame()
-		stat = response['status']
-		stat = ord(stat)
-		
+		signal.signal(signal.SIGALRM,signal_handler)
+		signal.alarm(5)
+
+		try:
+			response=xbee.wait_read_frame()
+			stat = response['status']
+			stat = ord(stat)
+			signal.alarm(0)
+		except SampleTimeoutException:
+			print "Timeout reached"
+			stat = -1
+
 		# evaluate response
 		if stat == 0:
 			# there is a connection                           
@@ -252,6 +245,10 @@ def receive(xbee):
 			msg = rf[hashStart+1:-1]
 			msg = re.sub('[^A-Za-z0-9\*\:\.\-\,\+\/]',"",msg)
 			rf = re.sub('[^A-Za-z0-9\*<>\#\/\:\.\-\,\+]',"",rf)
+			msg = re.sub('TIMESTAMP000',tstamp,msg)
+			rf = re.sub('TIMESTAMP000',tstamp,rf)
+			print msg
+			print rf
 
 			if re.search("\d{2,3}>>\d{1,2}\/\d{1,2}#.*<<",rf):
 				print ">> Sending complete message"
@@ -310,13 +307,11 @@ def routine(xbee = None):
 	#reset(xbee)
 
 	power_off(xbee)
-	time.sleep(10)
+	time.sleep(5)
 	power_on(xbee)
-	time.sleep(10)
+	time.sleep(5)
 	rssi_info = get_rssi(xbee)
 	time.sleep(2)
-	#transmit_test(xbee) #double sending is being fixed
-	#time.sleep(2)
 	transmit_time(xbee)
 
 	#wakeup(xbee)
