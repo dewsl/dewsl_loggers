@@ -406,6 +406,9 @@ void getATCommand(){
     } else if (command == "AT+LOOPBACK"){
       serial_loopback();
       Serial.println(OKSTR);
+    } else if (command == "AT+LOOPBACK2"){
+      serial_loopback2();
+      Serial.println(OKSTR);
     } else if (command == "AT+B64"){
       // g_timestamp = b64_timestamp(g_timestamp);
       // Serial.println(g_timestamp);
@@ -615,8 +618,8 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
       get_data(112,1,column_data);
     }
   } else if (sensor_version == 3){
-    get_data(11,1,column_data);
-    get_data(12,1,column_data);
+    get_data(8,1,column_data);
+    get_data(9,1,column_data);
     get_data(22,1,column_data);
     if (sensor_type == 2){
       get_data(10,1,column_data);
@@ -1214,6 +1217,10 @@ char check_identifier(char* token, int index_msgid){
             idfier = 'x';
           else if (token[index_msgid+1] == 'C')
             idfier = 'y';
+          else if (token[index_msgid+1] == '8')
+            idfier = 'x';
+          else if (token[index_msgid+1] == '9')
+            idfier = 'y';
           else if (token[index_msgid+1] == 'A')
             idfier = 'b';
           else if (token[index_msgid+1] == 'D')
@@ -1519,4 +1526,16 @@ void serial_loopback(){
   }
 }
 
-
+void serial_loopback2(){
+  Serial2.begin(9600);
+  while(1){
+    if (Serial2.available()) {
+      int inByte = Serial2.read();
+      Serial.write(inByte);
+    }
+    if (Serial.available()) {
+      int inByte = Serial.read();
+      Serial2.write(inByte);
+    }
+  }
+}
