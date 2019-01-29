@@ -618,8 +618,8 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
       get_data(112,1,column_data);
     }
   } else if (sensor_version == 3){
-    get_data(8,1,column_data);
-    get_data(9,1,column_data);
+    get_data(11,1,column_data);
+    get_data(12,1,column_data);
     get_data(22,1,column_data);
     if (sensor_type == 2){
       get_data(10,1,column_data);
@@ -627,6 +627,7 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
     }
   } else if (sensor_version == 1){
     Serial.println("Not yet supported");
+ 
   }
   if (has_piezo){
     get_data(255,1,column_data);
