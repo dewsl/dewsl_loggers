@@ -62,7 +62,7 @@ class LoRaRcvCont(LoRa):
             common.save_sms_to_memory(dts)
         filename = "lora_data.txt"
         with open(filename,'a+') as fh:
-            fh.write(dts)
+            fh.write(dts+'\n')
         print dts
         print ">> Saved!"
         #print(bytes(payload).decode())
