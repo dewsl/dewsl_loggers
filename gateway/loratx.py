@@ -35,6 +35,13 @@ parser.add_argument('--single', '-S', dest='single', default=False, action="stor
 parser.add_argument('--wait', '-w', dest='wait', default=1, action="store", type=float, help="Waiting time between transmissions (default is 0s)")
 parser.add_argument('--message', '-m', dest='message', default='', action="store", type=str, help="Message to be sent")
 
+tmpmsg = [
+    'PHILA*x*030B024FBFE8F830F0BF7348000082100BFF3D0FEDF80070B044E2FE1F7D050B0641B0FBF800D0B044360E6F7F020B014F4F1D083130B004DAF38083*190410130018',
+    'PHILA*x*0C0B004E6FBCF7E010BFD31601E087110BFF31001007D0B0B004050F3F7F090B0141D0D6F7D0E0BFF3AEFFAF85040BFA33B0C4F7F0A0BFE3F0F2607F140B004C4FEBF84*190410130018',
+    'PHILA*y*0C0CFE3E3FD2F7E010CF930001D087110C0140B00807D0B0CFC3E6FEDF7F090C0041F0F3F7D0E0C024BFFEEF850A0C034E5F2407F040C034350D6F7F140C014CDFE0F84*190410130018', 
+    'PHILA*y*030C024EDFF5F830F0CF432F00D082100C014D3FE3F80070C014E1FFBF7D050C0941A01B0800D0C054330E2F7F020C03415026083130CFC3D9F53083*190410130018',
+    'PHILA*d*0C16042A011603FC111604170B160416091604290E1604110A16042F0416042A141604160316041E0F160418101604110716042A0516040F0D16041E0216041D13160418*190410130018']
+
 class LoRaBeacon(LoRa):
 
     tx_counter = 0
@@ -65,7 +72,11 @@ class LoRaBeacon(LoRa):
         #BOARD.led_off()
         sleep(args.wait)
         preamble = [0xff, 0xff, 0x00, 0x00]
-        rawinput = args.message
+        try:
+            rawinput = tmpmsg[self.tx_counter]
+        except IndexError:
+            print(">>Done sending all data")
+            sys.exit(0)
         #rawinput = "hello LORA" #raw_input(">>> ")
         converted = [int(hex(ord(c)), 0) for c in rawinput]
         data = preamble + converted + [0x00]
@@ -101,7 +112,8 @@ class LoRaBeacon(LoRa):
         #BOARD.led_on()
         preamble = [0xff, 0xff, 0x00, 0x00]
         #rawinput = args.message
-        rawinput = ">>TX002*TP:25.43*HM:70.20*MADTA*TP:25.43*HM:70.20*MADTA*TP:25.43*HM:70.20*MADTA*TP:25.43*HM:70.20*MADTA*TP:25.43*HM:70.20*MADTA*TP:25.43*HM:70.2<<" #raw_input(">>> ")
+        rawinput = tmpmsg[self.tx_counter]
+        #raw_input(">>> ")
         converted = [int(hex(ord(c)), 0) for c in rawinput]
         data = preamble + converted + [0x00]
         #self.write_payload([0x0f])

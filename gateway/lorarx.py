@@ -54,7 +54,8 @@ class LoRaRcvCont(LoRa):
         #common.save_sms_to_memory(data)
         data = re.sub(r'[^\w*<>#/:.\-,+]',"",data)
         timestamp = dt.now().strftime("%y%m%d%H%M%S")
-        dts = data + ',' + timestamp + '\n'
+        sigstrength = str(self.rssi_value)
+        dts = data + ',' + sigstrength + ',' + timestamp
         if dts.startswith('>>'):
             print ">> Valid lora data!"
             dts = re.sub(r'[<>]',"",dts)
@@ -99,10 +100,10 @@ class LoRaRcvCont(LoRa):
         self.set_mode(MODE.RXCONT)
         while True:
             sleep(.5)
-            rssi_value = self.get_rssi_value()
+            self.rssi_value = self.get_rssi_value()
             status = self.get_modem_status()
             sys.stdout.flush()
-            sys.stdout.write("\r%d %d %d" % (rssi_value, status['rx_ongoing'], status['modem_clear']))
+            sys.stdout.write("\r%d %d %d" % (self.rssi_value, status['rx_ongoing'], status['modem_clear']))
 
 def signal_handler(signum, frame):
     raise SampleTimeoutException("Timed out!")
@@ -132,12 +133,16 @@ assert(lora.get_agc_auto_on() == 1)
 
 try:
     signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(90)
+    signal.alarm(360)
     lora.start()
 except KeyboardInterrupt:
     sys.stdout.flush()
     print("")
     sys.stderr.write("KeyboardInterrupt\n")
+except SampleTimeoutException:
+    sys.stdout.flush()
+    print("")
+    sys.stderr.write("TimeoutInterrupt\n")
 finally:
     sys.stdout.flush()
     print("")
