@@ -54,7 +54,7 @@ class LoRaRcvCont(LoRa):
         #common.save_sms_to_memory(data)
         data = re.sub(r'[^\w*<>#/:.\-,+]',"",data)
         timestamp = dt.now().strftime("%y%m%d%H%M%S")
-        sigstrength = str(self.rssi_value)
+        sigstrength = str(self.rssi_value*-1)
         dts = data + ',' + sigstrength + ',' + timestamp
         if dts.startswith('>>'):
             print ">> Valid lora data!"
