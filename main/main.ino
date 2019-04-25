@@ -1232,13 +1232,17 @@ char check_identifier(char* token, int index_msgid){
             idfier = 'c';
           break;
         } case '2': {
-          Serial.println(token[index_msgid+1]);
-          if (token[index_msgid+1] == '0'){
-            idfier = 'x';
-          } else if (token[index_msgid+1] == '1'){
-            idfier = 'y';
-          }
-          break;
+         //Serial.println(token[index_msgid+1]);
+         if (token[index_msgid+1] == '0'){
+           idfier = 'x';
+         } else if (token[index_msgid+1] == '1'){
+           idfier = 'y';
+         } else if (token[index_msgid+1] == '9'){ //Version 4 idf
+           idfier = 'x';
+         }else if (token[index_msgid+1] == 'A'){
+           idfier = 'y';
+         }
+         break;
         } case '6': {
           idfier = 'b';
           break;
@@ -1247,13 +1251,6 @@ char check_identifier(char* token, int index_msgid){
           break;
         } case 'F' :{
           idfier = 'p';
-          break;
-        } case '4': {           // Version 4 idf
-          if (token[index_msgid+1] == '1')
-            idfier = 'x';
-          else if (token[index_msgid+1] == '2')
-            idfier = 'y';
-          break;
         } default: {
           idfier = '0';
           break;
