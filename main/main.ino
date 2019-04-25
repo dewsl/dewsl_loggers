@@ -624,7 +624,11 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
     if (sensor_type == 2){
       get_data(10,1,column_data);
       get_data(13,1,column_data);
-    }
+    }   
+  } else if (sensor_version == 4){
+    get_data(41,1,column_data);
+    get_data(42,1,column_data);
+    get_data(22,1,column_data); 
   } else if (sensor_version == 1){
     Serial.println("Not yet supported");
  
@@ -1243,8 +1247,14 @@ char check_identifier(char* token, int index_msgid){
           break;
         } case 'F' :{
           idfier = 'p';
-        }
-        default: {
+          break;
+        } case '4': {           // Version 4 idf
+          if (token[index_msgid+1] == '1')
+            idfier = 'x';
+          else if (token[index_msgid+1] == '2')
+            idfier = 'y';
+          break;
+        } default: {
           idfier = '0';
           break;
         }
