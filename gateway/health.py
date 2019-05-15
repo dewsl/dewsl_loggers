@@ -50,8 +50,12 @@ def main():
     rainval = "%0.2f" % (rd.check_rain_value(reset_rain = True) * mmpertip) 
     sysvol = "%0.2f" % (pmon.read()["bus_voltage"])
     
+    temp = os.popen("vcgencmd measure_temp").readline()
+    tempval = temp.replace("temp=","").replace("'C\n","")
+    print "Temperature: {0}".format(tempval)
+
     msgtosend = cfg["coordinfo"]["name"] + "W," + ts_str
-    msgtosend += "0,000,000," + rainval + ","
+    msgtosend += "0,000," + tempval + "," + rainval + ","
     msgtosend += sysvol + ","
     msgtosend += csq
 
