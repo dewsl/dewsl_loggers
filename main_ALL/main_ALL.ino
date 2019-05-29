@@ -989,7 +989,7 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   int name_len = 0,char_cnt = 0,c=0;
   int i,j;
   int token_length = 0;
-  char pad[12] = "_________";
+  char pad[12] = "________";
 
   for (int i = 0; i < 5000; i++) {
       destination[i] = '\0';
