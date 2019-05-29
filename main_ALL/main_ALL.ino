@@ -362,7 +362,6 @@ void loop(){
               Serial.println(xbee.getResponse().getErrorCode());
         }
       } else if ((strcmp(comm_mode,"ARQ") == 0) && (DATALOGGER.available()) ){ // sira ito       
-        Serial.println(g_sampling_max_retry);
         operation(wait_arq_cmd(), comm_mode);
         shut_down();
         datalogger_flag = 1;
