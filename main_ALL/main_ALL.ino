@@ -1062,9 +1062,9 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   token2 = strtok(dest, g_delim);
   c=0;
   while( token2 != NULL ){
+    if (strcmp(comm_mode, "FEATHER") == 0){
     c++;
     char_cnt = strlen(token2) + name_len - 24;
-
     idf = check_identifier(token1,2);
     identifier[0] = idf;
     identifier[1] = '\0';
@@ -1079,9 +1079,29 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     Serial.println(token2);
     strncat(destination,token2, strlen(token2));
     strncat(destination, g_delim, 2);
+    token2 = strtok(NULL, g_delim);  
+      
+    }else{
+    c++;
+    char_cnt = strlen(token2) + name_len - 24;
+
+    idf = check_identifier(token1,2);
+    identifier[0] = idf;
+    identifier[1] = '\0';
+    sprintf(pad, "%03ds", char_cnt);
+    strncat(pad,">>",3);
+    sprintf(temp, "%02d/", c);
+    strncat(pad,temp,4);
+    sprintf(temp,"%02d#",num_text_to_send);
+    strncat(pad,temp,4);
+    strncpy(token2,pad,8);
+    // strncat(token2,"<<",3);
+    Serial.println(token2);
+    strncat(destination,token2, strlen(token2));
+    strncat(destination, g_delim, 2);
     token2 = strtok(NULL, g_delim);
   }
-
+  }
   if (destination[0] == '\0'){
     no_data_parsed(destination);
     writeData(timestamp,String("*0*ERROR: no data parsed"));
