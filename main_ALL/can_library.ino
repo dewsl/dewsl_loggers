@@ -158,6 +158,7 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   int count,uid,ic;
   if (cmd < 100){
     for (retry_count = 0; retry_count < g_sampling_max_retry; retry_count++){
+      
       turn_on_column();
       send_command(cmd,transmit_id);
       if( (respondents = get_all_frames(broad_timeout,g_can_buffer,g_num_of_nodes)) == g_num_of_nodes){

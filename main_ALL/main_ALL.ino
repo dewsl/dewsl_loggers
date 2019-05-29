@@ -299,7 +299,7 @@ void setup() {
   } else if(g_datalogger_version == 2){
     strncpy(comm_mode,"ARQ",3);
   } else if(g_datalogger_version == 4){
-    strncpy(comm_mode,"FEATHER",7);  
+    strncpy(comm_mode,"LORA",4);  
   } else {
     Serial.print("g_datalogger_version == ");
     Serial.println(g_datalogger_version);
@@ -361,11 +361,12 @@ void loop(){
               Serial.print("Error ");
               Serial.println(xbee.getResponse().getErrorCode());
         }
-      } else if ((strcmp(comm_mode,"ARQ") == 0) && (DATALOGGER.available()) ){ // sira ito
+      } else if ((strcmp(comm_mode,"ARQ") == 0) && (DATALOGGER.available()) ){ // sira ito       
+        Serial.println(g_sampling_max_retry);
         operation(wait_arq_cmd(), comm_mode);
         shut_down();
         datalogger_flag = 1;
-     } else if ((strcmp(comm_mode,"FEATHER") == 0) && (DATALOGGER.available()) ){
+     } else if ((strcmp(comm_mode,"LORA") == 0) && (DATALOGGER.available()) ){
       operation(wait_arq_cmd(), comm_mode);
       DATALOGGER.println("STOPLORA");
       datalogger_flag = 1;
@@ -555,7 +556,7 @@ void operation(int sensor_type, char communication_mode[]){
     Serial.println(token1);
     if (strcmp(comm_mode,"ARQ") == 0) {
       send_data(false, token1);    
-    }else if(strcmp(comm_mode, "FEATHER") == 0){
+    }else if(strcmp(comm_mode, "LORA") == 0){
       send_thru_lora(false,token1);
     }else if(strcmp(comm_mode,"XBEE") == 0) {
       while (send_thru_xbee(token1) == false){
@@ -704,7 +705,7 @@ String getTimestamp(char communication_mode[]){
     return g_timestamp;
   } else if(strcmp(comm_mode,"XBEE") == 0){ //xbee
     return g_timestamp;
-  } else if(strcmp(comm_mode, "FEATHER") == 0){
+  } else if(strcmp(comm_mode, "LORA") == 0){
     return g_timestamp;
     /*
     char timestamp[20] = "";    
@@ -983,12 +984,12 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   char identifier[2] = {};
   char temp[6];
   char temp_id[5];
-  char pad[9] = "________";
   char master_name[8] = "";
   int cutoff = 0, num_text_to_send = 0, num_text_per_dtype = 0;
   int name_len = 0,char_cnt = 0,c=0;
   int i,j;
   int token_length = 0;
+  char pad[12] = "_________";
 
   for (int i = 0; i < 5000; i++) {
       destination[i] = '\0';
@@ -1051,7 +1052,7 @@ void build_txt_msgs(char mode[], char* source, char* destination){
         strncat(dest,"*",1);
         strncat(dest,Ctimestamp,12);
       }
-      if (strcmp(comm_mode, "FEATHER") == 0){
+      if (strcmp(comm_mode, "LORA") == 0){
         strncat(dest,"*",1);
         strncat(dest,Ctimestamp,12);
         }
@@ -1064,14 +1065,14 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   token2 = strtok(dest, g_delim);
   c=0;
   while( token2 != NULL ){
-    if (strcmp(comm_mode, "FEATHER") == 0){
+    if (strcmp(comm_mode, "LORA") == 0){
+      
     c++;
     char_cnt = strlen(token2) + name_len - 24;
     idf = check_identifier(token1,2);
     identifier[0] = idf;
     identifier[1] = '\0';
     sprintf(pad, "%02s", ">>");
-   // strncat(pad,">>",3);
     sprintf(temp, "%02d/", c);
     strncat(pad,temp,4);
     sprintf(temp,"%02d#",num_text_to_send);
@@ -1086,17 +1087,16 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     }else{
     c++;
     char_cnt = strlen(token2) + name_len - 24;
-
     idf = check_identifier(token1,2);
     identifier[0] = idf;
     identifier[1] = '\0';
-    sprintf(pad, "%03ds", char_cnt);
+    sprintf(pad, "%03d", char_cnt);
     strncat(pad,">>",3);
     sprintf(temp, "%02d/", c);
     strncat(pad,temp,4);
     sprintf(temp,"%02d#",num_text_to_send);
     strncat(pad,temp,4);
-    strncpy(token2,pad,8);
+    strncpy(token2,pad,11);
     // strncat(token2,"<<",3);
     Serial.println(token2);
     strncat(destination,token2, strlen(token2));
