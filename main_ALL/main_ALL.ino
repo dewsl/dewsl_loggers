@@ -367,6 +367,8 @@ void loop(){
         datalogger_flag = 1;
      } else if ((strcmp(comm_mode,"FEATHER") == 0) && (DATALOGGER.available()) ){
       operation(wait_arq_cmd(), comm_mode);
+      DATALOGGER.println("STOPLORA");
+      datalogger_flag = 1;
      }
   }
   delay (100);
@@ -1467,7 +1469,7 @@ void send_data(bool isDebug, char* columnData){
     } while (OKFlag == false);
   } else {
       do{   
-        Serial.print("Sending: ");
+        Serial.print("Sending:");
         Serial.println(columnData);
         DATALOGGER.println(columnData);
         timestart = millis();
@@ -1494,7 +1496,7 @@ void send_data(bool isDebug, char* columnData){
         }
       } while (OKFlag == false);
   }
-  DATALOGGER.println("STOPLORA");
+  
   return;
 } 
 
