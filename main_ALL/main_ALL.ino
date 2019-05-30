@@ -988,7 +988,8 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   int name_len = 0,char_cnt = 0,c=0;
   int i,j;
   int token_length = 0;
-  char pad[12] = "________";
+  char pad[12] = "___________";
+  
 
   for (int i = 0; i < 5000; i++) {
       destination[i] = '\0';
@@ -1030,8 +1031,13 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     }
 
     token_length = strlen(token1); 
+    if (strcmp(comm_mode, "LORA") == 0){
+     strncat(dest,pad,8);
+      }
+    else{
+     strncat(dest,pad,11);
+      }
     for (i = 0; i < num_text_per_dtype; i++){
-      strncat(dest,pad,11);
       strncat(dest,master_name, name_len);
       strncat(dest,"*", 2);
       if (idf != 'p'){ // except piezo
@@ -1064,10 +1070,8 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   token2 = strtok(dest, g_delim);
   c=0;
   while( token2 != NULL ){
-    if (strcmp(comm_mode, "LORA") == 0){
-      
     c++;
-    char_cnt = strlen(token2) + name_len - 24;
+    if (strcmp(comm_mode, "LORA") == 0){      
     idf = check_identifier(token1,2);
     identifier[0] = idf;
     identifier[1] = '\0';
@@ -1084,7 +1088,6 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     token2 = strtok(NULL, g_delim);  
       
     }else{
-    c++;
     char_cnt = strlen(token2) + name_len - 24;
     idf = check_identifier(token1,2);
     identifier[0] = idf;
