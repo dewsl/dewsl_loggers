@@ -31,6 +31,7 @@ import common
 import re
 from datetime import datetime as dt
 import signal
+import lockscript
 
 BOARD.setup()
 
@@ -54,17 +55,24 @@ class LoRaRcvCont(LoRa):
         #common.save_sms_to_memory(data)
         data = re.sub(r'[^\w*<>#/:.\-,+]',"",data)
         timestamp = dt.now().strftime("%y%m%d%H%M%S")
-        sigstrength = str(self.rssi_value*-1)
-        dts = data + ',' + sigstrength + ',' + timestamp
-        if dts.startswith('>>'):
+        print (str(self.rssi_value*-1))
+        if data.startswith('>>'):
             print ">> Valid lora data!"
-            dts = re.sub(r'[<>]',"",dts)
+            hashStart = data.find('#')
+            if hashStart != -1:
+                data = data[hashStart+1:-1]
+            data = data[:data.find('<<')]
+            data = re.sub(r'[<>]',"",data)
+            dts = data #+ '*' + timestamp
             common.save_sms_to_memory(dts)
+        else:
+            print ">> Invalidated."
+            dts = data + '*INVALID*' + timestamp
         filename = "lora_data.txt"
         with open(filename,'a+') as fh:
             fh.write(dts+'\n')
         print dts
-        print ">> Saved!"
+        print ">> Saved to text file."
         #print(bytes(payload).decode())
         self.set_mode(MODE.SLEEP)
         self.reset_ptr_rx()
@@ -111,6 +119,7 @@ def signal_handler(signum, frame):
 class SampleTimeoutException(Exception):
     pass
 
+lockscript.get_lock('lora')
 lora = LoRaRcvCont(verbose=False)
 args = parser.parse_args(lora)
 
