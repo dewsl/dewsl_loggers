@@ -21,8 +21,8 @@
 #define OKSTR     "OK"
 #define ERRORSTR  "ERROR"
 #define ATSD      "ATSD"
-#define DATALOGGER Serial1
-#define powerM Serial2
+#define DATALOGGER Serial2
+#define powerM Serial3
 
 
 #define VERBOSE 0
@@ -1032,7 +1032,7 @@ void build_txt_msgs(char mode[], char* source, char* destination){
 
     token_length = strlen(token1); 
     if (strcmp(comm_mode, "LORA") == 0){
-     strncat(dest,pad,8);
+     strncat(dest,pad,2);
       }
     else{
      strncat(dest,pad,11);
@@ -1076,11 +1076,7 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     identifier[0] = idf;
     identifier[1] = '\0';
     sprintf(pad, "%02s", ">>");
-    sprintf(temp, "%02d/", c);
-    strncat(pad,temp,4);
-    sprintf(temp,"%02d#",num_text_to_send);
-    strncat(pad,temp,4);
-    strncpy(token2,pad,8);
+    strncpy(token2,pad,2);
     // strncat(token2,"<<",3);
     Serial.println(token2);
     strncat(destination,token2, strlen(token2));
