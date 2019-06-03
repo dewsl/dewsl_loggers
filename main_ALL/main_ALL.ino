@@ -1031,13 +1031,14 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     }
 
     token_length = strlen(token1); 
-    if (strcmp(comm_mode, "LORA") == 0){
+
+    for (i = 0; i < num_text_per_dtype; i++){
+     if (strcmp(comm_mode, "LORA") == 0){
      strncat(dest,pad,2);
       }
-    else{
+     else{
      strncat(dest,pad,11);
       }
-    for (i = 0; i < num_text_per_dtype; i++){
       strncat(dest,master_name, name_len);
       strncat(dest,"*", 2);
       if (idf != 'p'){ // except piezo
@@ -1060,9 +1061,13 @@ void build_txt_msgs(char mode[], char* source, char* destination){
       if (strcmp(comm_mode, "LORA") == 0){
         strncat(dest,"*",1);
         strncat(dest,Ctimestamp,12);
-        }
+        strncat(dest,g_delim,1);   
+        } else{
       strncat(dest,"<<",2);
-      strncat(dest,g_delim,1);
+      strncat(dest,g_delim,1);          
+          
+          }
+
     }
     num_text_to_send = num_text_to_send + num_text_per_dtype;
     token1 = strtok(NULL, g_delim);
@@ -1354,10 +1359,14 @@ int check_cutoff(char idf){
     message - empty char array 
 */
 void no_data_parsed(char* message){
-  
+  if(strcmp(comm_mode, "LORA") == 0){
+  strncat(message, g_mastername, 5);
+  strncat(message, "*0*ERROR: no data parsed<<+", 27);
+    }else{
   sprintf(message, "040>>1/1#", 3);
   strncat(message, g_mastername, 5);
   strncat(message, "*0*ERROR: no data parsed<<+", 27);
+}
 }
 
 //Group: Auxilliary Control Functions
