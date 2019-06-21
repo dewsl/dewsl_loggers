@@ -455,6 +455,7 @@ void getATCommand(){
         b64_build_text_msgs(comm_mode, g_final_dump, text_message);
       } else {
         build_txt_msgs(comm_mode, g_final_dump, text_message); 
+        g_final_dump[0] = 0;
       }
       Serial.println(OKSTR);
     } else if (command == ATSNIFFCAN){
@@ -1067,6 +1068,7 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     strncat(destination,token2, strlen(token2));
     strncat(destination, g_delim, 2);
     token2 = strtok(NULL, g_delim);
+
   }
 
   if (destination[0] == '\0'){
