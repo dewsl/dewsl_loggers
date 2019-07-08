@@ -1,0 +1,20 @@
+numOfNodesColumn1 = 23
+column1 = 4,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28
+ColumnCommand = T
+GlobalWaitTime = 12345
+useGlobalWaitTime = 1
+loggingOn = 1
+MasterName = OSLB
+SamplingMaxNumOfRetry = 2
+TURN_ON_DELAY = 2000
+enable_find_node_ids = 0
+REPEATING_FRAMES_LIMIT = 20
+ALLOWED_MISSING_NODES = 0
+PRINT_MODE = 0
+PIEZO = 0
+ENDOFCONFIG
+ENDOFCONFIG
+ENDOFCONFIG
+ENDOFCONFIG
+
+
