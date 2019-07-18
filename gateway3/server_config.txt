@@ -1,0 +1,57 @@
+[LocalDB]
+user = root
+host = 127.0.0.1
+password = senslope
+dbname = senslopedb
+
+[Serial]
+baudrate = 57600
+sunport = 
+globeport = /dev/ttyAMA0
+timeout = 5
+smartport = /dev/ttyAMA0
+
+[coordinfo]
+name = MAD
+#name = LTE
+simnet = GLOBE
+#simnet = SMART
+
+[serverinfo]
+#simnum = 639175394337
+simnum = 639175972526
+#simnum = 639088125642
+
+[gsmio]
+port = /dev/ttyAMA0
+baudrate = 9600
+timeout = 5
+sendretry = 15
+resetpin = 11
+statpin = 37
+ripin = 15
+purgeafter = 60
+
+[mysql]
+sentbuffersize = 15
+
+[user]
+pass = rpisenslope
+
+[sms]
+delsmsafterread = True
+
+[pmm]
+port = /dev/pwrmodusbport
+baud = 9600
+timeout = 5
+
+[xbee]
+port = /dev/xbeeusbport
+baud = 9600
+sampletimeout = 360
+utslidartimeout = 110
+
+[rain]
+mmpertip = 0.5
+
