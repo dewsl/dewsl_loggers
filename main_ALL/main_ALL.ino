@@ -1331,7 +1331,7 @@ int check_cutoff(char idf){
       cutoff = 133;  //15 chars only for axel
       break;
     } case 'd': {
-      cutoff = 144;  //15 chars only for axel
+      cutoff = 136;  //15 chars only for axel
       break;
     } case 'p' :{
       cutoff = 135; 
