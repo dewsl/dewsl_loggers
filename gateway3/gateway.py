@@ -10,6 +10,7 @@ import serial
 import time
 import re
 from datetime import datetime as dt
+from datetime import timedelta as td
 import subprocess
 import xbeegate as xb
 
@@ -29,7 +30,11 @@ def get_arguments():
         help = "write custom sms to smsoutbox", action = 'store_true')
     parser.add_argument('-som', "--send_outbox_messages", 
         help = "send messages stored in smsoutbox", action = 'store_true')
-    
+    parser.add_argument('-dom', "--delete_outbox_messages", 
+        help = "delete some messages stored in smsoutbox", action = 'store_true')
+    parser.add_argument('-dam', "--delete_all_outbox_messages", 
+        help = "delete all messages stored in smsoutbox", action = 'store_true')
+
     parser.add_argument('-igm', "--initialize_gsm_module", 
         help = "initialize gsm module", action = 'store_true')
     parser.add_argument('-dg', "--debug_gsm", 
@@ -152,6 +157,7 @@ def send_unsent_msg_outbox():
     #    return
 
     all_sms = dbio.get_db_outbox()
+    oldts = dt.now() - td(weeks=1)
 
     try:
         for sms in all_sms:
@@ -160,6 +166,9 @@ def send_unsent_msg_outbox():
             if len(sms.msg) > 160:
                 stat = 99
                 print(">> Abort sending, message exceeds 160 characters", sms.msg)
+            elif sms.ts < oldts:
+                stat = -1
+                print(">> Abort sending, message expired", sms.msg)
             else:
                 stat = gsmio.send_msg(sms.msg,sms.simnum)  
 
@@ -167,9 +176,9 @@ def send_unsent_msg_outbox():
                 print(">> Updating send status in database...")
                 dbio.update_smsoutbox_send_status(sms_id)
                 print(">> Done updating send status in database")
-            elif stat == 99:
+            elif stat == 99 or stat == -1:
                 print(">> Updating status in database...")
-                dbio.update_smsoutbox_send_status(sms_id,99)
+                dbio.update_smsoutbox_send_status(sms_id,stat)
                 print(">> Done updating status in database")
             else:
                 raise gsmio.CustomGSMResetException
@@ -240,6 +249,10 @@ def main():
     if args.send_outbox_messages:
         lockscript.get_lock('gateway gsm')
         send_unsent_msg_outbox()
+    if args.delete_outbox_messages:
+        dbio.delete_smsoutbox()
+    if args.delete_all_outbox_messages:
+        dbio.delete_all_smsoutbox()
     if args.debug_gsm:
         lockscript.get_lock('gateway gsm')
         gsmio.gsm_debug()

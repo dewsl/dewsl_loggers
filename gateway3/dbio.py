@@ -1,5 +1,6 @@
 import configparser, MySQLdb, time, sys, os
 from datetime import datetime as dt
+from datetime import timedelta as td
 from configparser import SafeConfigParser
 import memcache
 import gsmio
@@ -190,7 +191,20 @@ def update_smsoutbox_send_status(sms_id, send_status=15):
 
     commit_to_db(query,"UpdateSendStatus", instance='GSM')    
 
-    
+def delete_smsoutbox(send_status=15, time=None):
+    if time == '0':
+        query = ("delete from smsoutbox where send_status = %d") %(send_status)
+    else:
+        oldtime = (dt.now() - td(days=120)).strftime("%Y-%m-%d %H:%M:%S")
+        query = ("delete from smsoutbox where send_status = %d and ts_sent < '%s'") %(send_status,oldtime)
+    print(query)
+    commit_to_db(query,"DeleteSmsoutbox")    
+
+def delete_all_smsoutbox():
+    query = ("delete from smsoutbox")
+    print(query)
+    commit_to_db(query,"DeleteAllsmsoutbox")   
+
 def get_db_inbox(read_status):
     db, cur = db_connect()
     
@@ -213,9 +227,9 @@ def get_db_outbox(send_status=0):
     
     while True:
         # try:
-        query = ("select sms_id, pb_id, sms_msg"
+        query = ("select sms_id, pb_id, sms_msg, ts_written"
             " from smsoutbox where send_status = %d"
-            " limit 200") % (send_status)
+            " order by ts_written desc limit 100") % (send_status)
     
         print(query)
         a = cur.execute(query)
@@ -232,8 +246,8 @@ def get_db_outbox(send_status=0):
     all_msgs = []
     for msg in out:
         print(msg)
-        num,pb_id,sms_msg = msg
-        sms_item = gsmio.SmsItem(num,pb_id,sms_msg,'')
+        num,pb_id,sms_msg,ts = msg
+        sms_item = gsmio.SmsItem(num,pb_id,sms_msg,ts)
         all_msgs.append(sms_item)
 
     return all_msgs

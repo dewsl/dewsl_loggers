@@ -80,6 +80,7 @@ def reset_gsm(delay=45):
 
     #SIM800L
     try:
+        raise CustomGSMResetException
         reply = gsmcmd('AT+CPOWD=1')
         print(">> Waiting GSM Reboot")
         print(delay)
@@ -193,11 +194,10 @@ def gsmcmd(cmd,gsm=None):
 
         now = time.time()
 
-        if 'AT+COPS=1,1' in cmd:
+        if 'AT+COPS=' in cmd:
             tout = 120
         else:
             tout = 10 
-        gsm.write((cmd+'\r\n').encode())
         gsm.write((cmd+'\r\n').encode())
 
         while True:

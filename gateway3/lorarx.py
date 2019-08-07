@@ -56,25 +56,32 @@ class LoRaRcvCont(LoRa):
         #common.save_sms_to_memory(data)
         data = re.sub(r'[^a-zA-z0-9*<>#/:.\-,+]',"",data)
         timestamp = dt.now().strftime("%y%m%d%H%M%S")
-        print((str(self.get_pkt_rssi_value()*-1)))
+        rssi = self.get_pkt_rssi_value()*-1
+        print("RSSI: " + str(rssi))
         if data.startswith('>>'):
-            print(">> Valid lora data!")
+            print(">> Valid lora data.")
             hashStart = data.find('#')
             if hashStart != -1:
                 data = data[hashStart+1:-1]
             data = data[:data.find('<<')]
             data = re.sub(r'[<>]',"",data)
+            router_name = data[:5]
+            global router_list
+            global rssi_info
+            if router_name in router_list:
+                if rssi_info[router_name] == '':
+                    rssi_info[router_name] = str(rssi)
             dts = data #+ '*' + timestamp
             #common.save_sms_to_memory(dts)
             dbio.write_sms_to_outbox(dts)
         else:
             print(">> Invalidated.")
             dts = data + '*INVALID*' + timestamp
-        filename = "lora_data.txt"
-        with open(filename,'a+') as fh:
-            fh.write(dts+'\n')
-        print(dts)
-        print(">> Saved to text file.")
+            filename = "/home/pi/logs/lora_data.txt"
+            with open(filename,'a+') as fh:
+                fh.write(dts+'\n')
+            print(dts)
+            print(">> Saved to text file.")
         #print(bytes(payload).decode())
         self.set_mode(MODE.SLEEP)
         self.reset_ptr_rx()
@@ -108,12 +115,15 @@ class LoRaRcvCont(LoRa):
     def start(self):
         self.reset_ptr_rx()
         self.set_mode(MODE.RXCONT)
+        ctr=0
         while True:
-            sleep(.5)
-            self.rssi_value = self.get_rssi_value()
-            status = self.get_modem_status()
+            ctr += 1
+            sleep(1)
+            #self.rssi_value = self.get_rssi_value()
+            #status = self.get_modem_status()
             sys.stdout.flush()
-            sys.stdout.write("\r%d %d %d" % (self.rssi_value, status['rx_ongoing'], status['modem_clear']))
+            #sys.stdout.write("\r%d %d %d" % (self.rssi_value, status['rx_ongoing'], status['modem_clear']))
+            sys.stdout.write("\r%s %d" %('waiting for packets', ctr))
 
 def signal_handler(signum, frame):
     raise SampleTimeoutException("Timed out!")
@@ -136,15 +146,33 @@ lora.set_pa_config(pa_select=1)
 #lora.set_pa_ramp(PA_RAMP.RAMP_50_us)
 #lora.set_agc_auto_on(True)
 
-print(lora)
+#print(lora)
+print("Starting LoRa")
 assert(lora.get_agc_auto_on() == 1)
 
+rxtimeout = common.mc.get("server_config")['lora']['rxtimeout']
+site_code = common.mc.get("network_info")['site_code']
+router_list = common.mc.get("network_info")['router_addr_short_by_name'].keys()
+rssi_info = {}
+for router in router_list:
+    rssi_info[router] = ''
+
+def build_rssi_msg():
+    global site_code
+    global rssi_info
+    timestamp = dt.now().strftime("%y%m%d%H%M%S")
+    rssi_msg = 'GATEWAY*RSSI,{},'.format(site_code)
+    for router in sorted(rssi_info.keys()):
+        rssi_msg += '{},{},,'.format(router, rssi_info[router])
+    rssi_msg += '*{}'.format(timestamp)
+    return rssi_msg
+ 
 #try: input("Press enter to start...")
 #except: pass
 
 try:
     signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(1000)
+    signal.alarm(rxtimeout)
     lora.start()
 except KeyboardInterrupt:
     sys.stdout.flush()
@@ -153,10 +181,13 @@ except KeyboardInterrupt:
 except SampleTimeoutException:
     sys.stdout.flush()
     print("")
+    #save rssi info: dbio.    
     sys.stderr.write("TimeoutInterrupt\n")
 finally:
     sys.stdout.flush()
     print("")
     lora.set_mode(MODE.SLEEP)
-    print(lora)
+#    print(lora)
+    print("Terminating")
     BOARD.teardown()
+    dbio.write_sms_to_outbox(build_rssi_msg())

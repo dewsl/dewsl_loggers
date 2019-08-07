@@ -45,7 +45,7 @@ def main():
     try:
         mmpertip = float(cfg['rain']['mmpertip'])
     except:
-        os.system('sudo shutdown -r +1')
+        os.system('python3 /home/pi/gateway3/gateway.py -ir')
         sys.exit()
 
     rainval = "%0.2f" % (rd.check_rain_value(reset_rain = True) * mmpertip) 
@@ -65,8 +65,8 @@ def main():
         time.sleep(5)
         print(msgtosend)
         #common.save_sms_to_memory(msgtosend)
-        #dbio.write_sms_to_outbox(msgtosend)
-        dbio.write_sms_to_outbox(msgtosend,pb_id='639175972526')
+        dbio.write_sms_to_outbox(msgtosend)
+        #dbio.write_sms_to_outbox(msgtosend,pb_id='639175972526')
 
     
 if __name__=='__main__':

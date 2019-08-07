@@ -18,7 +18,6 @@ simnet = GLOBE
 #simnet = SMART
 
 [serverinfo]
-#simnum = 639175394337
 simnum = 639175972526
 #simnum = 639088125642
 
@@ -51,6 +50,9 @@ port = /dev/xbeeusbport
 baud = 9600
 sampletimeout = 360
 utslidartimeout = 110
+
+[lora]
+rxtimeout = 900
 
 [rain]
 mmpertip = 0.5
