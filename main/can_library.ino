@@ -200,6 +200,7 @@ void get_data(int cmd, int transmit_id, char* final_dump){
     }
   } 
   count = count_frames(g_can_buffer);
+  Serial.println(count);
   // write frames to String or char array
   for (int i = 0;i<count;i++){
     if (g_can_buffer[i].id != 0){
@@ -279,14 +280,14 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
         can_buffer[i].data.byte[7] = incoming.data.byte[7];
         i++;
         interpret_frame(incoming);
-        if (i == expected_frames){
+//        if (i == expected_frames){
           process_all_frames(g_can_buffer);
           i = count_frames(g_can_buffer);
-          if (i == expected_frames){
-            return i;
-            break;
-          }
-        }
+//          if (i == expected_frames){          
+//            return i;
+//            break;
+//          }
+//        }
       }
       if (comm_mode == "ARQ"){
         if ( (millis() - arq_start_time) >= ARQTIMEOUT){
@@ -543,6 +544,7 @@ void write_frame_to_dump(CAN_FRAME incoming, char* dump){
   strcat(dump,temp);
 
   // interpret_frame(incoming);
+
   return;
 }
 
@@ -692,7 +694,7 @@ void interpret_frame(CAN_FRAME incoming){
   d8 = incoming.data.byte[7]; 
 
   if (VERBOSE == 1) { Serial.println("process_frame()"); }
-  if ((d1 == 11)|(d1 == 12)|(d1==32)|(d1==33)){ 
+  if ((d1 == 11)|(d1 == 12)|(d1==32)|(d1==33)|(d1==41)|(d1==42)){ 
 
     x = compute_axis(d2,d3);
     y = compute_axis(d4,d5);
