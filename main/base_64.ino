@@ -221,9 +221,21 @@ struct data_type_params b64_identify_params(int msgid){
 			struct_dtype.data_length = 4;
 			struct_dtype.type_cutoff = 120; // 4 chars per node soms data	
 			break;
+		} case 41:{
+		  struct_dtype.type_number = 1;
+      struct_dtype.data_length = 9;
+      struct_dtype.type_cutoff = 135; // 9 chars per node tilt data 
+      break;
+		  }
+    } case 42:{
+      struct_dtype.type_number = 1;
+      struct_dtype.data_length = 9;
+      struct_dtype.type_cutoff = 135; // 9 chars per node tilt data 
+      break;
+      }
 		}
-	}
 	return struct_dtype;
+  
 }
 
 /* 
@@ -550,4 +562,3 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 	}
 
 }
-
