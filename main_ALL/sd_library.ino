@@ -311,26 +311,28 @@ String get_value_from_line(String line){
 		<>
 */
 int8_t writeData(String fname,String data){
+  
 	File sdFile;
 	char filename[100]= {};
-	char logger_file_name[7] = {};
+	char logger_file_name[8] = {};
 	String timeString;
-	// Serial.println(g_timestamp);
-
-	// if (!SD.begin(6,g_chip_select)) {
-	// 	Serial.println(" SD.begin() Failed!");
-	// 	return -1;
-	// }
+//	 Serial.println(g_timestamp);
+//
+//	 if (!SD.begin(6,g_chip_select)) {
+//	 	Serial.println(" SD.begin() Failed!");
+//	 	return -1;
+//	 }
 	delay(20);
   
-	for(int i=0; i<6 ; i++){
-	 	logger_file_name[i]= fname[i];
+	for(int i=1; i<7 ; i++){
+	 	logger_file_name[i-1]= fname[i];
 	}
-	//fname.substring(0,6).toCharArray(filename,6);
-	
+//	fname.substring(0,6).toCharArray(filename,6);
+
+//	Serial.println(logger_file_name);
 	strcpy(filename,logger_file_name);
 	strcat(filename,".TXT");
-	// Serial.println(filename);
+	 Serial.println(filename);
 	sdFile = SD.open(filename,FILE_WRITE);
 	if(!sdFile){
 		Serial.println("Can't Write to file");

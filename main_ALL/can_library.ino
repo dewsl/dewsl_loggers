@@ -265,6 +265,7 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
   int a = 0, i = 0;
   CAN_FRAME incoming;
   if (VERBOSE == 1) { Serial.println("get_all_frames()"); }
+  
   do {
       check_can_status();
       if (Can0.available()){
@@ -280,16 +281,16 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
         can_buffer[i].data.byte[7] = incoming.data.byte[7];
         i++;
         interpret_frame(incoming);
-        if (i == expected_frames){
+//        if (i == expected_frames){
           process_all_frames(g_can_buffer);
           i = count_frames(g_can_buffer);
-          if (i == expected_frames){
-            return i;
-            break;
-          }
-        }
+//          if (i == expected_frames){          
+//            return i;
+//            break;
+//          }
+//        }
       }
-      if (comm_mode == "ARQ"){
+      if (comm_mode == "LORA"){
         if ( (millis() - arq_start_time) >= ARQTIMEOUT){
           arq_start_time = millis();
           Serial.println("ARQWAIT");
