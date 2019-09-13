@@ -705,6 +705,7 @@ String getTimestamp(char communication_mode[]){
   } else if(strcmp(comm_mode,"XBEE") == 0){ //xbee
     return g_timestamp;
   } else if(strcmp(comm_mode, "LORA") == 0){
+    Serial.println(g_timestamp);
     return g_timestamp;
     /*
     char timestamp[20] = "";    
@@ -805,7 +806,7 @@ int wait_arq_cmd(){
   do{
     serial_line = DATALOGGER.readStringUntil('\r\n');
   } while(serial_line == "");
-  serial_line.toCharArray(c_serial_line,serial_line.length());
+  serial_line.toCharArray(c_serial_line,serial_line.length()+1);
   Serial.println(serial_line);
   return parse_cmd(c_serial_line);
 }
@@ -891,6 +892,7 @@ int parse_cmd(char* command_string){
   int cmd_index,slash_index;
 
   serial_line = String(command_string);
+  Serial.println(serial_line);
 
   if ((pch = strstr(command_string,cmd)) != NULL) {
     if (*(pch+strlen(cmd)) == 'S'){ // SOMS + TILT
