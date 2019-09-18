@@ -375,7 +375,8 @@ void loop(){
 }
 
 void hard_code(){
-  String str1 = "column1 = 1644,1710,2022,1915,749,1691,1724,1742,1906,1921,1923,1983,2021,2024,2079,2107,2137,2160,2255,2282,2307,2329,2429,2570,2553,2544,2460,2459,2455,1717,1708,2598,2581,2577,2308,2239,2409,2369,2442,2076";
+  //String str1 = "column1 = 1644,1710,2022,1915,749,1691,1724,1742,1906,1921,1923,1983,2021,2024,2079,2107,2137,2160,2255,2282,2307,2329,2429,2570,2553,2544,2460,2459,2455,1717,1708,2598,2581,2577,2308,2239,2409,2369,2442,2076";
+  String str1 = "column1 = 1835, 2055, 1924, 1886, 2495";
   String str2 = "MasterName = PHITA";
 
   g_num_of_nodes = process_column_ids(str1);
@@ -999,9 +1000,16 @@ void build_txt_msgs(char mode[], char* source, char* destination){
 
   String timestamp = getTimestamp(mode);
   char Ctimestamp[12] = "";
+  if (strcmp(comm_mode, "LORA") == 0){
+      for (int i = 0; i < 12; i++) {
+      Ctimestamp[i] = timestamp[i+1];
+    }
+  }else{
   for (int i = 0; i < 12; i++) {
       Ctimestamp[i] = timestamp[i];
+    }
   }
+  
   Ctimestamp[12] = '\0';
   
   token1 = strtok(source, g_delim);
@@ -1569,7 +1577,7 @@ void send_thru_lora(bool isDebug, char* columnData){
   return;
 } 
 /* 
-  Function: send_thru_xbee
+  Function: send_thru_xbee  
 
      Sends data thru designated xbee Serial port 
 
