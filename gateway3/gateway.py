@@ -167,7 +167,7 @@ def send_unsent_msg_outbox():
                 stat = 99
                 print(">> Abort sending, message exceeds 160 characters", sms.msg)
             elif sms.ts < oldts:
-                stat = -1
+                stat = -5
                 print(">> Abort sending, message expired", sms.msg)
             else:
                 stat = gsmio.send_msg(sms.msg,sms.simnum)  
@@ -176,7 +176,7 @@ def send_unsent_msg_outbox():
                 print(">> Updating send status in database...")
                 dbio.update_smsoutbox_send_status(sms_id)
                 print(">> Done updating send status in database")
-            elif stat == 99 or stat == -1:
+            elif stat == 99 or stat == -5:
                 print(">> Updating status in database...")
                 dbio.update_smsoutbox_send_status(sms_id,stat)
                 print(">> Done updating status in database")
@@ -185,6 +185,10 @@ def send_unsent_msg_outbox():
     except TypeError:
         print('>> No more data. Aborting')
         #mc.set("sms_in_db", False)
+        common.save_smsinbox_to_memory()
+        print(">> spawning process ...", end=' ') 
+        common.spawn_process("python /home/pi/gateway/command.py")
+        print(">> done")
 
 def set_system_time():
     now = time.time()

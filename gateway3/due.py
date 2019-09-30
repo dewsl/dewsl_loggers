@@ -20,10 +20,6 @@ try:
     time.sleep(1)
     GPIO.output(trig_pin, True)
     time.sleep(1)
-    GPIO.output(trig_pin, False)
-    time.sleep(1)
-    GPIO.output(trig_pin, True)
-    time.sleep(1)
     print("TRIGGERED")
 
     s = serial.Serial('/dev/dueusbport', 9600) #should be in server_config
@@ -32,7 +28,9 @@ try:
     signal.signal(signal.SIGALRM, signal_handler)
     signal.alarm(300) #should be in server_config
 
-    cmd = 'ARQCMD6T\r\n'.encode()
+    ts = dt.now().strftime('%y%m%d%H%M%S')
+    strcmd = 'ARQCMD6T' + '/' + ts + '\r\n'
+    cmd = strcmd.encode()
     print(("COMMAND: {}".format(cmd)))
     s.write(cmd)
     time.sleep(1)
@@ -44,11 +42,9 @@ try:
                 #print("RAW PACKET:\n{}".format(rx))
                 s.write('OK'.encode())
                 rx = re.sub('[^A-Za-z0-9\+\/\*\:\.\-\,]', '', rx)
-                ts = dt.now().strftime('%y%m%d%H%M%S')
-                msg = rx + ts
-                #common.save_sms_to_memory(msg)
-                dbio.write_sms_to_outbox(msg)
-                print(("VALID PACKET STORED FOR SENDING:\n{}\n".format(msg)))
+                #common.save_sms_to_memory(rx)
+                dbio.write_sms_to_outbox(rx)
+                print(("VALID PACKET STORED FOR SENDING:\n{}\n".format(rx)))
             elif rx == 'STOPLORA\r\n':
                 print(("FINISHED".format(rx)))	
                 time.sleep(1)

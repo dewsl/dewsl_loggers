@@ -258,7 +258,8 @@ def send_msg(msg, number):
     """
     # under development
     # return
-
+    mc = common.get_mc_server()
+    mc.set('send_sms_done',False)
     check_count = 0
     csq = 0
     print('>> Check csq ...')
@@ -335,6 +336,8 @@ def send_msg(msg, number):
         print("NO SERIAL COMMUNICATION (sendmsg)")
     finally:
         gsm.close()
+
+    mc.set('send_sms_done',True)
         
 def log_error(log):
     nowdate = dt.today().strftime("%A, %B %d, %Y, %X")
@@ -345,7 +348,7 @@ def log_error(log):
 def delete_read_messages():
     print('>> Deleting read messages ...', end=' ')
     print(gsmcmd('AT+CMGD=1,2').strip())
-    print('done')
+    print('>> done')
     
 def count_msg():
     """

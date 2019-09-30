@@ -16,10 +16,10 @@ def ring_isr(channel):
             gsmio.gsmcmd("ATH")
             print('done')
         else:
-            common.save_smsinbox_to_memory()
-            print("spawning process ...", end=' ') 
+            #common.save_smsinbox_to_memory()
+            #print("spawning process ...", end=' ') 
             # common.spawn_process("sudo python /home/pi/gateway/command.py > /home/pi/gateway/command_out.txt 2>&1")
-            common.spawn_process("python /home/pi/gateway/command.py")
+            #common.spawn_process("python /home/pi/gateway/command.py")
             print("done")
     else:
         print(">> GSM reset ongoing...")

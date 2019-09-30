@@ -115,6 +115,7 @@ def save_smsinbox_to_memory():
 		ignore_index = True)
 
 	mc.set("smsinbox",smsinbox)
+	print(">> save inbox to memory process complete")
 	gsmio.delete_read_messages()
 
 def save_phonebook_memory():

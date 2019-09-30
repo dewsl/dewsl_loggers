@@ -29,15 +29,15 @@ def main():
     ts_str = ts.strftime("%x,%X,")
 
     try:
-        if mc.get('rst_gsm_done') * mc.get('init_gsm_done'):
+        if mc.get('rst_gsm_done') * mc.get('init_gsm_done') * mc.get('send_sms_done'):
             gsmio.check_csq()
             csq = int(mc.get("csq_val"))
             csq = str(csq)
         else:
             print(">> GSM is busy")
             csq = "98"
-    except:
-        print(">> Error reading GSM CSQ. Setting CSQ to error value")
+    except Exception as e:
+        print(">> Error reading GSM CSQ. Setting CSQ to error value",e)
         csq = "98"
 
     cfg = mc.get("server_config")
