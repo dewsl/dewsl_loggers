@@ -187,7 +187,7 @@ def send_unsent_msg_outbox():
         #mc.set("sms_in_db", False)
         common.save_smsinbox_to_memory()
         print(">> spawning process ...", end=' ') 
-        common.spawn_process("python /home/pi/gateway/command.py")
+        common.spawn_process("python3 /home/pi/gateway3/command.py")
         print(">> done")
 
 def set_system_time():

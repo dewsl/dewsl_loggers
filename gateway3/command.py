@@ -105,7 +105,7 @@ def change_coord_name(row):
 def change_running_version(args, row):
     version = args[2]
     try:
-        common.spawn_process("python ~/gateway/processcontrol.py -v %s" % version)
+        common.spawn_process("python3 ~/gateway3/processcontrol.py -v %s" % version)
     except IndexError:
         reply = "No argument given (%s)" % (row['msg'])
         common.save_sms_to_memory(reply, row["contact_id"])
@@ -181,7 +181,7 @@ def main():
         cmd = msg_args[0].lower()
         if cmd == "coordname":
             change_coord_name(row)
-            common.spawn_process('python /home/pi/gateway/common.py')
+            common.spawn_process('python3 /home/pi/gateway3/common.py')
         elif cmd == "version":
             change_running_version(msg_args, row)
 
@@ -191,7 +191,7 @@ def main():
     #             continue
         elif cmd == "servernum":
             change_server_number(row)
-            common.spawn_process('python /home/pi/gateway/common.py')            
+            common.spawn_process('python3 /home/pi/gateway3/common.py')            
     #         elif cmd == "servernum?":
     #             print 'response'
     #             # sendMsgWRetry("SERVERNUM " + getcfg.servernum, msg.simnum)
@@ -218,7 +218,7 @@ def main():
             cmd_reply = "USER initiated sensorpoll at %s" % (ts)
             common.save_sms_to_memory(cmd_reply, row['contact_id'])
             #subprocess.Popen(["python","/home/pi/gateway/xbeegate.py -s"])
-            common.spawn_process('python /home/pi/gateway/gateway.py -sr')                
+            common.spawn_process('python3 /home/pi/gateway3/gateway.py -sr')                
         elif cmd == 'interval':
             change_report_interval(row)
         elif cmd == 'xbeetimeout':

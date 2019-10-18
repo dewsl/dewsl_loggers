@@ -336,8 +336,7 @@ def send_msg(msg, number):
         print("NO SERIAL COMMUNICATION (sendmsg)")
     finally:
         gsm.close()
-
-    mc.set('send_sms_done',True)
+        mc.set('send_sms_done',True)
         
 def log_error(log):
     nowdate = dt.today().strftime("%A, %B %d, %Y, %X")
