@@ -1002,7 +1002,7 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   char Ctimestamp[12] = "";
   if (strcmp(comm_mode, "LORA") == 0){
       for (int i = 0; i < 12; i++) {
-      Ctimestamp[i] = timestamp[i+1];
+      Ctimestamp[i] = timestamp[i];
     }
   }else{
   for (int i = 0; i < 12; i++) {
