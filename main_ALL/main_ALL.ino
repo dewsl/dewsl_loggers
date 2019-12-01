@@ -21,7 +21,7 @@
 #define OKSTR     "OK"
 #define ERRORSTR  "ERROR"
 #define ATSD      "ATSD"
-#define DATALOGGER Serial2 // Change this to Serial1 if using ARQ
+#define DATALOGGER Serial1 // Change this to Serial1 if using ARQ
 #define powerM Serial3
 
 
