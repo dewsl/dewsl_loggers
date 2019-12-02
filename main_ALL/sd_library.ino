@@ -324,8 +324,8 @@ int8_t writeData(String fname,String data){
 //	 }
 	delay(20);
   
-	for(int i=1; i<7 ; i++){
-	 	logger_file_name[i-1]= fname[i];
+	for(int i=0; i<6 ; i++){
+	 	logger_file_name[i]= fname[i];
 	}
 //	fname.substring(0,6).toCharArray(filename,6);
 
