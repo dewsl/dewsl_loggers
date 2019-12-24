@@ -1,26 +1,5 @@
 #!/usr/bin/env python3
 
-""" A simple continuous receiver class. """
-
-# Copyright 2015 Mayer Analytics Ltd.
-#
-# This file is part of pySX127x.
-#
-# pySX127x is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
-# version.
-#
-# pySX127x is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
-# details.
-#
-# You can be released from the requirements of the license by obtaining a commercial license. Such a license is
-# mandatory as soon as you develop commercial activities involving pySX127x without disclosing the source code of your
-# own applications, or shipping pySX127x with a closed source product.
-#
-# You should have received a copy of the GNU General Public License along with pySX127.  If not, see
-# <http://www.gnu.org/licenses/>.
-
 from time import sleep
 import sys
 sys.path.insert(0, '/home/pi/pySX127x')
@@ -68,12 +47,17 @@ class LoRaRcvCont(LoRa):
             router_name = data[:5]
             global router_list
             global rssi_info
+            global volt_info
             if router_name in router_list:
                 if rssi_info[router_name] == '':
                     rssi_info[router_name] = str(rssi)
+                if 'VOLT' in data:
+                    volt_info[router_name] = data[11:data.find('*',11)]
+                    print(data)
             dts = data #+ '*' + timestamp
             #common.save_sms_to_memory(dts)
-            dbio.write_sms_to_outbox(dts)
+            if 'VOLT' not in dts:
+                dbio.write_sms_to_outbox(dts)
         else:
             print(">> Invalidated.")
             dts = data + '*INVALID*' + timestamp
@@ -154,16 +138,19 @@ rxtimeout = common.mc.get("server_config")['lora']['rxtimeout']
 site_code = common.mc.get("network_info")['site_code']
 router_list = common.mc.get("network_info")['router_addr_short_by_name'].keys()
 rssi_info = {}
+volt_info = {}
 for router in router_list:
     rssi_info[router] = ''
+    volt_info[router] = ''
 
 def build_rssi_msg():
     global site_code
     global rssi_info
+    global volt_info
     timestamp = dt.now().strftime("%y%m%d%H%M%S")
     rssi_msg = 'GATEWAY*RSSI,{},'.format(site_code)
     for router in sorted(rssi_info.keys()):
-        rssi_msg += '{},{},,'.format(router, rssi_info[router])
+        rssi_msg += '{},{},{},'.format(router, rssi_info[router], volt_info[router])
     rssi_msg += '*{}'.format(timestamp)
     return rssi_msg
  
