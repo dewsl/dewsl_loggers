@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("par",["Function"],[["parse_cmd",,[[,,,,0,"File:main.ino:parse_cmd"]]]]);
