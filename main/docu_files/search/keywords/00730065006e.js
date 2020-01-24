@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("sen",["Function"],[["send_command",,[[,,,,0,"File:can_library.ino:send_command"]]],["send_data",,[[,,,,0,"File:main.ino:send_data"]]],["send_thru_xbee",,[[,,,,0,"File:main.ino:send_thru_xbee"]]]]);
+NDSearch.OnPrefixDataLoaded("sen",["Function"],[["send_command",,[[,,,,0,"File:can_library.ino:send_command"]]],["send_data",,[[,,,,0,"File:main.ino:send_data"]]],["send_lora_data",,[[,,,,0,"File:main.ino:send_lora_data"]]],["send_thru_xbee",,[[,,,,0,"File:main.ino:send_thru_xbee"]]]]);

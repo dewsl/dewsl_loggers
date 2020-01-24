@@ -10,7 +10,7 @@
 #include <RTCDue.h>
 
 
-#define ATCMD     "AT"
+#define ATCMD     "AT" 
 #define ATECMDTRUE  "ATE"
 #define ATECMDFALSE "ATE0"
 #define ATRCVCAN    "ATRCV"
@@ -21,8 +21,9 @@
 #define OKSTR     "OK"
 #define ERRORSTR  "ERROR"
 #define ATSD      "ATSD"
-#define DATALOGGER Serial1
-#define powerM Serial2
+#define DATALOGGER Serial1 // Change this to Serial1 if using ARQ
+#define LORA Serial2
+#define powerM Serial3
 
 
 #define VERBOSE 0
@@ -282,6 +283,7 @@ bool ate=true;
 void setup() {
   Serial.begin(BAUDRATE);
   DATALOGGER.begin(9600);
+  LORA.begin(9600);
   // powerM.begin(9600);
   ina219.begin();
   pinMode(RELAYPIN, OUTPUT);
@@ -298,6 +300,8 @@ void setup() {
     xbee.setSerial(DATALOGGER);  
   } else if(g_datalogger_version == 2){
     strncpy(comm_mode,"ARQ",3);
+  } else if(g_datalogger_version == 4){
+    strncpy(comm_mode,"LORA",4);  
   } else {
     Serial.print("g_datalogger_version == ");
     Serial.println(g_datalogger_version);
@@ -359,17 +363,41 @@ void loop(){
               Serial.print("Error ");
               Serial.println(xbee.getResponse().getErrorCode());
         }
-      } else if ((strcmp(comm_mode,"ARQ") == 0) && (DATALOGGER.available()) ){ // sira ito
+      } else if ((strcmp(comm_mode,"ARQ") == 0) && (DATALOGGER.available()) ){ // sira ito       
         operation(wait_arq_cmd(), comm_mode);
         shut_down();
         datalogger_flag = 1;
-      }
+     } else if ((strcmp(comm_mode,"LORA") == 0) && (LORA.available()) ){
+      operation(wait_lora_cmd(), comm_mode);
+      LORA.println("STOPLORA");
+      datalogger_flag = 1;
+     }
   }
   delay (100);
 }
+/* Function: hard_code
+   Hard code node ids for specific logger
+
+   Parameters:
+
+      str1 - Node Ids
+      str2 - Logger name ex. AGBSB
+      g_num_of_nodes - Counts number of nodes
+
+   Returns:
+
+      String of node ids plus the logger name
+
+   See Also:
+
+      <process_column_ids>  <get_value_from_line>
+ 
+ */
+
 
 void hard_code(){
-  String str1 = "column1 = 1644,1710,2022,1915,749,1691,1724,1742,1906,1921,1923,1983,2021,2024,2079,2107,2137,2160,2255,2282,2307,2329,2429,2570,2553,2544,2460,2459,2455,1717,1708,2598,2581,2577,2308,2239,2409,2369,2442,2076";
+  //String str1 = "column1 = 1644,1710,2022,1915,749,1691,1724,1742,1906,1921,1923,1983,2021,2024,2079,2107,2137,2160,2255,2282,2307,2329,2429,2570,2553,2544,2460,2459,2455,1717,1708,2598,2581,2577,2308,2239,2409,2369,2442,2076";
+  String str1 = "column1 = 1835, 2055, 1924, 1886, 2495";
   String str2 = "MasterName = PHITA";
 
   g_num_of_nodes = process_column_ids(str1);
@@ -455,7 +483,6 @@ void getATCommand(){
         b64_build_text_msgs(comm_mode, g_final_dump, text_message);
       } else {
         build_txt_msgs(comm_mode, g_final_dump, text_message); 
-        g_final_dump[0] = 0;
       }
       Serial.println(OKSTR);
     } else if (command == ATSNIFFCAN){
@@ -550,7 +577,9 @@ void operation(int sensor_type, char communication_mode[]){
     Serial.println(token1);
     if (strcmp(comm_mode,"ARQ") == 0) {
       send_data(false, token1);    
-    } else if(strcmp(comm_mode,"XBEE") == 0) {
+    }else if(strcmp(comm_mode, "LORA") == 0){
+      send_thru_lora(false,token1);
+    }else if(strcmp(comm_mode,"XBEE") == 0) {
       while (send_thru_xbee(token1) == false){
         if (counter == 10)
           break;
@@ -697,6 +726,9 @@ String getTimestamp(char communication_mode[]){
     return g_timestamp;
   } else if(strcmp(comm_mode,"XBEE") == 0){ //xbee
     return g_timestamp;
+  } else if(strcmp(comm_mode, "LORA") == 0){
+    Serial.println(g_timestamp);
+    return g_timestamp;
     /*
     char timestamp[20] = "";    
     timestart = millis();
@@ -796,7 +828,41 @@ int wait_arq_cmd(){
   do{
     serial_line = DATALOGGER.readStringUntil('\r\n');
   } while(serial_line == "");
-  serial_line.toCharArray(c_serial_line,serial_line.length());
+  serial_line.toCharArray(c_serial_line,serial_line.length()+1);
+  Serial.println(serial_line);
+  return parse_cmd(c_serial_line);
+}
+//Group: Command Gathering Function
+/* 
+  Function: wait_lora_cmd
+
+    Determine the types of data to be sampled from the sensors based on given ARQCMD.
+    ARQCMD is read from the defined DATALOGGER. It differs from wait_arq_cmd as it gets 
+    its command from arq, this commands from lora. 
+  
+  Parameters:
+  
+    n/a
+  
+  Returns:
+  
+    1 - tilt
+
+    2 - tilt and soil moisture
+  
+  See Also:
+  
+    - <loop> <parse_cmd>
+*/
+int wait_lora_cmd(){
+  String serial_line; 
+  char c_serial_line[30];  
+  while(!LORA.available());
+  arq_start_time = millis(); // Global variable used by arqwait_delay
+  do{
+    serial_line = LORA.readStringUntil('\r\n');
+  } while(serial_line == "");
+  serial_line.toCharArray(c_serial_line,serial_line.length()+1);
   Serial.println(serial_line);
   return parse_cmd(c_serial_line);
 }
@@ -882,6 +948,7 @@ int parse_cmd(char* command_string){
   int cmd_index,slash_index;
 
   serial_line = String(command_string);
+  Serial.println(serial_line);
 
   if ((pch = strstr(command_string,cmd)) != NULL) {
     if (*(pch+strlen(cmd)) == 'S'){ // SOMS + TILT
@@ -974,23 +1041,31 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   char identifier[2] = {};
   char temp[6];
   char temp_id[5];
-  char pad[12] = "___________";
   char master_name[8] = "";
   int cutoff = 0, num_text_to_send = 0, num_text_per_dtype = 0;
   int name_len = 0,char_cnt = 0,c=0;
   int i,j;
   int token_length = 0;
+  char pad[12] = "___________";
+  
 
   for (int i = 0; i < 5000; i++) {
       destination[i] = '\0';
   }
 
   String timestamp = getTimestamp(mode);
-  char Ctimestamp[12] = "";
+  char Ctimestamp[13] = "";
+  if (strcmp(comm_mode, "LORA") == 0){
+      for (int i = 0; i < 13; i++) {
+      Ctimestamp[i] = timestamp[i];
+    }
+  }else{
   for (int i = 0; i < 12; i++) {
       Ctimestamp[i] = timestamp[i];
+    }
   }
-  Ctimestamp[12] = '\0';
+  
+  //Ctimestamp[12] = '\0';
   
   token1 = strtok(source, g_delim);
   while ( token1 != NULL){
@@ -1021,8 +1096,14 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     }
 
     token_length = strlen(token1); 
+
     for (i = 0; i < num_text_per_dtype; i++){
-      strncat(dest,pad,11);
+     if (strcmp(comm_mode, "LORA") == 0){
+     strncat(dest,pad,2);
+      }
+     else{
+     strncat(dest,pad,11);
+      }
       strncat(dest,master_name, name_len);
       strncat(dest,"*", 2);
       if (idf != 'p'){ // except piezo
@@ -1042,8 +1123,16 @@ void build_txt_msgs(char mode[], char* source, char* destination){
         strncat(dest,"*",1);
         strncat(dest,Ctimestamp,12);
       }
+      if (strcmp(comm_mode, "LORA") == 0){
+        strncat(dest,"*",1);
+        strncat(dest,Ctimestamp,13);
+        strncat(dest,g_delim,1);   
+        } else{
       strncat(dest,"<<",2);
-      strncat(dest,g_delim,1);
+      strncat(dest,g_delim,1);          
+          
+          }
+
     }
     num_text_to_send = num_text_to_send + num_text_per_dtype;
     token1 = strtok(NULL, g_delim);
@@ -1052,6 +1141,19 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   c=0;
   while( token2 != NULL ){
     c++;
+    if (strcmp(comm_mode, "LORA") == 0){      
+    idf = check_identifier(token1,2);
+    identifier[0] = idf;
+    identifier[1] = '\0';
+    sprintf(pad, "%02s", ">>");
+    strncpy(token2,pad,2);
+    // strncat(token2,"<<",3);
+    Serial.println(token2);
+    strncat(destination,token2, strlen(token2));
+    strncat(destination, g_delim, 2);
+    token2 = strtok(NULL, g_delim);  
+      
+    }else{
     char_cnt = strlen(token2) + name_len - 24;
     idf = check_identifier(token1,2);
     identifier[0] = idf;
@@ -1068,9 +1170,8 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     strncat(destination,token2, strlen(token2));
     strncat(destination, g_delim, 2);
     token2 = strtok(NULL, g_delim);
-
   }
-
+  }
   if (destination[0] == '\0'){
     no_data_parsed(destination);
     writeData(timestamp,String("*0*ERROR: no data parsed"));
@@ -1295,7 +1396,7 @@ int check_cutoff(char idf){
       cutoff = 133;  //15 chars only for axel
       break;
     } case 'd': {
-      cutoff = 144;  //15 chars only for axel
+      cutoff = 136;  //15 chars only for axel
       break;
     } case 'p' :{
       cutoff = 135; 
@@ -1323,10 +1424,14 @@ int check_cutoff(char idf){
     message - empty char array 
 */
 void no_data_parsed(char* message){
-  
+  if(strcmp(comm_mode, "LORA") == 0){
+  strncat(message, g_mastername, 5);
+  strncat(message, "*0*ERROR: no data parsed<<+", 27);
+    }else{
   sprintf(message, "040>>1/1#", 3);
   strncat(message, g_mastername, 5);
   strncat(message, "*0*ERROR: no data parsed<<+", 27);
+}
 }
 
 //Group: Auxilliary Control Functions
@@ -1436,9 +1541,10 @@ void send_data(bool isDebug, char* columnData){
     } while (OKFlag == false);
   } else {
       do{   
-        Serial.print("Sending: ");
+        Serial.print("Sending:");
         Serial.println(columnData);
         DATALOGGER.println(columnData);
+        
         timestart = millis();
         timenow = millis();
         while (!DATALOGGER.available()){
@@ -1453,7 +1559,91 @@ void send_data(bool isDebug, char* columnData){
           OKFlag = true;
         }
         else{
-          DATALOGGER.println(columnData);       
+
+           DATALOGGER.println(columnData);       
+          
+        }
+
+        send_retry_limit++;
+        if (send_retry_limit == 10){
+          Serial.println("send_retry_limit reached.");
+          OKFlag = true;
+        }
+      } while (OKFlag == false);
+  }
+  
+  return;
+} 
+
+/* 
+  Function: send_lora_data
+  
+    * Sends data to the defined LORA serial. 
+
+    * Manages the retry for sending.
+  
+  Parameters:
+  
+    isDebug - boolean that states whether in debug mode or not.
+
+    columnData - array of characters that contain the messages to be sent
+  
+  Returns:
+
+    n/a
+  
+  See Also:
+  
+    - <operation>
+*/
+
+void send_thru_lora(bool isDebug, char* columnData){
+  int timestart = millis();
+  int timenow = millis();
+  bool OKFlag = false;
+  uint8_t send_retry_limit = 0; 
+  if (isDebug == true){
+    // Serial.print("Sending: ");
+    // Serial.println(columnData);
+
+    do{
+        timestart = millis();
+        timenow = millis();
+        while (!Serial.available()){
+            while ( timenow - timestart < 9000 ) {
+                timenow = millis();
+            }
+            Serial.println("Time out...");
+            break;
+        }
+        if (Serial.find("OK")){
+            OKFlag = true;
+            Serial.println("moving on");
+        } else{
+            Serial.println(columnData);       
+        }
+    } while (OKFlag == false);
+  } else {
+      do{   
+        Serial.print("Sending: ");
+        Serial.println(columnData);
+        LORA.println(columnData);
+
+        timestart = millis();
+        timenow = millis();
+        while (!LORA.available()){
+          while ( timenow - timestart < 9000 ) {
+            timenow = millis();
+          }
+          LORA.println("Time out...");
+          break;
+        }
+
+        if (LORA.find("OK")){
+          OKFlag = true;
+        }
+        else{
+           LORA.println(columnData);     
         }
 
         send_retry_limit++;
@@ -1465,9 +1655,8 @@ void send_data(bool isDebug, char* columnData){
   }
   return;
 } 
-
 /* 
-  Function: send_thru_xbee
+  Function: send_thru_xbee  
 
      Sends data thru designated xbee Serial port 
 
@@ -1521,7 +1710,19 @@ bool send_thru_xbee(char* load_data) {
   delay(1000);
   return successFlag;
 }
+/*
+  Function: serial_loopback
+    Read and write loopback in Serial
 
+  Parameters:
+    inByte - integer to read/ to write
+
+  Returns:
+
+    Sent integer
+
+
+*/
 void serial_loopback(){
   Serial1.begin(9600);
   while(1){
@@ -1536,6 +1737,19 @@ void serial_loopback(){
   }
 }
 
+/*
+  Function: serial_loopback
+    Read and write loopback in Serial2
+
+  Parameters:
+    inByte - integer to read/ to write
+
+  Returns:
+
+    Sent integer
+
+
+*/
 void serial_loopback2(){
   Serial2.begin(9600);
   while(1){

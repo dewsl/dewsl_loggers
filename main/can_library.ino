@@ -158,6 +158,7 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   int count,uid,ic;
   if (cmd < 100){
     for (retry_count = 0; retry_count < g_sampling_max_retry; retry_count++){
+      
       turn_on_column();
       send_command(cmd,transmit_id);
       if( (respondents = get_all_frames(broad_timeout,g_can_buffer,g_num_of_nodes)) == g_num_of_nodes){
@@ -200,7 +201,6 @@ void get_data(int cmd, int transmit_id, char* final_dump){
     }
   } 
   count = count_frames(g_can_buffer);
-  Serial.println(count);
   // write frames to String or char array
   for (int i = 0;i<count;i++){
     if (g_can_buffer[i].id != 0){
@@ -265,6 +265,7 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
   int a = 0, i = 0;
   CAN_FRAME incoming;
   if (VERBOSE == 1) { Serial.println("get_all_frames()"); }
+  
   do {
       check_can_status();
       if (Can0.available()){
@@ -289,11 +290,11 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
 //          }
 //        }
       }
-      if (comm_mode == "ARQ"){
+      if (comm_mode == "LORA"){
         if ( (millis() - arq_start_time) >= ARQTIMEOUT){
           arq_start_time = millis();
           Serial.println("ARQWAIT");
-          DATALOGGER.print("ARQWAIT");
+          LORA.print("ARQWAIT");
         }
       }
   } while ((millis() - timestart <= timeout_ms)); 
@@ -544,7 +545,6 @@ void write_frame_to_dump(CAN_FRAME incoming, char* dump){
   strcat(dump,temp);
 
   // interpret_frame(incoming);
-
   return;
 }
 
@@ -694,7 +694,7 @@ void interpret_frame(CAN_FRAME incoming){
   d8 = incoming.data.byte[7]; 
 
   if (VERBOSE == 1) { Serial.println("process_frame()"); }
-  if ((d1 == 11)|(d1 == 12)|(d1==32)|(d1==33)|(d1==41)|(d1==42)){ 
+  if ((d1 == 11)|(d1 == 12)|(d1==32)|(d1==33)){ 
 
     x = compute_axis(d2,d3);
     y = compute_axis(d4,d5);
