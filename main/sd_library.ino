@@ -4,10 +4,10 @@
 		Assert the chip_select pin for SD use.
 
 	Parameters:
+   n/a
 
-		n/a
+  Returns:
 
-	Returns:
 
 		-1 fail, 0 success.
 
@@ -346,4 +346,54 @@ int8_t writeData(String fname,String data){
 	sdFile.println();
 	sdFile.close();//close the file
 	// Serial.println("writing to SD"); 
+}
+/* 
+  Function: print_due_command2
+
+    Print in the AT command options with corresponding keys
+    for debug mode
+
+  Parameters:
+
+    n/a
+
+  Returns:
+
+    n/a
+
+  See Also:
+
+    n/a
+*/
+void print_due_command2() {
+
+    Serial.println(F("================================="));
+    Serial.println("KEY\tCOMMAND");
+    Serial.println(F("================================="));
+    Serial.println("?.\tPrint this menu");
+    Serial.println("A.\tRead Sensor Data(tilt)");
+    Serial.println("B.\tRead Sensor Data(soms)");
+    Serial.println("C.\tInit. SDcard & config");
+    Serial.println("D.\tGet arQ Timestamp");
+    Serial.println("E.\tSet CustomDue RTC");
+    Serial.println("F.\tSet 'ate' TRUE");
+    Serial.println("G.\tSet 'ate' FALSE");
+    Serial.println("H.\tSerial Test");
+    Serial.println("I.\tSample column data(v.3)");
+    Serial.println("J.\tConvert to base64");
+    Serial.println("K.\tToggle base64 operations");
+    Serial.println("L.\tSniff CAN bus");
+    Serial.println("M.\tRead Current draw");
+    Serial.println("N.\tGet INA219 voltages");
+    Serial.println("O.\tGet XBEE Timestamp");
+    Serial.println("P.\tSample XBEE response");
+    Serial.println("Q.\tSample Piezo readout");
+    Serial.println("R.\tSend data to DATALOGGER");
+    Serial.println("S.\tSend commnad(3,3)");
+    Serial.println("T.\tR&W DATALOGGER Loopback");
+    Serial.println("U.\tR&W LORA Loopback");
+    Serial.println("V.\tFinal Dump");
+    Serial.println(F("================================="));
+    Serial.println("Enter Choice:");
+
 }
