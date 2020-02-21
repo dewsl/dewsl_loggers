@@ -295,6 +295,7 @@ void setup() {
   open_config();
   print_stored_config();
 
+  
   if (g_datalogger_version == 3){
     strncpy(comm_mode,"XBEE",4);
     xbee.setSerial(DATALOGGER);  
@@ -308,6 +309,7 @@ void setup() {
     strncpy(comm_mode,"ARQ",3);
   }
     Serial.print("Comms: "); Serial.println(comm_mode);
+    print_due_command2();
 }
 
 
@@ -334,7 +336,6 @@ void setup() {
 */
 void loop(){
   int timestart = millis();
-
   while ( (millis() - timestart < 20000) && (datalogger_flag == 0)){
       if (Serial.available()){
         Serial.println("Debug Mode!");
@@ -410,14 +411,16 @@ void getATCommand(){
   String serial_line, command, extra_parameters;
   char converted[5] = {};
   char padded[5] = {};
+  char atSwitch;
   int i_equals = 0; // index of equal sign
   if (Serial.available()) {
     do{
       serial_line = Serial.readStringUntil('\r\n');
     } while(serial_line == "");
+
+     serial_line.toUpperCase();
+     serial_line.replace("\r","");
     
-    serial_line.toUpperCase();
-    serial_line.replace("\r","");
 
     // echo command if ate is set, default true
     if (ate) Serial.println(serial_line);{
@@ -426,111 +429,160 @@ void getATCommand(){
     if (i_equals == -1) command = serial_line;
     else command = serial_line.substring(0,i_equals);
     
-    if (command == ATCMD){
-      Serial.println(OKSTR);
-    } else if (command == ATECMDTRUE){
-      ate = true;
-      Serial.println(OKSTR);
-    } else if (command == "AT+LOOPBACK"){
-      serial_loopback();
-      Serial.println(OKSTR);
-    } else if (command == "AT+LOOPBACK2"){
-      serial_loopback2();
-      Serial.println(OKSTR);
-    } else if (command == "AT+B64"){
-      // g_timestamp = b64_timestamp(g_timestamp);
-      // Serial.println(g_timestamp);
-      extra_parameters = serial_line.substring(i_equals+1);
-      to_base64(extra_parameters.toInt(),converted);
-      pad_b64(5,converted,padded);
-      Serial.print("converted and padded: ");
-      Serial.print(padded);
-    } else if (command == "AT+RTC"){
-      extra_parameters = serial_line.substring(i_equals+1);
-      set_rtc_time(extra_parameters);
-    } else if (command == "AT+TIMENOW"){
-      Serial.print("ARQ Time String: ");
-      Serial.println(g_timestamp);
-    } else if (command == ATECMDFALSE){
-      ate = false;
-      Serial.println(OKSTR);
-    } else if (command == "AT+SWITCHB64"){
-      if(b64){
-        b64 = 0;
-      } else {
-        b64 = 1;
-      }
-      Serial.println("Toggled b64 operations.");
-      get_data(11,1,g_final_dump);
-      get_data(12,1,g_final_dump);
-      get_data(22,1,g_final_dump);
-      get_data(10,1,g_final_dump);
-      get_data(13,1,g_final_dump);
-      // Serial.println(g_final_dump);
-
-      g_timestamp = String("180607142000");
-      b64_build_text_msgs(comm_mode, g_final_dump, text_message);
-      // Serial.println(text_message); 
-      // Serial.println(g_final_dump);
-      Serial.println("OK");
-    } else if (command == ATGETSENSORDATA){
-      read_data_from_column(g_final_dump, g_sensor_version,1);
-      Serial.println(OKSTR);
-    } else if (command == "AT+POLL"){
-      read_data_from_column(g_final_dump, g_sensor_version,2);
-      Serial.println(g_final_dump);
-      if (b64 == 1) {
-        b64_build_text_msgs(comm_mode, g_final_dump, text_message);
-      } else {
-        build_txt_msgs(comm_mode, g_final_dump, text_message); 
-      }
-      Serial.println(OKSTR);
-    } else if (command == ATSNIFFCAN){
-      while (true){
-        Serial.println(OKSTR);
-      }
-    } else if (command == "AT+S"){
-      get_data(11,1,g_final_dump);
-      get_data(12,1,g_final_dump);
-    } else if (command == ATDUMP){
-      Serial.print("g_final_dump: ");
-      Serial.println(g_final_dump);
-      Serial.println(OKSTR);
-    } else if (command == ATSD){
-      String conf;
-      init_sd();
-      open_config();
-      Serial.println(F(OKSTR));
-    } else if (command == "AT+SEND"){
-      Serial.println(text_message);
-      char *token1 = strtok(text_message,g_delim);
-      while (token1 != NULL){
-        send_data(false, token1);
-        token1 = strtok(NULL, g_delim);
-      }
-    } else if (command == "AT+CURRENT"){
-      read_current();
-    } else if (command == "AT+VOLTAGE"){
-      read_voltage();
-    } else if (command == "AT+TIMESTAMPPMM"){
-        String timestamp = getTimestamp("XBEE");
-        Serial.println(timestamp);
-    } else if (command =="AT+XBEE"){
-      wait_xbee_cmd(10000,xbee_response);
-      Serial.print("xbee_response :: ");
-      Serial.println(xbee_response);
-    } else if (command == "AT+PIEZO"){
-      get_data(255,1,g_final_dump);
-      Serial.print("g_final_dump:::");
-      Serial.println(g_final_dump);
-    } else if (command == "AT+LOOPSEND"){
-      while(1){
-        Serial.println("sent.");
-        send_command(3,3);
-        delay(1000);
-      }
-    } else{
-      Serial.println(ERRORSTR);
+     
+    atSwitch = serial_line.charAt(0);
+    switch(atSwitch) {
+      case '?': 
+        print_due_command2();
+        break;
+      case 'A': {         //ATGETSENSORDATA
+          read_data_from_column(g_final_dump, g_sensor_version,1);
+          Serial.println(OKSTR);
+        }
+        break;
+      case 'B': {         //AT+POLL
+          read_data_from_column(g_final_dump, g_sensor_version,2);
+          Serial.println(g_final_dump);
+          if (b64 == 1) {
+            b64_build_text_msgs(comm_mode, g_final_dump, text_message);
+          } else {
+          build_txt_msgs(comm_mode, g_final_dump, text_message); 
+          }
+          Serial.println(OKSTR);
+        }
+        break;
+      case 'C': {          //ATSD){
+          String conf;
+          init_sd();
+          open_config();
+          Serial.println(F(OKSTR));
+        }
+        break;
+      case 'D': {         //AT+TIMENOW
+          Serial.print("ARQ Time String: ");
+          Serial.println(g_timestamp);
+        }
+        break;
+      case 'E': {         //AT+RTC
+          extra_parameters = serial_line.substring(i_equals+1);
+          set_rtc_time(extra_parameters);
+        }
+        break;
+      case 'F': {         //ATECMDTRUE
+          ate = true;
+          Serial.println(OKSTR);
+        }
+        break;
+      case 'G': {         //ATECMDFALSE
+          ate = false;
+          Serial.println(OKSTR);
+        }
+        break;        
+      case 'H': {         //ATCMD
+          Serial.println(OKSTR);
+        }
+        break;
+      case 'I': {         //AT+S
+          get_data(11,1,g_final_dump);
+          get_data(12,1,g_final_dump);
+        }
+        break;
+      case 'J': {         //AT+B64
+          // g_timestamp = b64_timestamp(g_timestamp);
+          // Serial.println(g_timestamp);
+          extra_parameters = serial_line.substring(i_equals+1);
+          to_base64(extra_parameters.toInt(),converted);
+          pad_b64(5,converted,padded);
+          Serial.print("converted and padded: ");
+          Serial.print(padded);
+        }
+        break;
+      case 'K': {         //AT+SWITCHB64
+          if(b64){
+            b64 = 0;
+          } else {
+            b64 = 1;
+          }
+          Serial.println("Toggled b64 operations.");
+          get_data(11,1,g_final_dump);
+          get_data(12,1,g_final_dump);
+          get_data(22,1,g_final_dump);
+          get_data(10,1,g_final_dump);
+          get_data(13,1,g_final_dump);
+          // Serial.println(g_final_dump);
+    
+          g_timestamp = String("180607142000");
+          b64_build_text_msgs(comm_mode, g_final_dump, text_message);
+          // Serial.println(text_message); 
+          // Serial.println(g_final_dump);
+          Serial.println("OK");
+        }
+        break;
+      case 'L': {         //ATSNIFFCAN
+          while (true){
+            Serial.println(OKSTR);
+          }
+        } 
+        break;
+      case 'M':         //AT+CURRENT
+        read_current();
+        break;
+      case 'N':         //AT+VOLTAGE
+        read_voltage();
+        break;
+      case 'O': {         //AT+TIMESTAMPPMM
+          String timestamp = getTimestamp("XBEE");
+          Serial.println(timestamp);
+        }
+        break;
+      case 'P': {          //AT+SEND
+          Serial.println(text_message);
+          char *token1 = strtok(text_message,g_delim);
+          while (token1 != NULL){
+            send_data(false, token1);
+            token1 = strtok(NULL, g_delim);
+          }
+        }
+        break;
+      case 'Q': {         //AT+PIEZO
+          get_data(255,1,g_final_dump);
+          Serial.print("g_final_dump:::");
+          Serial.println(g_final_dump);
+        }
+        break;
+      case 'R': {         //AT+XBEE
+          wait_xbee_cmd(10000,xbee_response);
+          Serial.print("xbee_response :: ");
+          Serial.println(xbee_response);
+        }
+        break;
+      case 'S': {          //AT+LOOPSEND
+          while(1){
+            Serial.println("sent.");
+            send_command(3,3);
+            delay(1000);
+          }
+        } 
+        break;                
+      case 'T': {         //AT+LOOPBACK
+          serial_loopback();
+          Serial.println(OKSTR);
+        }
+        break;
+      case 'U': {         //AT+LOOPBACK2
+          serial_loopback2();
+          Serial.println(OKSTR);
+        }
+        break;
+      case 'V': {         //ATDUMP
+          Serial.print("g_final_dump: ");
+          Serial.println(g_final_dump);
+          Serial.println(OKSTR);
+        }
+        break;
+      default:
+        Serial.println(ERRORSTR);
+        break;
     }
   } else 
     return;
