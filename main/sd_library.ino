@@ -371,8 +371,8 @@ void print_due_command2() {
     Serial.println("KEY\tCOMMAND");
     Serial.println(F("================================="));
     Serial.println("?.\tPrint this menu");
-    Serial.println("A.\tRead Sensor Data(tilt)");
-    Serial.println("B.\tRead Sensor Data(soms)");
+    Serial.println("A.\tRead Sensor Data ");
+    Serial.println("B.\tRead data & Save to SD card ");
     Serial.println("C.\tInit. SDcard & config");
     Serial.println("D.\tGet arQ Timestamp");
     Serial.println("E.\tSet CustomDue RTC");

@@ -183,6 +183,40 @@ void get_data(int cmd, int transmit_id, char* final_dump){
         }
     }
 
+  }else if (cmd == 256){
+    turn_on_column();
+    for (int i = 0; i < g_num_of_nodes; i++){
+      uid = g_gids[i][0];
+      version_1(uid);  
+      get_all_frames(broad_timeout,g_can_buffer,g_num_of_nodes);
+      count = count_frames(g_can_buffer);
+      // write frames to String or char array
+      for (int i = 0;i<count;i++){
+        if (g_can_buffer[i].id != 0){
+          if (b64 == 1){
+            b64_write_frame_to_dump(g_can_buffer[i],g_temp_dump);
+          } else {
+            write_frame_to_dump(g_can_buffer[i],g_temp_dump);
+          }
+        }
+      }
+    }//Try lang
+//      strcat(g_temp_dump,g_delim);
+//      strcat(g_temp_dump, '\0');
+//      Serial.print("g_temp_dump: ");
+//      Serial.println(g_temp_dump);
+//      process_g_temp_dump(g_temp_dump,final_dump,g_no_gids_dump);
+//      
+//      
+//      for (int i = 0; i < 2500; i++){
+//        g_temp_dump[i] = '\0';
+//      }
+//      clear_can_buffer(g_can_buffer);
+//      Serial.println(F("================================="));      
+//
+//    //}
+    turn_off_column();
+
   } else if ( (cmd >= 100) && (cmd < 255) ) {
     turn_on_column();
     for (int i = 0; i < g_num_of_nodes; i++){
@@ -270,7 +304,13 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
       check_can_status();
       if (Can0.available()){
         Can0.read(incoming);
-        can_buffer[i].id = incoming.id;
+        if (g_sensor_version == 1)
+        {
+          can_buffer[i].id = incoming.id/8;
+        }else{
+          can_buffer[i].id = incoming.id;
+          }
+        
         can_buffer[i].data.byte[0] = incoming.data.byte[0];
         can_buffer[i].data.byte[1] = incoming.data.byte[1];
         can_buffer[i].data.byte[2] = incoming.data.byte[2];
@@ -643,6 +683,7 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
     }
     token = strtok(NULL,"-");
   } 
+
   strncat(final_dump,g_delim,1); // add delimiterfor different data type
 }
 
@@ -874,6 +915,30 @@ void poll_piezo(){
   delay(2000);
   Can0.global_send_transfer_cmd(CAN_TCR_MB1);
 }
+
+void version_1(int uid){
+  CAN_FRAME outgoing;
+  Can0.mailbox_set_mode(0, CAN_MB_RX_MODE);              // Set MB0 as receiver
+  Can0.mailbox_set_id(0, 0, true);                   // Set MB0 receive ID extended id
+  Can0.mailbox_set_accept_mask(0,0,true);                //make it receive everything seen in bus
+  
+  Can0.mailbox_set_mode(1, CAN_MB_TX_MODE);              // Set MB1 as transmitter
+  //CAN.mailbox_set_id(1,MASTERMSGID, true);              // Set MB1 transfer ID to 1 extended id
+  Can0.enable();    
+  
+  Can0.enable_interrupt(CAN_IER_MB0);
+  Can0.enable_interrupt(CAN_IER_MB1);
+  Can0.mailbox_set_id(1, uid*8, false);                       //set MB1 transfer ID
+  Can0.mailbox_set_id(0, uid*8, false);                       //MB0 receive ID
+  Can0.mailbox_set_databyte(1, 0, 0x00);
+  Can0.mailbox_set_databyte(1, 1, 0x00); 
+  Can0.global_send_transfer_cmd(CAN_TCR_MB1); // Broadcast command
+  
+
+  delay(2000);
+  Can0.global_send_transfer_cmd(CAN_TCR_MB1);  
+  
+  }
 
 
 

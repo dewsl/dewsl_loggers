@@ -151,7 +151,7 @@ uint8_t g_turn_on_delay = 10;
   --- Code
   sensorVersion = 3
   ---*/
-uint8_t g_sensor_version = 3;
+uint8_t g_sensor_version = 3; 
 
 /*
   Variable: g_datalogger_version
@@ -711,8 +711,9 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
     get_data(41,1,column_data);
     get_data(42,1,column_data);
     get_data(22,1,column_data); 
+    
   } else if (sensor_version == 1){
-    Serial.println("Not yet supported");
+    get_data(256,1,column_data); //Added for polling of version 1
  
   }
   if (has_piezo){
@@ -1100,7 +1101,7 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   int token_length = 0;
   char pad[12] = "___________";
   
-
+  Serial.println(g_final_dump); //Print final dump data
   for (int i = 0; i < 5000; i++) {
       destination[i] = '\0';
   }
@@ -1156,9 +1157,9 @@ void build_txt_msgs(char mode[], char* source, char* destination){
      else{
      strncat(dest,pad,11);
       }
-      strncat(dest,master_name, name_len);
+      strncat(dest,master_name, name_len); 
       strncat(dest,"*", 2);
-      if (idf != 'p'){ // except piezo
+      if (g_sensor_version != 1){ // except piezo and v1 // or idf != 'p' (Tinangal ko muna ito)
           strncat(dest,identifier,2);
           strncat(dest,"*", 2);
       }
@@ -1356,7 +1357,10 @@ char check_identifier(char* token, int index_msgid){
 
   strncpy(temp_id,token,4);
   id_int = strtol(temp_id,&last_char,16);
-  if (id_int == 255) {
+  if (g_sensor_version == 1) {
+     idfier = '\0';
+    }
+  else if (id_int == 255) {
     idfier = 'p';
     return idfier;
   } else {
