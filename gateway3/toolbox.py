@@ -1,7 +1,8 @@
 import subprocess
+import datetime
 import gsmio as modGsm
 import raindetect as modRain
-
+import common
 cmd1 = ['date']
 cmd2 = ['sudo', 'hwclock', '-r']
 cmd3 = ['sudo', 'date', '-s']
@@ -19,7 +20,7 @@ def getDatetime():
 
 def setDatetime():
    ip1 = input("Set correct datetime (YYYY-MM-DD HH:MM:SS): ")
-   if ip1:
+   if isCorrectDatetime(ip1):
       cmd3.append(ip1)
       if execute(cmd3) == 0:
          execute(cmd4)
@@ -27,7 +28,18 @@ def setDatetime():
       print("Invalid format")
 
 def getServerconfig():
-   execute(cmd5)
+   #execute(cmd5)
+   op1 = common.mc.get("server_config")['coordinfo']['name']
+   op2 = common.mc.get("server_config")['coordinfo']['simnet']
+   op3 = str(common.mc.get("server_config")['serverinfo']['simnum'])
+   print("\nSitecode: {}\nGSM Network: {}\nServer Num: {}\n".format(op1, op2, op3))
+
+def isCorrectDatetime(dt):
+    try:
+        datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+        return True
+    except ValueError:
+        return False
 
 def isSet():
    flag = input("Change (y/n)? ")
