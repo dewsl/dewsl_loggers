@@ -244,7 +244,7 @@ CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
 String g_timestamp = "TIMESTAMP000";
 
 //current sensor
-Adafruit_INA219 ina219;
+Adafruit_INA219 ina219(0x41);
 bool ate=true;
 
 //Group: Main Loop Functions
