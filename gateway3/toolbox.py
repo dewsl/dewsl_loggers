@@ -70,7 +70,10 @@ def findItemInConfig(configlist):
     return iName, iSimnet, iSimnum
 
 def setSiteCode():
-    newSiteCode = input("Input correct SITE CODE (press Enter to skip): ").upper()
+    print("V4 SITES: ", end = '')
+    for site in v4sites:
+        print(site, end = ' ')
+    newSiteCode = input("\nInput correct SITE CODE (press Enter to skip): ").upper()
     if isCorrectSiteCode(newSiteCode):
         configlist[iName] = "name = {}\n".format(newSiteCode)
         return True
@@ -78,7 +81,8 @@ def setSiteCode():
         return False
 
 def setSimNet():
-    newSimNet = input("Input correct SIM NETWORK (press Enter to skip): ").upper()
+    print(gsmnetwork)
+    newSimNet = input("Input correct SIM NETWORK - GLOBE/SMART (press Enter to skip): ").upper()
     if isCorrectSimNet(newSimNet):
         configlist[iSimnet] = "simnet = {}\n".format(newSimNet)
         configlist[iSimnum] = "simnum = {}\n".format(gsmnetwork[newSimNet])
@@ -123,7 +127,6 @@ def printMenu():
      C: Print Debug Menu\n\
      D: Datetime\n\
      G: GSM CSQ+Network\n\
-     L: LoRa Receiver\n\
      R: Rain Gauge\n\
      S: ServerConfig Settings\n\n\
      E: EXIT")
