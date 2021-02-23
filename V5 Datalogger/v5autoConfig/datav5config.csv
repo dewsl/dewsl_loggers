@@ -1,8 +1,9 @@
-ConfigParameters,	Update?,	Value
-realtimeclock,		1,			systemtime
-servernetwork,		1,			SMART
-sendingtime,		1,			0
-loggerversion,		1,			5
-loggernames,		1,			PEPG PEPTA PEPSB PEPTC
-sensorcommand,		1,			ARQCMD6T
-mcupassword,		1,			senslope
+ConfigParameters,   Update?,    Value
+realtimeclock,      1,          systemtime
+servernetwork,      1,          SMART
+gsmpowmode,         1,          0
+sendingtime,        1,          0
+loggerversion,      1,          5
+loggernames,        1,          PEPG PEPTA PEPSB PEPTC
+sensorcommand,      1,          ARQCMD6T
+mcupassword,        1,          SENSLOPE
