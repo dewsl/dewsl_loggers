@@ -44,6 +44,7 @@ def set_datetime(ts):
         timeStamp = dt.strptime(ts,'%Y-%m-%d %H:%M:%S').strftime("%Y,%m,%d,%H,%M,%S,%w")
     serial_clear()
     swrite(timeStamp, 1)
+    ser.readline()
     readout = ser.read(12)
     pcTs = timeStamp
     mcuTs = readout.decode('ascii')
@@ -53,7 +54,7 @@ def set_datetime(ts):
         print ("End process: Timestamp update FAILED. Fix hardware clock issues.")
     else:
         print ("End process: Timestamp succesfully updated!")
-    waitread("C", True, "----------", 5, 1)
+    waitread("C", True, "***", 5, 1)
 
 def set_servernum(network):
     #F...C...servernum
@@ -70,7 +71,7 @@ def set_servernum(network):
     serial_clear()
     swrite(servernum, 1)
     print ("End process: Server number succesfully updated!")
-    waitread("C", True, "----------", 5, 1)
+    waitread("C", True, "***", 5, 1)
 
 def set_loggerversion(logver):
     #J...C...loggerversion
@@ -81,7 +82,7 @@ def set_loggerversion(logver):
     serial_clear()
     swrite(logver, 1)
     print ("End process: Logger version succesfully updated!")
-    waitread("C", True, "----------", 5, 1)
+    waitread("C", True, "***", 5, 1)
 
 def set_sendingtime(sendingtime):
     #D...C...sendingtime
@@ -91,7 +92,7 @@ def set_sendingtime(sendingtime):
     print("Sending time:", sendingtime)
     swrite(sendingtime, 1)
     print ("End process: Sending time succesfully updated!")
-    waitread("C", True, "----------", 5, 1)
+    waitread("C", True, "***", 5, 1)
 
 def set_mcupassword(pw):
     #K...C...password
@@ -101,7 +102,7 @@ def set_mcupassword(pw):
     print("MCU password:", pw)
     swrite(pw, 1)
     print ("End process: MCU password succesfully updated!")
-    waitread("C", True, "----------", 5, 1)
+    waitread("C", True, "***", 5, 1)
 
 def set_loggernames():
     #N...C...logname
@@ -114,7 +115,7 @@ def set_loggernames():
         swrite(logname.upper(),1)
         sread(True)
     print ("End process: Datalogger names succesfully updated!")
-    waitread("C", True, "----------", 5, 1)
+    waitread("C", True, "***", 5, 1)
 
 def set_command(cmd):
     #Z...C...cmd
@@ -124,7 +125,7 @@ def set_command(cmd):
     print("Command:", cmd)
     swrite(cmd, 1)
     print ("End process: Sensor command succesfully updated!")
-    waitread("C", True, "----------", 5, 1)
+    waitread("C", True, "***", 5, 1)
 
 def set_gsmpowmode(gpm):
     #W...C...gpm
@@ -134,7 +135,7 @@ def set_gsmpowmode(gpm):
     print("GSM Power Mode:", gpm)
     swrite(gpm, 1)
     print ("End process: GSM power mode succesfully updated!")
-    waitread("C", True, "----------", 5, 1)
+    waitread("C", True, "***", 5, 1)
 
 def serial_clear(input = True, output = True):
     if input:
@@ -304,9 +305,10 @@ def check_csv_integrity(row):
 def main():
     serial_clear()
     try:
-        if waitread("C", True, "----------", 10, 1) == False:
+        if waitread("C", True, "***", 10, 1) == False:
             raise UnrespondingDevice("Device not responding.")
         serial_clear()
+        print("Start")
         print('-'*10)
         if conf['realtimeclock'][0]:
             set_datetime(conf['realtimeclock'][1].upper())
@@ -340,7 +342,7 @@ try:
     serport = comport_setup()
     serbaud = 115200
     ser = serial.Serial(serport, serbaud)
-    print("Started")
+    print("Loading...")
     time.sleep(3)
     main()
 except Exception as e:
