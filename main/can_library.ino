@@ -155,12 +155,34 @@ void clear_can_buffer(CAN_FRAME can_buffer[]){
 */
 void get_data(int cmd, int transmit_id, char* final_dump){
   int retry_count = 0,respondents = 0;
+
+  float g_current = ina219.getCurrent_mA();
+  float g_voltage = ina219.getBusVoltage_V();
+  dtostrf(g_current,5,2,g_test);
+  sprintf(g_build, g_test, strlen(g_test));
+  dtostrf(g_voltage,5,2,g_test);
+  strncat(g_build, "*",1);
+  strncat(g_build, g_test, strlen(g_test));
+  strncat(g_build, "*",1);
+    
   int count,uid,ic;
   if (cmd < 100){
     for (retry_count = 0; retry_count < g_sampling_max_retry; retry_count++){
       
       turn_on_column();
+      delay(1000);
+      g_current = 0;
+      g_current = ina219.getCurrent_mA();
+      g_voltage = ina219.getBusVoltage_V();
+      dtostrf(g_current,5,2,g_test);
+      strncat(g_build, g_test, strlen(g_test));
+      dtostrf(g_voltage,5,2,g_test);
+      strncat(g_build, "*",1);
+      strncat(g_build, g_test, strlen(g_test));
+      strncat(g_build, "*",1); 
+
       send_command(cmd,transmit_id);
+      
       if( (respondents = get_all_frames(broad_timeout,g_can_buffer,g_num_of_nodes)) == g_num_of_nodes){
         Serial.println("Complete frames! :) ");
         turn_off_column();
@@ -264,6 +286,14 @@ void get_data(int cmd, int transmit_id, char* final_dump){
 
   clear_can_buffer(g_can_buffer);
   Serial.println(F("================================="));
+  g_current = ina219.getCurrent_mA();
+  g_voltage = ina219.getBusVoltage_V();
+  dtostrf(g_current,5,2,g_test);
+  strncat(g_build, g_test, strlen(g_test));
+  dtostrf(g_voltage,5,2,g_test);
+  strncat(g_build, "*",1);
+  strncat(g_build, g_test, strlen(g_test)); 
+  vc_flag = true;  
 }
 
 /* 
@@ -303,6 +333,7 @@ int get_all_frames(int timeout_ms, CAN_FRAME can_buffer[], int expected_frames) 
   do {
       check_can_status();
       if (Can0.available()){
+      can_flag = true;
         Can0.read(incoming);
         if (g_sensor_version == 1)
         {
@@ -706,6 +737,8 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
 
       z - integer z value
 
+      v - float voltage value
+
   Parameters:
 
     incoming - CAN_FRAME struct
@@ -723,7 +756,8 @@ void interpret_frame(CAN_FRAME incoming){
   int tilt = 1;
   int soms = 0;
   char temp[6];
-
+  float v;
+  
   id = incoming.id;
   d1 = incoming.data.byte[0];
   d2 = incoming.data.byte[1];
@@ -740,6 +774,8 @@ void interpret_frame(CAN_FRAME incoming){
     x = compute_axis(d2,d3);
     y = compute_axis(d4,d5);
     z = compute_axis(d6,d7);
+    v = ((d8+200.0)/100.0);
+    
     Serial.print("\t");
     Serial.print(id,HEX); Serial.print("\t"); 
     Serial.print(id); Serial.print('\t');
@@ -750,8 +786,19 @@ void interpret_frame(CAN_FRAME incoming){
     sprintf(temp, "%5d", y); Serial.print(temp);
     temp[0] = '\0';
     sprintf(temp, "%5d", z);
-    Serial.print(" "); Serial.println(temp);
-
+    Serial.print(" "); Serial.print(temp);
+    Serial.print(" "); Serial.print(v);
+    Serial.println("");
+    if (vdata_flag) {
+      int newIndex = 0;
+      for (int i=0; i<VDATASIZE; i++) {
+        if (g_volt[i] > 0) {
+          newIndex = newIndex+1;
+        }
+      }
+      g_volt[newIndex] = v;
+    }
+    
   } else if( (d1==10) | (d1==13) | (d1==110) | (d1==113)) {
     somsr = compute_axis(d2,d3);  
     Serial.print("\t");
