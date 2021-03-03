@@ -8,7 +8,7 @@
 #include <stdbool.h>
 
 #include <RTCDue.h>
-
+#include <avr/dtostrf.h>
 
 #define ATCMD     "AT" 
 #define ATECMDTRUE  "ATE"
@@ -32,7 +32,7 @@
 #define POLL_TIMEOUT 5000
 #define BAUDRATE 9600
 #define ARQTIMEOUT 30000
-
+#define VDATASIZE 300
 
 #define ENABLE_RTC 0
 #define CAN_ARRAY_BUFFER_SIZE 100
@@ -45,6 +45,7 @@ const char base64[64] PROGMEM = {'A','B','C','D','E','F','G','H','I','J','K','L'
 'i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','0','1','2',
 '3','4','5','6','7','8','9','+','/'};
 
+File newconfig, oldconfig, root;
 XBee xbee = XBee();
 long timestart = 0;
 long timenow = 0;
@@ -85,8 +86,9 @@ ZBRxResponse rx = ZBRxResponse();
 
 int g_chip_select = SS3;
 uint8_t datalogger_flag = 0;
-
-
+int volt_last_val = 0;
+boolean vdata_flag;
+bool can_flag;
 /* 
   Variable: xbee_response
   global variable char array that will hold the command frame received from the xbee
@@ -130,6 +132,17 @@ uint8_t g_num_of_nodes = 40;
   ---
 */
 char g_mastername[6] = "XXXXX";
+
+/*
+  Variable: g_volt
+  global char array that holds the node voltage values with respect to gids. This used by is by get_v_value.
+
+  Variable Declaration:
+  --- Code
+  VDATASIZE = 40
+  ---
+*/
+float g_volt[VDATASIZE];
 
 /*
   Variable: g_turn_on_delay
@@ -224,7 +237,17 @@ char g_no_gids_dump[2500];
 
   <build_txt_msgs>
 */
-char text_message[10000];
+char text_message[5000];
+
+static char g_test[100] = "\0";
+char g_build[100] = "";
+char g_build_final[500] = "";
+/*
+ * Variable: vc_flag
+ * Global variable that triggers an additional sms with voltage and current reading (before, during, after polling)
+ */
+bool vc_flag = false;
+char vc_text[100] = "\0";
 
 String g_string;
 String g_string_proc;
@@ -398,7 +421,8 @@ void loop(){
 
 void hard_code(){
   //String str1 = "column1 = 1644,1710,2022,1915,749,1691,1724,1742,1906,1921,1923,1983,2021,2024,2079,2107,2137,2160,2255,2282,2307,2329,2429,2570,2553,2544,2460,2459,2455,1717,1708,2598,2581,2577,2308,2239,2409,2369,2442,2076";
-  String str1 = "column1 = 1835, 2055, 1924, 1886, 2495";
+  //String str1 = "column1 = 1835, 2055, 1924, 1886, 2495";
+  String str1 = "column1 = 2291, 2386";
   String str2 = "MasterName = PHITA";
 
   g_num_of_nodes = process_column_ids(str1);
@@ -429,7 +453,9 @@ void getATCommand(){
     if (i_equals == -1) command = serial_line;
     else command = serial_line.substring(0,i_equals);
     
-     
+    for( int i = 0; i < VDATASIZE;  ++i ) {
+      g_volt[i] = (float)0; }
+    
     atSwitch = serial_line.charAt(0);
     switch(atSwitch) {
       case '?': 
@@ -437,12 +463,19 @@ void getATCommand(){
         break;
       case 'A': {         //ATGETSENSORDATA
           read_data_from_column(g_final_dump, g_sensor_version,1);
+          int g_volt_size = sizeof(g_volt)/sizeof(g_volt[0]);
+          //sample_send();
+          /*
+          for (int x=0; x < g_volt_size; x++) {
+            Serial.println(g_volt[x]);
+          }
+          */
           Serial.println(OKSTR);
         }
         break;
       case 'B': {         //AT+POLL
           read_data_from_column(g_final_dump, g_sensor_version,2);
-          Serial.println(g_final_dump);
+          Serial.println(F(g_final_dump));
           if (b64 == 1) {
             b64_build_text_msgs(comm_mode, g_final_dump, text_message);
           } else {
@@ -466,6 +499,7 @@ void getATCommand(){
       case 'E': {         //AT+RTC
           extra_parameters = serial_line.substring(i_equals+1);
           set_rtc_time(extra_parameters);
+          Serial.print(millis());
         }
         break;
       case 'F': {         //ATECMDTRUE
@@ -536,9 +570,10 @@ void getATCommand(){
         }
         break;
       case 'P': {          //AT+SEND
-          Serial.println(text_message);
+          Serial.print(text_message);
           char *token1 = strtok(text_message,g_delim);
           while (token1 != NULL){
+            Serial.println(token1);
             send_data(false, token1);
             token1 = strtok(NULL, g_delim);
           }
@@ -580,6 +615,33 @@ void getATCommand(){
           Serial.println(OKSTR);
         }
         break;
+      case 'W': {         //Change sensor version format W=new_version
+          pinMode(g_chip_select, OUTPUT);
+          extra_parameters = serial_line.substring(i_equals+1);
+          extra_parameters.trim();
+          change_sensor_version(extra_parameters.toInt());
+        }
+        break;
+      case 'X': {
+        root = SD.open("config.txt");
+        if (root) {
+          int data;
+          while ((data = root.read()) >= 0) {
+            Serial.write(data);
+          }
+          Serial.println(" CONFIG.TXT end of file");
+        } else {
+          Serial.println("error opening config.txt");
+        }
+        root.close();
+        }
+        break;
+      case 'Z': {
+          root = SD.open("/");
+          printDirectory(root, 0);
+          Serial.print("OK");   
+        }
+        break;
       default:
         Serial.println(ERRORSTR);
         break;
@@ -615,13 +677,15 @@ void operation(int sensor_type, char communication_mode[]){
   int counter= 0;
   int num_of_tokens = 0;
   read_data_from_column(g_final_dump, g_sensor_version, sensor_type);// matagal ito.
-  Serial.print("g_final_dump: ");
-  Serial.println(g_final_dump);
+  Serial.print(F("g_final_dump: "));
+  Serial.println(F(g_final_dump));
   if (b64 == 1) {
     b64_build_text_msgs(comm_mode, g_final_dump, text_message);
   } else {
     build_txt_msgs(comm_mode, g_final_dump, text_message); 
   }
+
+  Serial.println(text_message);
   char *token1 = strtok(text_message,"~");
     
   while (token1 != NULL){
@@ -692,6 +756,7 @@ void getArguments(String at_cmd, String *arguments){
     <operation>
 */
 void read_data_from_column(char* column_data, int sensor_version, int sensor_type){
+  vdata_flag=true;
   if (sensor_version == 2){
     get_data(32,1,column_data);
     get_data(33,1,column_data);
@@ -719,6 +784,10 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
   if (has_piezo){
     get_data(255,1,column_data);
   }
+
+  sensor_voltage_ver();
+  vdata_flag=false;
+  //sample_send();
 }
 
 //Function: read_current()
@@ -732,7 +801,6 @@ void read_current(){
   delay(1000);
   turn_off_column();
 }
-
 /* 
   Function: read_voltage()
 
@@ -969,7 +1037,7 @@ int wait_xbee_cmd(int timeout, char* response_string){
     <wait_arq_cmd> and <wait_xbee_cmd> both return a call to <parse_cmd>.
 
     *From <wait_arq_cmd>:*
-    --- Code
+    --- Code'
     return parse_cmd(c_serial_line);
     ---
 
@@ -1100,8 +1168,10 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   int i,j;
   int token_length = 0;
   char pad[12] = "___________";
+  char pad2[12] = "___________";
   
-  Serial.println(g_final_dump); //Print final dump data
+  
+  //Serial.println(F(g_final_dump)); //Print final dump data
   for (int i = 0; i < 5000; i++) {
       destination[i] = '\0';
   }
@@ -1113,14 +1183,17 @@ void build_txt_msgs(char mode[], char* source, char* destination){
       Ctimestamp[i] = timestamp[i];
     }
   }else{
-  for (int i = 0; i < 12; i++) {
-      Ctimestamp[i] = timestamp[i];
-    }
+    for (int i = 0; i < 12; i++) {
+        Ctimestamp[i] = timestamp[i];
+      }
   }
   
   //Ctimestamp[12] = '\0';
-  
+  //Serial.print(g_delim);
   token1 = strtok(source, g_delim);
+  if (vc_flag == true) {
+      num_text_to_send = 1;
+  }
   while ( token1 != NULL){
     c=0;
     idf = check_identifier(token1,4);
@@ -1155,38 +1228,38 @@ void build_txt_msgs(char mode[], char* source, char* destination){
      strncat(dest,pad,2);
       }
      else{
-     strncat(dest,pad,11);
+      strncat(dest,pad,11);
       }
-      strncat(dest,master_name, name_len); 
-      strncat(dest,"*", 2);
-      if (g_sensor_version != 1){ // except piezo and v1 // or idf != 'p' (Tinangal ko muna ito)
-          strncat(dest,identifier,2);
-          strncat(dest,"*", 2);
-      }
-      for (j=0; j < (cutoff); j++ ){
-        strncat(dest,token1,1);
-        c++;
-        token1++;
-        if (c == (token_length)){
-          break;
-        }
-      }
-      if (strcmp(comm_mode,"XBEE") == 0){
-      // Baka dapat kapag V3 ito. 
-        strncat(dest,"*",1);
-        strncat(dest,Ctimestamp,12);
-      }
-      if (strcmp(comm_mode, "LORA") == 0){
-        strncat(dest,"*",1);
-        strncat(dest,Ctimestamp,13);
-        strncat(dest,g_delim,1);   
-        } else{
-      strncat(dest,"<<",2);
-      strncat(dest,g_delim,1);          
-          
-          }
-
+    strncat(dest,master_name, name_len); 
+    strncat(dest,"*", 2);
+    if (g_sensor_version != 1){ // except piezo and v1 // or idf != 'p' (Tinangal ko muna ito)
+        strncat(dest,identifier,2);
+        strncat(dest,"*", 2);
     }
+    for (j=0; j < (cutoff); j++ ){
+      strncat(dest,token1,1);
+      c++;
+      token1++;
+      if (c == (token_length)){
+        break;
+      }
+    }
+    if (strcmp(comm_mode,"XBEE") == 0){
+      vc_flag = false;
+    // Baka dapat kapag V3 ito. 
+      strncat(dest,"*",1);
+      strncat(dest,Ctimestamp,12);
+    }
+    if (strcmp(comm_mode, "LORA") == 0){
+      strncat(dest,"*",1);
+      strncat(dest,Ctimestamp,13);
+      strncat(dest,g_delim,1);   
+      } else{
+      strncat(dest,"<<",2);
+      strncat(dest,g_delim,1);              
+      }
+    }
+    
     num_text_to_send = num_text_to_send + num_text_per_dtype;
     token1 = strtok(NULL, g_delim);
   }
@@ -1194,43 +1267,81 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   c=0;
   while( token2 != NULL ){
     c++;
-    if (strcmp(comm_mode, "LORA") == 0){      
-    idf = check_identifier(token1,2);
-    identifier[0] = idf;
-    identifier[1] = '\0';
-    sprintf(pad, "%02s", ">>");
-    strncpy(token2,pad,2);
-    // strncat(token2,"<<",3);
-    Serial.println(token2);
-    strncat(destination,token2, strlen(token2));
-    strncat(destination, g_delim, 2);
-    token2 = strtok(NULL, g_delim);  
+    if (strcmp(comm_mode, "LORA") == 0){
+          
+      idf = check_identifier(token1,2);
+      identifier[0] = idf;  
+      identifier[1] = '\0';
+      sprintf(pad, "%02s", ">>");
+      strncpy(token2,pad,2);
+      // strncat(token2,"<<",3);
+      Serial.println(token2);
+      strncat(destination,token2, strlen(token2));
+      strncat(destination, g_delim, 2);
+      token2 = strtok(NULL, g_delim);  
       
     }else{
-    char_cnt = strlen(token2) + name_len - 24;
-    idf = check_identifier(token1,2);
-    identifier[0] = idf;
-    identifier[1] = '\0';
-    sprintf(pad, "%03d", char_cnt);
-    strncat(pad,">>",3);
-    sprintf(temp, "%02d/", c);
-    strncat(pad,temp,4);
-    sprintf(temp,"%02d#",num_text_to_send);
-    strncat(pad,temp,4);
-    strncpy(token2,pad,11);
-    // strncat(token2,"<<",3);
-    Serial.println(token2);
-    strncat(destination,token2, strlen(token2));
+      char_cnt = strlen(token2) + name_len - 24;
+      idf = check_identifier(token1,2);
+      identifier[0] = idf;
+      identifier[1] = '\0';
+      sprintf(pad, "%03d", char_cnt);
+      strncat(pad,">>",3);
+      sprintf(temp, "%02d/", c);
+      strncat(pad,temp,4);
+      sprintf(temp,"%02d#",num_text_to_send);
+      strncat(pad,temp,4);
+      strncpy(token2,pad,11);
+      // strncat(token2,"<<",3);
+      Serial.println(token2);
+      strncat(destination,token2, strlen(token2));
+      strncat(destination, g_delim, 2);
+      token2 = strtok(NULL, g_delim);
+    }
+  }
+   
+  if (vc_flag == true) {                                                //for testing
+    char temp3[100] = "";
+
+    strncat(temp3,master_name,strlen(master_name));
+    strncat(temp3,"*m*",4);
+    strncat(temp3, g_build, strlen(g_build));
+    writeData(timestamp, g_build);
+    if (strcmp(comm_mode, "ARQ") == 0) {
+      sprintf(pad2,"%03d", strlen(g_build));      //message count
+      strncat(pad2,">>",3);                   
+      sprintf(temp,"%02d/%02d#",num_text_to_send,num_text_to_send); 
+      strncat(pad2,temp,6);                       //000>>00/00#
+      strncat(g_build_final, pad2, strlen(pad2));
+      strncat(g_build_final, temp3, strlen(temp3));
+      strncat(g_build_final, "<<", 3);
+    }
+    if (strcmp(comm_mode, "LORA") == 0) {
+      sprintf(pad2, "%02s", ">>");
+      strncpy(g_build_final, pad2, 2);
+      strncat(g_build_final, temp3, strlen(temp3));
+      strncat(g_build_final,"*",1);
+      strncat(g_build_final,Ctimestamp,13);  
+    }    
+    Serial.println(g_build_final);
+    //strncpy(vc_text, pad, strlen(pad));
+    strncat(destination, g_build_final, strlen(g_build_final));
     strncat(destination, g_delim, 2);
-    token2 = strtok(NULL, g_delim);
-  }
-  }
+    
+    Serial.println(F(destination));
+    vc_flag = false;
+    for (int i = 0; i < 500; i++) {
+      g_build_final[i] = '\0';
+    }
+ 
+    }
   if (destination[0] == '\0'){
     no_data_parsed(destination);
     writeData(timestamp,String("*0*ERROR: no data parsed"));
   }
+  //Serial.println(destination);
   Serial.println(F("================================="));
-}
+  }
 
 /* 
   Function: remove_extra_characters
@@ -1600,9 +1711,9 @@ void send_data(bool isDebug, char* columnData){
         Serial.print("Sending:");
         Serial.println(columnData);
         DATALOGGER.println(columnData);
-        
         timestart = millis();
         timenow = millis();
+               
         while (!DATALOGGER.available()){
           while ( timenow - timestart < 9000 ) {
             timenow = millis();
@@ -1610,19 +1721,18 @@ void send_data(bool isDebug, char* columnData){
           DATALOGGER.println("Time out...");
           break;
         }
-
+        
         if (DATALOGGER.find("OK")){
           OKFlag = true;
         }
         else{
-
            DATALOGGER.println(columnData);       
-          
         }
-
+        
+      
         send_retry_limit++;
-        if (send_retry_limit == 10){
-          Serial.println("send_retry_limit reached.");
+        if (send_retry_limit == 5){
+          Serial.println(F("send_retry_limit reached."));
           OKFlag = true;
         }
       } while (OKFlag == false);
@@ -1819,3 +1929,86 @@ void serial_loopback2(){
     }
   }
 }
+
+/*
+  Function: sensor_voltage_ver
+    Read voltage values from can frames to g_volt
+
+  Parameters:
+    g_volt - array for voltage reading
+
+  Returns:
+
+
+*/
+//medyo magulo paitong part na ito..
+void sensor_voltage_ver() {             //kailangan pang ayusin and triggers for v2 testing, v3 lang available
+  int normal = 0;
+  int nonZero = 0;                         //limited to v2 & v3
+  int zeroVal = 0;
+  int counter = 0;
+  int trig = 0;
+  int repeat = 1;
+  
+  for (int i=0; i<VDATASIZE; i++) {
+    if (g_volt[i] == 2.0) {                   //Values for testing
+      trig++;
+      nonZero++;
+    } else if ((g_volt[i] > 2.5) && (g_volt[i] < 3.5)) {
+      normal++;
+      nonZero++; 
+    } else if (g_volt[i] == 0) {
+      zeroVal++;
+    }
+  }
+  for (int j; j < counter; j++) {
+    if(g_volt[0] == g_volt[j]) { 
+      repeat++;
+    }
+  }
+    if (((g_sensor_version == 3) && (trig >= 1)) || ((g_sensor_version == 3) && (can_flag) && (zeroVal == (int)VDATASIZE))) {    //trigger for single instance for now
+    if (Serial.available()) {
+      Serial.println("sensor version mismatch");  }
+    change_sensor_version(2);
+  } else if (((g_sensor_version == 2) && (trig >= 1)) || ((g_sensor_version == 2) && (can_flag) && (zeroVal == (int)VDATASIZE))) {    //babaguhin pa
+    if (Serial.available()) {
+      Serial.println("sensor version mismatch");  }
+    change_sensor_version(3);
+  }
+  
+/*  
+  Serial.print("normal ");
+  Serial.println(normal);
+  Serial.print("nonZero ");
+  Serial.println(nonZero);
+  Serial.print("zeroVal ");
+  Serial.println(zeroVal);
+  Serial.print("trig ");
+  Serial.println(trig);
+  Serial.print("g_sensor_version ");
+  Serial.println(g_sensor_version);
+*/
+
+//reboot();                                              //reset watchdogtimer
+  normal = nonZero = zeroVal = trig = counter = 0;
+  can_flag = false;
+}
+
+
+void change_sensor_version (int new_version) {
+        if (g_sensor_version == new_version) {
+          Serial.println("OK");
+        } else if (copy_config_lines(String(new_version))) {
+            replace_old_config(); 
+            g_sensor_version = new_version;
+            }
+        
+}
+
+/*
+void reboot() {
+  wdt_disable();
+  wdt_enable(WDTO_15MS);
+  while (1) {}
+}
+*/
