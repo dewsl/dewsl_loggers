@@ -483,9 +483,9 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
       Ctimestamp[i] = timestamp[i];
     }
   }else{
-  for (int i = 0; i < 12; i++) {
-      Ctimestamp[i] = timestamp[i];
-    }
+    for (int i = 0; i < 12; i++) {
+        Ctimestamp[i] = timestamp[i];
+      }
 
     
   }
