@@ -34,11 +34,11 @@ int init_sd(){
 
 	Parameters:
 
-		n/a
+    n/a
 
-	Returns:
+  Returns:
 
-		n/a
+    n/a
 
 	See Also:
 	
@@ -165,7 +165,7 @@ unsigned int process_config_line(char *one_line){
 		return 0;
 
 	}else if((str1.startsWith("columnids")) | (str1.startsWith("column1")) 
-		| (str1.startsWith("columnIDs"))) {
+		| (str1.startsWith("columnIDs")) | (str1.startsWith("columnIDs"))) {
 		g_num_of_nodes = process_column_ids(str1);
 		return 0;
 
@@ -368,17 +368,17 @@ int8_t writeData(String fname,String data){
 void print_due_command2() {
 
     Serial.println(F("================================="));
-    Serial.println("KEY\tCOMMAND");
+    Serial.println(F("KEY\tCOMMAND"));
     Serial.println(F("================================="));
-    Serial.println("?.\tPrint this menu");
-    Serial.println("A.\tRead Sensor Data ");
-    Serial.println("B.\tRead data & Save to SD card ");
-    Serial.println("C.\tInit. SDcard & config");
-    Serial.println("D.\tGet arQ Timestamp");
-    Serial.println("E.\tSet CustomDue RTC");
-    Serial.println("F.\tSet 'ate' TRUE");
-    Serial.println("G.\tSet 'ate' FALSE");
-    Serial.println("H.\tSerial Test");
+    Serial.println(F("?.\tPrint this menu"));
+    Serial.println(F("A.\tRead Sensor Data "));
+    Serial.println(F("B.\tRead data & Save to SD card "));
+    Serial.println(F("C.\tInit. SDcard & config"));
+    Serial.println(F("D.\tGet arQ Timestamp"));
+    Serial.println(F("E.\tSet CustomDue RTC E=<YYMMDDhhmmss>"));
+    Serial.println(F("F.\tSet 'ate' TRUE"));
+    Serial.println(F("G.\tSet 'ate' FALSE"));
+    Serial.println(F("H.\tSerial Test"));
     Serial.println("I.\tSample column data(v.3)");
     Serial.println("J.\tConvert to base64");
     Serial.println("K.\tToggle base64 operations");
@@ -386,14 +386,124 @@ void print_due_command2() {
     Serial.println("M.\tRead Current draw");
     Serial.println("N.\tGet INA219 voltages");
     Serial.println("O.\tGet XBEE Timestamp");
-    Serial.println("P.\tSample XBEE response");
+    Serial.println("P.\tSend data to DATALOGGER");
     Serial.println("Q.\tSample Piezo readout");
-    Serial.println("R.\tSend data to DATALOGGER");
+    Serial.println("R.\tSample XBEE response");
     Serial.println("S.\tSend commnad(3,3)");
     Serial.println("T.\tR&W DATALOGGER Loopback");
     Serial.println("U.\tR&W LORA Loopback");
     Serial.println("V.\tFinal Dump");
+    Serial.println("W.\tChange Sensor Version W=<sensor version>");
+    Serial.println("X.\tOpen config.txt");
+    Serial.println("Z.\tView SDcard files");
     Serial.println(F("================================="));
     Serial.println("Enter Choice:");
 
+}
+
+void printDirectory(File dir, int numTabs) {
+  while (true) {
+
+    File entry =  dir.openNextFile();
+    if (! entry) {
+      break;                           // no more files
+    }
+    for (uint8_t i = 0; i < numTabs; i++) {
+      Serial.print('\t');
+    }
+    Serial.print(entry.name());
+    if (entry.isDirectory()) {
+      Serial.println("/");
+      printDirectory(entry, numTabs + 1);
+    } else {
+      // files have sizes, directories do not
+      Serial.print("\t\t");
+      Serial.println(entry.size(), DEC);
+    }
+    entry.close();
+  }
+}
+
+unsigned int copy_config_lines(String extra_parameters)  {
+  char temp[1];
+  if (SD.exists("ctemp.txt")) {
+    SD.remove("ctemp.txt");
+  }
+  newconfig = SD.open("ctemp.txt", FILE_WRITE);
+  if (SD.exists("ctemp.txt")) {
+    char *temp;
+    int max_char_per_line = 1000;
+    char one_line[max_char_per_line];
+    oldconfig = SD.open("config.txt");
+    if (oldconfig) {
+      memset(one_line, 0, sizeof(one_line));
+      temp = one_line;
+      while ((*temp = oldconfig.peek()) != -1) {
+        temp = one_line;
+        while (((*temp = oldconfig.read()) != '\n')) {
+          temp++;
+          if (*temp == -1)
+            break;
+        }
+        if (process_version_line(one_line, extra_parameters)) {
+          break;
+        }
+        memset(one_line, 0, sizeof(one_line));
+      }
+      oldconfig.close();
+      newconfig.close();
+
+      Serial.print("Changing to sensor version ");
+      Serial.print(extra_parameters);
+      Serial.print("\n");
+      return 1;
+    } else {
+      Serial.println("Error opening CONFIG.txt");
+      return 0;
+    }
+  } else {
+    Serial.println("Error creating temp file");
+    return 0;
+  }
+  
+}
+
+unsigned int process_version_line(char *one_line, String extra_parameters) {
+  String str1;
+  int temp_int = 0;
+  str1 = String(one_line);
+
+  if ( (str1.startsWith("sensorversion")) | (str1.startsWith("sensorVersion")) ) {
+    str1 = "sensorVersion = ";
+    newconfig.print(str1); newconfig.println(extra_parameters);
+    g_sensor_version = extra_parameters.toInt();
+    return 0;
+  } else if (str1.startsWith("ncolumnIDs")){      //may wierd na extra character ang lumalabas
+    str1.remove(0,1);
+    newconfig.print(str1);
+    return 0;
+  } else if ((str1.startsWith("endofconfig")) | (str1.startsWith("ENDOFCONFIG"))) {
+    newconfig.print(str1);
+    return 1;
+  } else {
+    newconfig.print(str1);
+    return 0;
+  }
+}
+
+void replace_old_config() {
+  if (SD.exists("config.txt")) {
+    SD.remove("config.txt");
+  } else { Serial.println("Error removing config.txt"); }
+  oldconfig = SD.open("ctemp.txt");
+  int ndata;
+  newconfig = SD.open("config.txt", FILE_WRITE);
+  while ((ndata = oldconfig.read()) >= 0) {
+    newconfig.write(ndata);
+  }
+  oldconfig.close();
+  newconfig.close();
+//  SD.remove("ctemp.txt");
+  Serial.println("Config file updated");
+  Serial.println("OK");
 }
