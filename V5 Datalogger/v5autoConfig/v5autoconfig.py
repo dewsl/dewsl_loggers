@@ -234,7 +234,7 @@ def check_logver_logname():
         #print(lognames)
         return True
     else:
-        print("Check logger name count.")
+        print(f'Logger version {logver} requires {logname_count} logger name/s.')
         return False
 
 def check_csv_integrity(row):
