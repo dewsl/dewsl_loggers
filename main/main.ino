@@ -388,9 +388,9 @@ void loop(){
               Serial.println(xbee.getResponse().getErrorCode());
         }
       } else if ((strcmp(comm_mode,"ARQ") == 0) && (DATALOGGER.available()) ){ // sira ito       
-        operation(wait_arq_cmd(), comm_mode);
-        shut_down();
-        datalogger_flag = 1;
+          operation(wait_arq_cmd(), comm_mode);
+          shut_down();
+          datalogger_flag = 1;
      } else if ((strcmp(comm_mode,"LORA") == 0) && (LORA.available()) ){
       operation(wait_lora_cmd(), comm_mode);
       LORA.println("STOPLORA");
@@ -499,7 +499,7 @@ void getATCommand(){
       case 'E': {         //AT+RTC
           extra_parameters = serial_line.substring(i_equals+1);
           set_rtc_time(extra_parameters);
-          Serial.print(millis());
+          Serial.print("");
         }
         break;
       case 'F': {         //ATECMDTRUE
@@ -945,7 +945,7 @@ int wait_arq_cmd(){
   String serial_line; 
   char c_serial_line[30];  
   while(!DATALOGGER.available());
-  arq_start_time = millis(); // Global variable used by arqwait_delay
+    arq_start_time = millis(); // Global variable used by arqwait_delay
   do{
     serial_line = DATALOGGER.readStringUntil('\r\n');
   } while(serial_line == "");
@@ -984,7 +984,7 @@ int wait_lora_cmd(){
     serial_line = LORA.readStringUntil('\r\n');
   } while(serial_line == "");
   serial_line.toCharArray(c_serial_line,serial_line.length()+1);
-  Serial.println(serial_line);
+  Serial.println(c_serial_line);
   return parse_cmd(c_serial_line);
 }
 
@@ -1191,6 +1191,9 @@ void build_txt_msgs(char mode[], char* source, char* destination){
   //Ctimestamp[12] = '\0';
   //Serial.print(g_delim);
   token1 = strtok(source, g_delim);
+  if (strcmp(comm_mode,"XBEE") == 0){   //di ko pa sure ang format ng xbee
+    vc_flag = false;
+    }
   if (vc_flag == true) {
       num_text_to_send = 1;
   }
@@ -1245,7 +1248,6 @@ void build_txt_msgs(char mode[], char* source, char* destination){
       }
     }
     if (strcmp(comm_mode,"XBEE") == 0){
-      vc_flag = false;
     // Baka dapat kapag V3 ito. 
       strncat(dest,"*",1);
       strncat(dest,Ctimestamp,12);
@@ -1729,7 +1731,6 @@ void send_data(bool isDebug, char* columnData){
            DATALOGGER.println(columnData);       
         }
         
-      
         send_retry_limit++;
         if (send_retry_limit == 5){
           Serial.println(F("send_retry_limit reached."));
