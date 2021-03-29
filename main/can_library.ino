@@ -158,9 +158,9 @@ void get_data(int cmd, int transmit_id, char* final_dump){
 
   float g_current = ina219.getCurrent_mA();
   float g_voltage = ina219.getBusVoltage_V();
-  dtostrf(g_current,5,2,g_test);
+  dtostrf(g_current,0,2,g_test);
   sprintf(g_build, g_test, strlen(g_test));
-  dtostrf(g_voltage,5,2,g_test);
+  dtostrf(g_voltage,0,2,g_test);
   strncat(g_build, "*",1);
   strncat(g_build, g_test, strlen(g_test));
   strncat(g_build, "*",1);
@@ -174,9 +174,9 @@ void get_data(int cmd, int transmit_id, char* final_dump){
       g_current = 0;
       g_current = ina219.getCurrent_mA();
       g_voltage = ina219.getBusVoltage_V();
-      dtostrf(g_current,5,2,g_test);
+      dtostrf(g_current,0,2,g_test);
       strncat(g_build, g_test, strlen(g_test));
-      dtostrf(g_voltage,5,2,g_test);
+      dtostrf(g_voltage,0,2,g_test);
       strncat(g_build, "*",1);
       strncat(g_build, g_test, strlen(g_test));
       strncat(g_build, "*",1); 
@@ -288,11 +288,12 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   Serial.println(F("================================="));
   g_current = ina219.getCurrent_mA();
   g_voltage = ina219.getBusVoltage_V();
-  dtostrf(g_current,5,2,g_test);
+  dtostrf(g_current,0,2,g_test);
   strncat(g_build, g_test, strlen(g_test));
-  dtostrf(g_voltage,5,2,g_test);
+  dtostrf(g_voltage,0,2,g_test);
   strncat(g_build, "*",1);
   strncat(g_build, g_test, strlen(g_test)); 
+  Serial.println(g_build);
   vc_flag = true;  
 }
 
