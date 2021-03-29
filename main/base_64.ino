@@ -464,6 +464,7 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
   char dest[5000] = {};
   char temp[6];
   char pad[12] = "___________";
+  char pad2[12] = "___________";
   char master_name[8] = "";
 //  char Ctimestamp[6] = "";
   char identifier[3] = {};
@@ -491,6 +492,13 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
   }
   Ctimestamp[12] = '\0';
   token1 = strtok(source, g_delim);
+  if (strcmp(comm_mode,"XBEE") == 0){   //di ko pa sure ang format ng xbee
+    vc_flag = false;
+    }
+  if (vc_flag == true) {
+    num_text_to_send = 1;
+    }
+  
   while ( token1 != NULL){
     // get first 2 chars of token1, they are the hex msgid that will determine
     token_length = strlen(token1)-2;
@@ -556,10 +564,11 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
         strncat(dest,Ctimestamp,12);
         strncat(dest,g_delim,1);   
         } else{
-      strncat(dest,"<<",2);
-      strncat(dest,g_delim,1);          
+        strncat(dest,"<<",2);
+        strncat(dest,g_delim,1);          
         }  
     }
+    
     num_text_to_send = num_text_to_send + num_text_per_dtype;
     token1 = strtok(NULL, g_delim);
   }
@@ -576,20 +585,54 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
     strncat(destination, g_delim, 2);
     token2 = strtok(NULL, g_delim);     
     }else{
-    char_cnt = strlen(token2) + name_len - 24;
-    sprintf(pad, "%03d", char_cnt);
-    strncat(pad,">>",3);
-    sprintf(temp, "%02d/", c);
-    strncat(pad,temp,4);
-    sprintf(temp,"%02d#",num_text_to_send);
-    strncat(pad,temp,4);
-    strncpy(token2,pad,11);
-    // strncat(token2,"<<",3);
-    Serial.println(token2);
-    strncat(destination,token2, strlen(token2));
-    strncat(destination, g_delim, 2);
-    token2 = strtok(NULL, g_delim);
-  }
+      char_cnt = strlen(token2) + name_len - 24;
+      sprintf(pad, "%03d", char_cnt);
+      strncat(pad,">>",3);
+      sprintf(temp, "%02d/", c);
+      strncat(pad,temp,4);
+      sprintf(temp,"%02d#",num_text_to_send);
+      strncat(pad,temp,4);
+      strncpy(token2,pad,11);
+      // strncat(token2,"<<",3);
+      Serial.println(token2);
+      strncat(destination,token2, strlen(token2));
+      strncat(destination, g_delim, 2);
+      token2 = strtok(NULL, g_delim);
+      }
+    }
+    
+    if (vc_flag == true) {                                                //for testing
+    char temp3[100] = "";
 
-}
+    strncat(temp3,master_name,strlen(master_name));
+    strncat(temp3,"*m*",4);
+    strncat(temp3, g_build, strlen(g_build));
+    writeData(timestamp, g_build);
+    if (strcmp(comm_mode, "ARQ") == 0) {
+      sprintf(pad2,"%03d", strlen(g_build));      //message count
+      strncat(pad2,">>",3);                   
+      sprintf(temp,"%02d/%02d#",num_text_to_send,num_text_to_send); 
+      strncat(pad2,temp,6);                       //000>>00/00#
+      strncat(g_build_final, pad2, strlen(pad2));
+      strncat(g_build_final, temp3, strlen(temp3));
+      strncat(g_build_final, "<<", 3);
+    }
+    if (strcmp(comm_mode, "LORA") == 0) {
+      sprintf(pad2, "%02s", ">>");
+      strncpy(g_build_final, pad2, 2);
+      strncat(g_build_final, temp3, strlen(temp3));
+      strncat(g_build_final,"*",1);
+      strncat(g_build_final,Ctimestamp,13);  
+    }    
+    Serial.println(g_build_final);
+    //strncpy(vc_text, pad, strlen(pad));
+    strncat(destination, g_build_final, strlen(g_build_final));
+    strncat(destination, g_delim, 2);
+    
+    Serial.println(F(destination));
+    vc_flag = false;
+    for (int i = 0; i < 500; i++) {
+      g_build_final[i] = '\0';
+      }
+    }
 }
