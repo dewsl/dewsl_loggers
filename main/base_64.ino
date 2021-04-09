@@ -478,9 +478,9 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
   // for (int i = 0; i < 6; i++) {
   //  Ctimestamp[i] = b64_ts[i];
   // }
-  char Ctimestamp[12] = "";
+  char Ctimestamp[13] = "";
   if (strcmp(comm_mode, "LORA") == 0){
-      for (int i = 0; i < 12; i++) {
+      for (int i = 0; i < 13; i++) {
       Ctimestamp[i] = timestamp[i];
     }
   }else{
