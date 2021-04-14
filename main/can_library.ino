@@ -591,31 +591,54 @@ void write_frame_to_dump(CAN_FRAME incoming, char* dump){
   char temp[5];
   sprintf(temp,"%04X",incoming.id);
   strcat(dump,temp);
-
-  sprintf(temp,"%02X",incoming.data.byte[0]);
-  strcat(dump,temp);
-
-  sprintf(temp,"%02X",incoming.data.byte[1]);
-  strcat(dump,temp);
-
-  sprintf(temp,"%02X",incoming.data.byte[2]);
-  strcat(dump,temp);
-
-  sprintf(temp,"%02X",incoming.data.byte[3]);
-  strcat(dump,temp);
-
-  sprintf(temp,"%02X",incoming.data.byte[4]);
-  strcat(dump,temp);
-
-  sprintf(temp,"%02X",incoming.data.byte[5]);
-  strcat(dump,temp);
-
+  
+  if (g_sensor_version ==1){
+    sprintf(temp,"%02X",incoming.data.byte[1]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[0]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[3]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[2]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[5]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[4]);
+    strcat(dump,temp);
+  
+  }
+  
+  else{
+    sprintf(temp,"%02X",incoming.data.byte[0]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[1]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[2]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[3]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[4]);
+    strcat(dump,temp);
+  
+    sprintf(temp,"%02X",incoming.data.byte[5]);
+    strcat(dump,temp);
+  }
+  
   sprintf(temp,"%02X",incoming.data.byte[6]);
   strcat(dump,temp);
 
   sprintf(temp,"%02X-",incoming.data.byte[7]);
-  strcat(dump,temp);
-
+  strcat(dump,temp);  
+  
   // interpret_frame(incoming);
   return;
 }
