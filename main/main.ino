@@ -1380,7 +1380,10 @@ void remove_extra_characters(char* columnData, char idf){
     cmd = 3;
   } else if (idf == 'c'){
     cmd = 3;
+  } else if (g_sensor_version ==1){
+    cmd = 4;
   }
+  
   for (i = 0; i < initlen; i++, columnData++) {
   // for (i = 0; i < 23; i++,) {
     switch (cmd) {
