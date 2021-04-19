@@ -395,7 +395,7 @@ void print_due_command2() {
     Serial.println("V.\tFinal Dump");
     Serial.println("W.\tChange Sensor Version W=<sensor version>");
     Serial.println("X.\tOpen config.txt");
-    Serial.println("Z.\tView SDcard files");
+    Serial.println("Z.\tSD Data Dump to PC (REALTERM)");
     Serial.println(F("================================="));
     Serial.println("Enter Choice:");
 
@@ -423,6 +423,47 @@ void printDirectory(File dir, int numTabs) {
     entry.close();
   }
 }
+
+void dumpSDtoPC()
+  {
+    root = SD.open("/");
+    File dir = root;
+    int numTabs = 0;
+    Serial.println("Open REALTERM application to dump data to file");
+    String dirarray[20];
+    int idx =0;
+    int i;
+    while(true){
+      File entry =  dir.openNextFile();
+      Serial.println(entry.name());
+  
+      if (! entry) {
+        break;
+      }
+      for (uint8_t i = 0; i < numTabs; i++) {
+        Serial.print('\t');
+      }
+      dirarray[idx] = entry.name();
+      
+      if(dirarray[idx][0] == '1' || dirarray[idx][0] == '2' )
+      {
+        File dataFile = SD.open(dirarray[idx]);
+        Serial.print(idx);
+        if (dataFile) {
+          while (dataFile.available()) {
+            
+            Serial.println(dataFile.readStringUntil('\n'));
+          }
+          dataFile.close();
+        }
+        // if the file isn't open, pop up an error:
+        else {
+          Serial.println("error opening check sd card");
+        }
+      }
+    }
+  }
+  
 
 unsigned int copy_config_lines(String extra_parameters)  {
   char temp[1];
