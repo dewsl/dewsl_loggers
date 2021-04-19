@@ -637,9 +637,8 @@ void getATCommand(){
         }
         break;
       case 'Z': {
-          root = SD.open("/");
-          printDirectory(root, 0);
-          Serial.print("OK");   
+          dumpSDtoPC();
+          //Serial.print("OK");   
         }
         break;
       default:
