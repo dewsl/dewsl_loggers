@@ -490,7 +490,7 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
 
     
   }
-  Ctimestamp[12] = '\0';
+  Ctimestamp[13] = '\0';
   token1 = strtok(source, g_delim);
   if (strcmp(comm_mode,"XBEE") == 0){   //di ko pa sure ang format ng xbee
     vc_flag = false;
@@ -561,7 +561,7 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
       }
       if (strcmp(comm_mode, "LORA") == 0){
         strncat(dest,"*",1);
-        strncat(dest,Ctimestamp,12);
+        strncat(dest,Ctimestamp,13);
         strncat(dest,g_delim,1);   
         } else{
         strncat(dest,"<<",2);
