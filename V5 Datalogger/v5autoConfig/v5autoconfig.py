@@ -44,12 +44,12 @@ def set_datetime(ts):
         timeStamp = dt.strptime(ts,'%Y-%m-%d %H:%M:%S').strftime("%Y,%m,%d,%H,%M,%S,%w")
     serial_clear()
     swrite(timeStamp, 1)
-    ser.readline()
-    readout = ser.read(12)
+    #ser.readline()
+    readout = ser.read(31)  #12
     pcTs = timeStamp
     mcuTs = readout.decode('ascii')
     print ("PC timestamp: ", pcTs)
-    print ("MCU timestamp: ", mcuTs)
+    print ("MCU timestamp: ", mcuTs[19:31])
     if mcuTs.startswith('65'):
         print ("End process: Timestamp update FAILED. Fix hardware clock issues.")
     else:
