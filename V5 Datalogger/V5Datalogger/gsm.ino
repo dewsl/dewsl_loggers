@@ -20,11 +20,9 @@ void send_thru_gsm(char *inputMessage, String serverNumber)
   Serial.print(serverNumber);
   Serial.print("': ");
   Serial.println(msgToSend);
-
-  GSMSerial.write("AT+CMGF=1\r");
-  gsmReadOK();
-
-  for (int i = 0; i < 3; i++)
+  int send_count = 0;
+  
+  for (int i = 0; i < 5; i++)
   {
     gsmSerialFlush();
     GSMSerial.write(atCmgsNo); //AT+CMGS="639XXXXXXXXX"\r
@@ -37,14 +35,22 @@ void send_thru_gsm(char *inputMessage, String serverNumber)
       if (readGSMResponse(), "OK")
       {
         Serial.println("Message sent!");
+        flashLed(LED_BUILTIN, 2, 30);
         break;
       }
     }
     else
     {
+      send_count++;
       Serial.println("Sending message failed!");
       GSMSerial.write(26); //need to clear pending gsm cmd
       delay_millis(500);
+    }
+    if (send_count == 3)
+    {
+      resetGSM();
+      gsm_network_connect();
+      init_gsm();
       Serial.print("CSQ: ");
       Serial.println(readCSQ());
     }
@@ -58,6 +64,10 @@ void send_thru_gsm(char *inputMessage, String serverNumber)
  * AT+CMGF=1  - make gsm receive sms to text format (PDU is in binary - 0) 
  * AT+CMGR=1  - read 1st sms in inbox
  * AT+CMGL="ALL"  - read all current received sms
+ * AT+CPMS?   - Gets the # of SMS messages stored in GSM modem.
+ * AT+CNMI=1,2,0,0,0 - read incoming message from buffer
+ * AT+CSCLK=2 - sleep GSM via AT command
+ * AT+CSCLK=0 - wake gsm from sleep mode in AT command
 */
 void manualGSMcmd()
 {
@@ -97,16 +107,17 @@ bool isPassWordCorrect(char *_passW)
 
 /** Over the air commands
  * Parse sms if valid and execute command
- * REGISTER:SENSLOPE:639954645704     - register mobile number to control MCU
- * SENSORPOLL:SENSLOPE:               - force data sampling
- * SERVERNUMBER:SENSLOPE:639954645704 - change server number in flash memory
- * ?SERVERNUM:SENSLOPE:               - check current server number
- * RESET:SENSLOPE:                    - reset MCU
- * SENSLOPE,REGISTERNUM, - register mobile number to control MCU, if not it will ignore SMS
- * SENSLOPE,SENSORPOLL, - force data sampling
- * SENSLOPE,SERVERNUMBER,639954645704 - change server number in flash memory
- * SENSLOPE,?SERVERNUM, - check current server number
- * SENSLOPE,?PASSW, - check Password
+ * REGISTER:SENSLOPE:639954645704         - register mobile number to control MCU *9
+ * SENSORPOLL:SENSLOPE:                   - force data sampling *10
+ * SERVERNUMBER:SENSLOPE:639954645704     - change server number in flash memory  *12
+ * ?SERVERNUMBER:SENSLOPE:                - check current server number *13
+ * RESET:SENSLOPE:                        - reset MCU   *5
+ * ?PASSW:SENSLOPE:                       - check current password  *6
+ * PASSWORD:SENSLOPE:[updated password]:  - change password  *8
+ * SETDATETIME:SENSLOPE:[YYYY,MM,DD,HH,MM,SS,dd[0-6/m-sun],] 2021,02,23,21,22,40,1, *11
+ * SETSENDINGTIME:SENSLOPE:[0-4]:         - sending time *14
+ * CMD?:SENSLOPE:                         - read current DUE command
+ * CMD:SENSLOPE:[SENSLOPE]:               - update DUE command
 */
 void process_data(char *data)
 {
@@ -166,14 +177,15 @@ void process_data(char *data)
       send_thru_gsm(messageToSend, regServer);
     }
   }
-  //?SERVERNUM:SENSLOPE:
-  else if (strncmp(data, "?SERVERNUM", 10) == 0)
+  //?SERVERNUMBER:SENSLOPE:
+  else if (strncmp(data, "?SERVERNUMBER", 13) == 0)
   {
-    char currenServerNumber[50];
+    char currenServerNumber[30];
     char messageToSend[100];
     Serial.println("Check current server number");
-    char *_password = strtok(data + 10, ":");
-    // Serial.println(_password);
+    char *_password = strtok(data + 13, ":");
+    currenServerNumber[0] = '\0';
+    messageToSend[0] = '\0';
 
     if (isPassWordCorrect(_password) && registerNumber)
     {
@@ -190,7 +202,7 @@ void process_data(char *data)
   else if (strncmp(data, "RESET", 5) == 0)
   {
     Serial.println("Resetting microcontroller!");
-    char *_password = strtok(data + 10, ":");
+    char *_password = strtok(data + 5, ":");
 
     if (isPassWordCorrect(_password) && registerNumber)
     {
@@ -199,134 +211,166 @@ void process_data(char *data)
       int countDownMS = Watchdog.enable(2000); //max of 16 seconds
     }
   }
-  /*
-  if (strncmp(data, "+CMT: \"+", 8) == 0)
+  //?PASSW:SENSLOPE:
+  else if (strncmp(data, "?PASSW", 6) == 0)
   {
-    char *mobNum = strtok(data + 8, "\",\""); //\"
-    char *name = strtok(NULL, "\",\"");
-    char *timeStamp = strtok(NULL, "+");
-    char *afterPlus = strtok(NULL, "\"\r");
-    char *cmd_message = strtok(NULL, ",");
+    char messageToSend[100];
+    Serial.println("Reading current password!");
+    char *_password = strtok(data + 6, ":");
 
-    String tempServer = String(mobNum);
-    tempServer.replace(" ", "");
-
-    Serial.print("Sender Number:");
-    Serial.println(tempServer);
-
-    // Serial.println(mobNum);
-    // Serial.println(name);
-    // Serial.println(timeStamp);
-    // Serial.println(afterPlus);
-    // Serial.println(cmd_message);
-
-    Serial.println(_data1);
-    if (_data1.indexOf("SENSLOPE,") > -1)
+    if (isPassWordCorrect(_password) && registerNumber)
     {
-      Serial.println("Valid Password received!!!");
-    }
-    if (valid_password)
-    {
-      Serial.println("valid password si TRUE");
-      valid_password = false;
+      Serial.println("Sending current password!");
+      strncpy(messageToSend, "Current password: ", 18);
+      strncat(messageToSend, get_password_from_flashMem(), 50);
+      send_thru_gsm(messageToSend, regServer);
     }
   }
-  else if (strncmp(data, get_password_from_flashMem(), 9) == 0)
+  //PASSWORD:SENSLOPE:[updated password]:
+  else if (strncmp(data, "PASSWORD", 8) == 0)
   {
-    Serial.println("Valid PASSWORD received!");
-    char *smsCommand = strtok(data + 9, ",");
-    char *serverSMS = strtok(NULL, ",");
-    Serial.print("Keyword: ");
-    Serial.println(smsCommand);
-    flashLed(LED_BUILTIN, 2, 60);
-    //input sms command here
-    if (strstr(smsCommand, "SENSORPOLL"))
-    {
-      if (regServer == tempServer)
-      {
-        flashLed(LED_BUILTIN, 3, 50);
-        get_Due_Data(get_logger_version(), regServer);
-      }
-    }
-    else if (strstr(smsCommand, "REGISTERNUM"))
-    {
-      flashLed(LED_BUILTIN, 2, 50);
-      regServer = "";
-      regServer += tempServer;
-      Serial.print("Saving this number: ");
-      Serial.println(regServer);
-      send_thru_gsm("Number Registered!", regServer);
-    }
-    else if (strstr(smsCommand, "?REGNUM"))
-    {
-      if (regServer == tempServer)
-      {
-        char serNum[50];
-        flashLed(LED_BUILTIN, 3, 50);
-        regServer.toCharArray(serNum, sizeof(serNum));
-        Serial.print("Registered Number: ");
-        Serial.println(serNum);
-      }
-    }
-    else if (strstr(smsCommand, "?SERVERNUM"))
-    {
-      if (regServer == tempServer)
-      {
-        char tempSerNum[50];
-        flashLed(LED_BUILTIN, 3, 50);
-        Serial.print("Server Number: ");
-        Serial.println(get_serverNum_from_flashMem());
-        get_serverNum_from_flashMem().toCharArray(tempSerNum, sizeof(tempSerNum));
-        send_thru_gsm(tempSerNum, regServer);
-      }
-    }
-    else if (strstr(smsCommand, "SERVERNUMBER"))
-    {
-      char messageNum[100];
-      char newServer[50];
-      if (regServer == tempServer)
-      {
-        flashLed(LED_BUILTIN, 3, 50);
-        //save new server number from remote
-        strcpy(flashServerNumber.inputNumber, serverSMS);
-        newServerNum.write(flashServerNumber);
+    char messageToSend[100];
+    char newPassword[50];
+    char *_password = strtok(data + 8, ":");
+    char *_newPassword = strtok(NULL, ":");
+    Serial.println(_newPassword);
+    Serial.println("change server number");
 
-        get_serverNum_from_flashMem().toCharArray(newServer, sizeof(newServer));
+    if (isPassWordCorrect(_password) && registerNumber)
+    {
+      //strore new password to flash memory
+      strcpy((flashPassword.keyword), _newPassword);
+      flashPasswordIn.write(flashPassword); //save to flash memory
 
-        strncpy(messageNum, "New server number: ", 19);
-        strncat(messageNum, newServer, sizeof(newServer));
-        Serial.println(messageNum);
-        send_thru_gsm(messageNum, tempServer);
-      }
-    }
-    else if (strstr(smsCommand, "?PASSW"))
-    {
-      if (regServer == tempServer)
-      {
-        flashLed(LED_BUILTIN, 3, 50);
-        Serial.print("Password: ");
-        Serial.println(get_password_from_flashMem());
-        send_thru_gsm(get_password_from_flashMem(), regServer);
-      }
-    }
-    else if (strstr(smsCommand, "RESET_NOW"))
-    {
-      if (regServer == tempServer)
-      {
-        flashLed(LED_BUILTIN, 3, 50);
-        send_thru_gsm(get_password_from_flashMem(), "Manual Reset! - watchdog activated");
-        enable_watchdog();
-      }
+      strncpy(messageToSend, "New password: ", 14);
+      strncat(messageToSend, get_password_from_flashMem(), 50);
+      Serial.println(messageToSend);
+
+      send_thru_gsm(messageToSend, regServer);
     }
   }
-  */
+  //SETDATETIME:SENSLOPE:[YYYY,MM,DD,HH,MM,SS,dd[0-6/m-sun],] 2021,02,23,21,22,40,1,
+  else if (strncmp(data, "SETDATETIME", 11) == 0)
+  {
+    Serial.println("change timestamp!");
+    char messageToSend[100];
+    messageToSend[0] = '\0';
+    Serial.println(data);
+    char *_password = strtok(data + 11, ":");
+    char *YY = strtok(NULL, ",");
+    char *MM = strtok(NULL, ",");
+    char *DD = strtok(NULL, ",");
+    char *hh = strtok(NULL, ",");
+    char *mm = strtok(NULL, ",");
+    char *ss = strtok(NULL, ",");
+    char *dd = strtok(NULL, ",");
+
+    int _YY = atoi(YY);
+    int _MM = atoi(MM);
+    int _DD = atoi(DD);
+    int _hh = atoi(hh);
+    int _mm = atoi(mm);
+    int _ss = atoi(ss);
+    int _dd = atoi(dd);
+
+    if (isPassWordCorrect(_password) && registerNumber)
+    {
+      //set date and time
+      Serial.println(_YY);
+      Serial.println(_MM);
+      Serial.println(_DD);
+      Serial.println(_hh);
+      Serial.println(_mm);
+      Serial.println(_ss);
+      Serial.println(_dd);
+      adjustDate(_YY, _MM, _DD, _hh, _mm, _ss, _dd);
+      readTimeStamp();
+
+      strncpy(messageToSend, "Current timestamp: ", 19);
+      strncat(messageToSend, Ctimestamp, sizeof(Ctimestamp));
+      Serial.println(messageToSend);
+      send_thru_gsm(messageToSend, regServer);
+    }
+  }
+  //SENDINGTIME:SENSLOPE:[0-4]:
+  else if (strncmp(data, "SETSENDINGTIME", 14) == 0)
+  {
+    Serial.println("change sending time!");
+    char messageToSend[100];
+    char sendStorage[10];
+    messageToSend[0] = '\0';
+    sendStorage[0] = '\0';
+    Serial.println(data);
+
+    char *_password = strtok(data + 14, ":");
+    char *inputSending = strtok(NULL, ":");
+    int _inputSending = atoi(inputSending);
+
+    if (isPassWordCorrect(_password) && registerNumber)
+    {
+      //set sending time
+      Serial.println(_inputSending);
+      alarmStorage.write(_inputSending);
+      sprintf(sendStorage, "%d", alarmFromFlashMem());
+
+      strncpy(messageToSend, "Updated sending time: ", 22);
+      strncat(messageToSend, sendStorage, sizeof(sendStorage));
+      Serial.println(messageToSend);
+      send_thru_gsm(messageToSend, regServer);
+    }
+  }
+  //CMD?:SENSLOPE:
+  else if (strncmp(data, "CMD?", 4) == 0)
+  {
+    Serial.println("change sending time!");
+    char messageToSend[100];
+    ;
+    messageToSend[0] = '\0';
+    char *_password = strtok(data + 4, ":");
+
+    if (isPassWordCorrect(_password) && registerNumber)
+    {
+      //read DUE command
+      sensCommand = passCommand.read();
+      strncpy(messageToSend, "Current DUE command: ", 21);
+      strncat(messageToSend, sensCommand.senslopeCommand, 50);
+      Serial.println(messageToSend);
+      send_thru_gsm(messageToSend, regServer);
+    }
+  }
+  //CMD:SENSLOPE[ARQCM6T/6S]
+  else if (strncmp(data, "CMD?", 4) == 0)
+  {
+    Serial.println("change sending time!");
+    char messageToSend[100];
+    messageToSend[0] = '\0';
+
+    char *_password = strtok(data + 4, ":");
+    char *dueCmd = strtok(NULL, ":");
+
+    if (isPassWordCorrect(_password) && registerNumber)
+    {
+      //read DUE command
+      strcpy((sensCommand.senslopeCommand), dueCmd);
+      passCommand.write(sensCommand); //save to flash memory
+
+      //read command
+      sensCommand = passCommand.read();
+
+      strncpy(messageToSend, "Current DUE command: ", 21);
+      strncat(messageToSend, sensCommand.senslopeCommand, 50);
+      Serial.println(messageToSend);
+      send_thru_gsm(messageToSend, regServer);
+    }
+  }
+  //LISTPHONENUM:SENSLOPE:
 }
 
 /* Read GSM reply; non read blocking process*/
 void processIncomingByte(const byte inByte, int _mode)
 {
   // const unsigned int MAX_INPUT = 256; // how much serial data we expect before a newline
-  static char input_line[256];
+  static char input_line[255];
   static unsigned int input_pos = 0;
 
   switch (inByte)
@@ -368,24 +412,6 @@ char *readGSMResponse()
   }
   return response;
 }
-
-/*
-char *readGSMResponse_test()
-{
-  while (GSMSerial.available() > 0)
-  {
-    // processIncomingByte(GSMSerial.read(), 0);
-  }
-}
-
-void process_gsm_data(char *_data)
-{
-  if (strncmp(_data, "OK", 2) == 0)
-  {
-    Serial.println("read 'OK' from GSM");
-  }
-}
-*/
 
 bool gsmReadOK()
 {
@@ -463,16 +489,16 @@ void gsmHangup()
 
 void gsmDeleteReadSmsInbox()
 {
+  Serial.println("deleting sms read from inbox . . .");
   GSMSerial.write("AT+CMGD=1,2\r");
-  // Serial.println(readGSMResponse());
   delay_millis(1000);
   if (gsmReadOK())
   {
-    Serial.println("Command success!");
+    Serial.println("deleting done!");
   }
   else
   {
-    Serial.println("Command failed.");
+    Serial.println("deleting failed!");
   }
 }
 
@@ -503,6 +529,7 @@ void gsmManualNetworkConnect()
   String response;
   char command[25];
   simNetCommand.toCharArray(command, 25);
+  Serial.println("Connecting GSM to network.");
   Serial.println(command);
 
   for (int i = 0; i < 10; i++)
@@ -512,13 +539,14 @@ void gsmManualNetworkConnect()
     delay_millis(1000);
     if (gsmReadOK())
     {
+      Serial.print("");
       Serial.print("GSM Connected to: ");
       Serial.println(simNetwork());
       break;
     }
     else
     {
-      Serial.println("retrying connection");
+      Serial.print(". ");
     }
   }
 }
@@ -530,6 +558,10 @@ void sleepGSM()
   if (gsmReadOK())
   {
     Serial.println("GSM going to sleep!");
+  }
+  else
+  {
+    Serial.println("GSM failed to sleep!");
   }
 }
 
@@ -545,7 +577,7 @@ void wakeGSM()
   gsmReadOK();
   GSMSerial.write("AT+CSCLK=0\r");
   gsmReadOK();
-  GSMSerial.write("AT+CMGF=1\r");
+  GSMSerial.write("AT\r");
   if (gsmReadOK())
   {
     Serial.println("GSM is alive!");
@@ -556,6 +588,11 @@ void wakeGSM()
   }
 }
 
+/**Reset and initialize GSM
+ * turn ON and OFF GSM
+ * set GSM to no echo mode
+ * set GSM to text mode
+*/
 void resetGSM()
 {
   int overflow_counter = 0;
@@ -564,23 +601,51 @@ void resetGSM()
   delay_millis(500);
   digitalWrite(GSMRST, HIGH);
   delay_millis(1000);
+  Serial.println("Sending AT cmd");
   for (int i = 0; i < 6; i++)
   {
     GSMSerial.write("AT\r"); //gsm initialization
-    Serial.println("Sending AT cmd");
+    Serial.print(". ");
     if (gsmReadOK() == true)
     {
       Serial.println("Got reply from GSM");
       break;
     }
-    Serial.println("No reply from GSM");
   }
-  // gsmManualNetworkConnect();
+  Serial.println(" ");
   Serial.println("Done resetting GSM");
+  Serial.println(" ");
+  // init_gsm();
+  Serial.println(" ");
+}
+
+void init_gsm()
+{
+  Serial.println("initializing gsm . . .");
+  GSMSerial.write("AT\r"); //gsm initialization
+  gsmReadOK();
+  GSMSerial.write("ATE0\r"); //turn off echo
+  if (gsmReadOK())
+  {
+    Serial.println("Turning GSM to NO echo mode.");
+  }
+  for (int i = 0; i < 4; i++)
+  {
+    GSMSerial.write("AT+CMGF=1\r"); //switching to text mode
+    if (gsmReadOK())
+    {
+      Serial.println(" ");
+      Serial.println("GSM is set to text mode.");
+      Serial.println("GSM is no now ready!");
+      break;
+    }
+    Serial.print(". ");
+  }
 }
 
 void turn_ON_GSM(int _gsmPowerMode)
 {
+  disable_watchdog();
   if (_gsmPowerMode == 0)
   {
     digitalWrite(GSMPWR, HIGH);
@@ -593,10 +658,10 @@ void turn_ON_GSM(int _gsmPowerMode)
       overflow_counter++;
     } while (readCSQ() == 0 || overflow_counter < 2);
 
-    GSMSerial.write("ATE0\r"); //turn off echo
+    init_gsm();
+    GSMSerial.write("AT\r");
     if (gsmReadOK())
     {
-      Serial.println("Turning GSM to NO echo mode");
       Serial.println("GSM is no now ready!");
     }
     else
@@ -614,6 +679,7 @@ void turn_ON_GSM(int _gsmPowerMode)
   else
   {
   }
+  enable_watchdog();
 }
 
 void gsm_network_connect()
@@ -625,10 +691,9 @@ void gsm_network_connect()
     overflow_counter++;
   } while (readCSQ() == 0 || overflow_counter < 2);
 
-  GSMSerial.write("ATE0\r"); //turn off echo
+  GSMSerial.write("AT\r");
   if (gsmReadOK())
   {
-    Serial.println("Turning GSM to NO echo mode");
     Serial.println("GSM is no now ready!");
   }
   else
