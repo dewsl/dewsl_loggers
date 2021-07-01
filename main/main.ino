@@ -6,6 +6,7 @@
 #include <avr/pgmspace.h>
 #include <XBee.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #include <RTCDue.h>
 #include <avr/dtostrf.h>
@@ -36,6 +37,7 @@
 
 #define ENABLE_RTC 0
 #define CAN_ARRAY_BUFFER_SIZE 100
+File unsent_log;
 
 // #define comm_mode "ARQ" // 1 for ARQ, 2 XBEE
 char comm_mode[5] = "ARQ";
@@ -175,7 +177,7 @@ uint8_t g_sensor_version = 3;
   uint8_t g_datalogger_version = 3;
   ---
 */
-uint8_t g_datalogger_version = 2;
+uint8_t g_datalogger_version = 4;
 
 /* 
   Variable: broad_timeout
@@ -314,7 +316,7 @@ void setup() {
   init_can();
   init_char_arrays();
   init_gids();
-  init_sd(); 
+  init_sd();
   open_config();
   print_stored_config();
 
@@ -636,8 +638,13 @@ void getATCommand(){
         root.close();
         }
         break;
-      case 'Z': {
+      case 'Y': {
           dumpSDtoPC();
+          //Serial.print("OK");   
+        }
+        break;
+      case 'Z': {
+          open_sdata();
           //Serial.print("OK");   
         }
         break;
@@ -673,8 +680,27 @@ void getATCommand(){
     <g_final_dump>, <g_sensor_version>, <text_message>
 */
 void operation(int sensor_type, char communication_mode[]){
+  File create_unsent;
+  int minute;
+  minute = g_timestamp.substring(8,10).toInt();
+  if (sensor_type == 3 )
+  {
+   // if((minute > 5 && minute < 25) || (minute > 35 && minute < 55)){
+    open_sdata();
+  //  rename_sd();
+    //}
+  }else
+  {
   int counter= 0;
   int num_of_tokens = 0;
+  if (!SD.begin(g_chip_select)) {                  //create unsent.txt
+    Serial.println("SD card not detected");
+    return;
+  } else {
+    create_unsent = SD.open("unsent.txt", FILE_WRITE);
+    create_unsent.close();
+  }
+  
   read_data_from_column(g_final_dump, g_sensor_version, sensor_type);// matagal ito.
   Serial.print(F("g_final_dump: "));
   Serial.println(F(g_final_dump));
@@ -705,6 +731,7 @@ void operation(int sensor_type, char communication_mode[]){
     }
     token1 = strtok(NULL, g_delim);
     num_of_tokens = num_of_tokens + 1;
+    }
   }
 }
 
@@ -1089,6 +1116,15 @@ int parse_cmd(char* command_string){
       Serial.print("g_timestamp: ");
       Serial.println(g_timestamp);
       return 1;
+    } else if (*(pch+strlen(cmd)) == 'G'){ // GSM
+      cmd_index = serial_line.indexOf('G',6); // ARQCMD has 6 characters
+      temp_time = serial_line.substring(cmd_index+1); 
+      slash_index = temp_time.indexOf('/');
+      temp_time.remove(slash_index,1);
+      g_timestamp = temp_time;
+      Serial.print("g_timestamp: ");
+      Serial.println(g_timestamp);
+      return 3;   
     } else {
       Serial.println("wait_arq_cmd returned 0");
       return 0;
@@ -1300,19 +1336,42 @@ void build_txt_msgs(char mode[], char* source, char* destination){
       token2 = strtok(NULL, g_delim);
     }
   }
+  
+  if (destination[0] == '\0'){
+    char no_dat[100] = "";
+    num_text_to_send++;
+    strncpy(master_name,g_mastername,6);
+    if(strcmp(comm_mode, "LORA") == 0){
+      sprintf(no_dat,  "%02s", ">>");
+      strncat(no_dat, g_mastername, 5);
+      strncat(no_dat, "*0*ERROR: no data parsed*", 25);
+      strncat(no_dat, Ctimestamp, 13);
+    }else{
+      sprintf(no_dat, "%s", "042>>1/2#");
+      strncat(no_dat, g_mastername, 5);
+      strncat(no_dat, "*0*ERROR: no data parsed*", 25);
+      strncat(no_dat, "<<", 2);  
+   }
+  strncat(destination,no_dat, strlen(no_dat));
+  strncat(destination, g_delim, 2);
+  }
    
   if (vc_flag == true) {                                                //for testing
     char temp3[100] = "";
-
+    char unsent_c[100] = "";
     strncat(temp3,master_name,strlen(master_name));
     strncat(temp3,"*m*",4);
     strncat(temp3, g_build, strlen(g_build));
+    strncat(temp3, ">", 1);
+    sprintf(unsent_c, "%d", unsent_count());
+    strncat(temp3, unsent_c, strlen(unsent_c));
+
     writeData(timestamp, g_build);
     if (strcmp(comm_mode, "ARQ") == 0) {
-      sprintf(pad2,"%03d", strlen(g_build));      //message count
+      sprintf(pad2,"%03d", strlen(temp3));      //message count
       strncat(pad2,">>",3);                   
       sprintf(temp,"%02d/%02d#",num_text_to_send,num_text_to_send); 
-      strncat(pad2,temp,6);                       //000>>00/00#
+      strncat(pad2,temp,strlen(temp));                       //000>>00/00#
       strncat(g_build_final, pad2, strlen(pad2));
       strncat(g_build_final, temp3, strlen(temp3));
       strncat(g_build_final, "<<", 3);
@@ -1685,6 +1744,7 @@ void arqwait_delay(int milli_secs){
     - <operation>
 */
 void send_data(bool isDebug, char* columnData){
+  String new_unsent;
   int timestart = millis();
   int timenow = millis();
   bool OKFlag = false;
@@ -1732,10 +1792,18 @@ void send_data(bool isDebug, char* columnData){
         else{
            DATALOGGER.println(columnData);       
         }
-        
+   
         send_retry_limit++;
-        if (send_retry_limit == 5){
+        if (send_retry_limit == 3){
           Serial.println(F("send_retry_limit reached."));
+          unsent_log = SD.open("unsent.txt", FILE_WRITE);
+          new_unsent = columnData;
+          new_unsent.remove(0,10);
+          if(unsent_log){         
+            unsent_log.println(new_unsent);
+            unsent_log.close();
+            Serial.println("data logged!");
+          }     
           OKFlag = true;
         }
       } while (OKFlag == false);
@@ -1978,19 +2046,6 @@ void sensor_voltage_ver() {             //kailangan pang ayusin and triggers for
       Serial.println("sensor version mismatch");  }
     change_sensor_version(3);
   }
-  
-/*  
-  Serial.print("normal ");
-  Serial.println(normal);
-  Serial.print("nonZero ");
-  Serial.println(nonZero);
-  Serial.print("zeroVal ");
-  Serial.println(zeroVal);
-  Serial.print("trig ");
-  Serial.println(trig);
-  Serial.print("g_sensor_version ");
-  Serial.println(g_sensor_version);
-*/
 
 //reboot();                                              //reset watchdogtimer
   normal = nonZero = zeroVal = trig = counter = 0;
@@ -2008,6 +2063,27 @@ void change_sensor_version (int new_version) {
         
 }
 
+int unsent_count() {
+  File unsent_file;
+  int unsent_counter = 0;
+  char usent_char;
+  if (SD.exists("unsent.txt")) {
+    unsent_file = SD.open("unsent.txt");
+    if (unsent_file) {
+      while (unsent_file.available()) {
+        usent_char = (unsent_file.read());
+        if (usent_char == '\n') {
+          unsent_counter++;
+          //Serial.print("count");
+        }
+      }
+      unsent_file.close();
+    }
+  } else{
+    unsent_counter= -1;
+  }
+  return(unsent_counter);   
+}
 /*
 void reboot() {
   wdt_disable();
