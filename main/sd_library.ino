@@ -105,6 +105,127 @@ void open_config(){
 	return;
 }
 
+int unsent_row()
+{
+  File unsent_log;
+  int totalrow = 0;
+  unsent_log = SD.open("unsent.txt");
+while (unsent_log.available())
+    {
+      if (totalrow <= 50)
+      {
+        unsent_log.readStringUntil('\n');
+        totalrow = totalrow + 1; 
+        Serial.println(totalrow);
+      }  
+      else
+      {
+        break;        
+      }
+      
+    }
+unsent_log.close();    
+return(totalrow);
+}
+
+void open_sdata(){
+  File unsent_log;
+  File temp_log;
+  int row = 0;
+  char values[390];
+  int state;
+  int i;
+
+int totalrow = unsent_row();
+
+
+unsent_log = SD.open("unsent.txt");
+while (unsent_log.available())
+    {
+      if (totalrow <= 50)
+      {
+        unsent_log.readStringUntil('\n');
+        totalrow = totalrow + 1; 
+        Serial.println(totalrow);
+      }  
+      else
+      {
+        break;        
+      }
+      
+    }
+unsent_log.close();       
+
+//if (DATALOGGER.available()){
+    int dummytotalrow = totalrow +1;
+    unsent_log = SD.open("unsent.txt");
+    // read from the file until there's nothing else in it:
+    while (unsent_log.available() > 0) {
+      //Serial.write(sd_files.read());
+      i = unsent_log.readBytesUntil('\n', values, sizeof(values) - 1);
+      row = row+1;
+      values[i] = '\0';              
+      char *token1 = values;
+      if(row <= totalrow){
+      Serial.println(token1);
+      delay(200);
+      char token2[142];  // "040>>1/1#cartc*asda<<";//Bilangin yung rows para malagay dito. Tapos tska isend
+      sprintf(token2, "%s%d%s%d%s%s%s\n", "040>>",row,"/",dummytotalrow,"#", token1, "<<");
+      //strcat(token2, token1);
+      Serial.println(token2); 
+      send_data(false, token2);
+      }else{
+        // close the file:
+       unsent_log.close(); 
+        }     
+      }
+ //   }
+
+
+    
+unsent_log = SD.open("unsent.txt");
+temp_log = SD.open("temp.txt", FILE_WRITE);
+int rowN = 0;
+
+while (unsent_log.available() > 0) {
+      i = unsent_log.readBytesUntil('\n', values, sizeof(values) - 1);
+      rowN = rowN+1;
+      values[i] = '\n';
+      values[i+1] = '\0';              
+      char *token1 = values;  
+      if(rowN > totalrow){
+        Serial.print(token1);
+        temp_log.print(token1);      
+      }else if(rowN == totalrow && rowN < 50)
+      {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+        temp_log.print("");
+      }
+          
+  }
+  temp_log.close();
+  unsent_log.close(); 
+  rename_sd();
+}
+
+void rename_sd(){
+  int n;  
+  File temp_log;
+  File unsent_log;
+  
+  SD.remove("unsent.txt");
+  temp_log = SD.open("temp.txt");
+  unsent_log = SD.open("unsent.txt", FILE_WRITE);
+  
+  while ((n = temp_log.read()) >= 0) {
+    unsent_log.write(n);
+  }
+  temp_log.close();
+  unsent_log.close();
+  SD.remove("temp.txt");
+}
+  
+
+
 /* 
 	Function: process_config_line
 
@@ -395,7 +516,8 @@ void print_due_command2() {
     Serial.println("V.\tFinal Dump");
     Serial.println("W.\tChange Sensor Version W=<sensor version>");
     Serial.println("X.\tOpen config.txt");
-    Serial.println("Z.\tSD Data Dump to PC (REALTERM)");
+    Serial.println("Y.\tSD Data Dump to PC (REALTERM)");
+    Serial.println("Z.\tSend SD card data backup to Server");
     Serial.println(F("================================="));
     Serial.println("Enter Choice:");
 
