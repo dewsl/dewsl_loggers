@@ -38,7 +38,6 @@
 #define ENABLE_RTC 0
 #define CAN_ARRAY_BUFFER_SIZE 100
 File unsent_log;
-/*test*/
 
 // #define comm_mode "ARQ" // 1 for ARQ, 2 XBEE
 char comm_mode[5] = "ARQ";
@@ -803,6 +802,12 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
     get_data(41,1,column_data);
     get_data(42,1,column_data);
     get_data(22,1,column_data); 
+
+  } else if (sensor_version == 5){
+    get_data(51,1,column_data);
+    get_data(52,1,column_data);
+    get_data(23,1,column_data);
+    get_data(24,1,column_data);
     
   } else if (sensor_version == 1){
     get_data(256,1,column_data); //Added for polling of version 1

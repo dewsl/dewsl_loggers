@@ -793,7 +793,7 @@ void interpret_frame(CAN_FRAME incoming){
   d8 = incoming.data.byte[7]; 
 
   if (VERBOSE == 1) { Serial.println("process_frame()"); }
-  if ((d1 == 11)|(d1 == 12)|(d1==32)|(d1==33)){ 
+  if ((d1 == 11)|(d1 == 12)|(d1==32)|(d1==33)|(d1==41)|(d1==42)|(d1==51)|(d1==52)){ 
 
     x = compute_axis(d2,d3);
     y = compute_axis(d4,d5);
