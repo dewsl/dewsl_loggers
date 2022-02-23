@@ -231,7 +231,29 @@ struct data_type_params b64_identify_params(int msgid){
       struct_dtype.data_length = 9;
       struct_dtype.type_cutoff = 135; // 9 chars per node tilt data 
       break;
-      }
+    } case 51:{
+      struct_dtype.type_number = 4;
+      struct_dtype.data_length = 12;
+      struct_dtype.type_cutoff = 132; // 12 chars per node tilt data 
+      break;
+    } case 52:{
+      struct_dtype.type_number = 4;
+      struct_dtype.data_length = 12;
+      struct_dtype.type_cutoff = 132; // 12 chars per node tilt data 
+      break;
+    } case 23:{
+      struct_dtype.type_number = 3;
+      struct_dtype.data_length = 3;
+      struct_dtype.type_cutoff = 120;
+      break;
+    } case 24:{
+      struct_dtype.type_number = 3;
+      struct_dtype.data_length = 3;
+      struct_dtype.type_cutoff = 120;
+      break;
+    }
+
+    
     }
   return struct_dtype;
   
