@@ -158,9 +158,9 @@ void get_data(int cmd, int transmit_id, char* final_dump){
 
   float g_current = ina219.getCurrent_mA();
   float g_voltage = ina219.getBusVoltage_V();
-  dtostrf(g_current,0,2,g_test);
+  dtostrf(g_current,0,4,g_test);
   sprintf(g_build, g_test, strlen(g_test));
-  dtostrf(g_voltage,0,2,g_test);
+  dtostrf(g_voltage,0,4,g_test);
   strncat(g_build, "*",1);
   strncat(g_build, g_test, strlen(g_test));
   strncat(g_build, "*",1);
@@ -174,9 +174,9 @@ void get_data(int cmd, int transmit_id, char* final_dump){
       g_current = 0;
       g_current = ina219.getCurrent_mA();
       g_voltage = ina219.getBusVoltage_V();
-      dtostrf(g_current,0,2,g_test);
+      dtostrf(g_current,0,4,g_test);
       strncat(g_build, g_test, strlen(g_test));
-      dtostrf(g_voltage,0,2,g_test);
+      dtostrf(g_voltage,0,4,g_test);
       strncat(g_build, "*",1);
       strncat(g_build, g_test, strlen(g_test));
       strncat(g_build, "*",1); 
@@ -288,9 +288,9 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   Serial.println(F("================================="));
   g_current = ina219.getCurrent_mA();
   g_voltage = ina219.getBusVoltage_V();
-  dtostrf(g_current,0,2,g_test);
+  dtostrf(g_current,0,4,g_test);
   strncat(g_build, g_test, strlen(g_test));
-  dtostrf(g_voltage,0,2,g_test);
+  dtostrf(g_voltage,0,4,g_test);
   strncat(g_build, "*",1);
   strncat(g_build, g_test, strlen(g_test)); 
   Serial.println(g_build);
@@ -854,21 +854,36 @@ void interpret_frame(CAN_FRAME incoming){
     <interpret_frame>
 */
 int compute_axis(int low, int high){
-  int value = 5000;
-  if (!b64){
-    if (high >= 240) {
-      high = high - 240;
-      value = (low + (high*256)) - 4095;
-    } else {
+  if (g_sensor_version < 5){
+    int value = 5000;
+    if (!b64){
+      if (high >= 240) {
+        high = high - 240;
+        value = (low + (high*256)) - 4095;
+      } else {
+        value = (low + (high*256));
+      } 
+      return value;
+    } else if (b64) {
+      if (high >= 240) {
+        high = high - 240;
+      } 
       value = (low + (high*256));
-    } 
-    return value;
-  } else if (b64) {
-    if (high >= 240) {
-      high = high - 240;
-    } 
-    value = (low + (high*256));
-    return value;
+      return value;
+    }
+  }
+
+  else if (g_sensor_version >= 5){
+    if (!b64){ 
+      int16_t value;
+      value= (high << 8) | low;
+      return value;
+    }
+    else if (b64) {
+      int value;
+      value= (high << 8) | low;
+      return value;
+    }
   }
 }
 
