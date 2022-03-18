@@ -252,8 +252,8 @@ struct data_type_params b64_identify_params(int msgid){
       struct_dtype.type_cutoff = 120;
       break;
     }
-
-    
+      
+      
     }
   return struct_dtype;
   
@@ -367,6 +367,39 @@ void b64_write_frame_to_dump(CAN_FRAME incoming, char* dump){
       to_base64(tmp,temp);
       pad_b64(2,temp,temp2);
       strncat(dump,temp2,2);      
+      break;
+    }
+    case 4: { // for version 5 sensor
+
+      x = compute_axis(incoming.data.byte[1],incoming.data.byte[2]);
+      y = compute_axis(incoming.data.byte[3],incoming.data.byte[4]);
+      z = compute_axis(incoming.data.byte[5],incoming.data.byte[6]);
+      v = incoming.data.byte[7];
+
+        sprintf(temp2,"%02X",msgid);
+      strncat(dump,temp2,2);
+
+      to_base64(gid,temp);
+      pad_b64(1,temp,temp2);
+      temp2[1] = '\0'; // append null 
+      strncat(dump,temp2,1);
+
+      to_base64(x,temp);
+      pad_b64(3,temp,temp2);
+      strncat(dump,temp2,3);
+
+      to_base64(y,temp);
+      pad_b64(3,temp,temp2);
+      strncat(dump,temp2,3);
+
+      to_base64(z,temp);
+      pad_b64(3,temp,temp2);
+      strncat(dump,temp2,3);
+
+      to_base64(v,temp);
+      pad_b64(2,temp,temp2);
+      strncat(dump,temp2,2);
+
       break;
     }
   }
@@ -625,10 +658,14 @@ void b64_build_text_msgs(char mode[], char* source, char* destination){
     
     if (vc_flag == true) {                                                //for testing
     char temp3[100] = "";
-
+    char unsent_c[100] = "";
     strncat(temp3,master_name,strlen(master_name));
     strncat(temp3,"*m*",4);
+    sprintf(unsent_c, "%d", unsent_count());
+    strncat(g_build, ">", 1);
+    strncat(g_build, unsent_c, strlen(unsent_c));
     strncat(temp3, g_build, strlen(g_build));
+    
     writeData(timestamp, g_build);
     if (strcmp(comm_mode, "ARQ") == 0) {
       sprintf(pad2,"%03d", strlen(g_build));      //message count
