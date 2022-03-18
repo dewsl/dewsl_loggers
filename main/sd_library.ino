@@ -167,18 +167,19 @@ unsent_log.close();
       values[i] = '\0';              
       char *token1 = values;
       if(row <= totalrow){
-      Serial.println(token1);
-      delay(200);
-      char token2[142];  // "040>>1/1#cartc*asda<<";//Bilangin yung rows para malagay dito. Tapos tska isend
-      sprintf(token2, "%s%d%s%d%s%s%s\n", "040>>",row,"/",dummytotalrow,"#", token1, "<<");
-      //strcat(token2, token1);
-      Serial.println(token2); 
-      send_data(false, token2);
+        Serial.println(token1);
+        delay(200);
+        char token2[142];  // "040>>1/1#cartc*asda<<";//Bilangin yung rows para malagay dito. Tapos tska isend
+        sprintf(token2, "%s%d%s%d%s%s%s\n", "040>>",row,"/",dummytotalrow,"#", token1, "<<");
+        //strcat(token2, token1);
+        Serial.println(token2); 
+        send_data(false, token2);
       }else{
         // close the file:
        unsent_log.close(); 
         }     
       }
+      unsent_log.close(); 
  //   }
 
 
@@ -444,9 +445,10 @@ int8_t writeData(String fname,String data){
 //	 	return -1;
 //	 }
 	delay(20);
-  
+
+  fname.trim();
 	for(int i=0; i<6 ; i++){
-	 	logger_file_name[i]= fname[i];
+	 	logger_file_name[i]= fname.charAt(i);
 	}
 //	fname.substring(0,6).toCharArray(filename,6);
 
@@ -464,7 +466,7 @@ int8_t writeData(String fname,String data){
 	sdFile.print(data);
 	sdFile.print(",");
 	sdFile.print(g_timestamp);
-	sdFile.println();
+	sdFile.print('\n');
 	sdFile.close();//close the file
 	// Serial.println("writing to SD"); 
 }
@@ -543,6 +545,7 @@ void printDirectory(File dir, int numTabs) {
       Serial.println(entry.size(), DEC);
     }
     entry.close();
+    dir.close();
   }
 }
 
@@ -584,6 +587,8 @@ void dumpSDtoPC()
         }
       }
     }
+    root.close();
+    dir.close();
   }
   
 
