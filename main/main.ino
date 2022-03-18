@@ -6,7 +6,7 @@
 #include <avr/pgmspace.h>
 #include <XBee.h>
 #include <stdbool.h>
-#include <limits.h>
+#include <limits.h> 
 
 #include <RTCDue.h>
 #include <avr/dtostrf.h>
@@ -365,7 +365,7 @@ void loop(){
       if (Serial.available()){
         Serial.println("Debug Mode!");
         getATCommand();  
-        // datalogger_flag = 1; // Kagpag nagdebug, wag na mag ops mode.
+        datalogger_flag = 1; // Kagpag nagdebug, wag na mag ops mode.
       } else if (strcmp(comm_mode,"XBEE") == 0){// sira ito // fix by: ilabas yung pagkuha nung string dito tapos ipasa na lang yung cmd.
 
         char temp[1];
@@ -806,6 +806,7 @@ void read_data_from_column(char* column_data, int sensor_version, int sensor_typ
   } else if (sensor_version == 5){
     get_data(51,1,column_data);
     get_data(52,1,column_data);
+    get_data(22,1,column_data);
     get_data(23,1,column_data);
     get_data(24,1,column_data);
     
@@ -1110,6 +1111,7 @@ int parse_cmd(char* command_string){
       slash_index = temp_time.indexOf('/');
       temp_time.remove(slash_index,1);
       g_timestamp = temp_time;
+      g_timestamp.trim();
       Serial.print("g_timestamp: ");
       Serial.println(g_timestamp);
       return 2;
@@ -1119,6 +1121,7 @@ int parse_cmd(char* command_string){
       slash_index = temp_time.indexOf('/');
       temp_time.remove(slash_index,1);
       g_timestamp = temp_time;
+      g_timestamp.trim();
       Serial.print("g_timestamp: ");
       Serial.println(g_timestamp);
       return 1;
@@ -1128,6 +1131,7 @@ int parse_cmd(char* command_string){
       slash_index = temp_time.indexOf('/');
       temp_time.remove(slash_index,1);
       g_timestamp = temp_time;
+      g_timestamp.trim();
       Serial.print("g_timestamp: ");
       Serial.println(g_timestamp);
       return 3;   
@@ -1367,12 +1371,12 @@ void build_txt_msgs(char mode[], char* source, char* destination){
     char unsent_c[100] = "";
     strncat(temp3,master_name,strlen(master_name));
     strncat(temp3,"*m*",4);
-    strncat(temp3, g_build, strlen(g_build));
-    strncat(temp3, ">", 1);
     sprintf(unsent_c, "%d", unsent_count());
-    strncat(temp3, unsent_c, strlen(unsent_c));
-
-    writeData(timestamp, g_build);
+    strncat(g_build, ">", 1);
+    strncat(g_build, unsent_c, strlen(unsent_c));
+    strncat(temp3, g_build, strlen(g_build));
+    
+    writeData(timestamp, g_build);      
     if (strcmp(comm_mode, "ARQ") == 0) {
       sprintf(pad2,"%03d", strlen(temp3));      //message count
       strncat(pad2,">>",3);                   
@@ -1434,10 +1438,13 @@ void remove_extra_characters(char* columnData, char idf){
   char *start_pointer = columnData;
 
   // dagdagan kapag kailangan
-  if (idf == 'd'){
+  if ((idf == 'd')||(idf == 'e')||(idf == 'f')){
     cmd = 9;
   } else if ( (idf == 'x' ) || (idf == 'y') ){
-    cmd = 1;
+    if (g_sensor_version >= 5){
+      cmd = 5;
+    }
+    else cmd = 1;
   } else if ((idf == 'p')){
     cmd = 10;
   } else if (idf=='b'){
@@ -1471,6 +1478,12 @@ void remove_extra_characters(char* columnData, char idf){
       }
       case 4: { // old format
         if (i%20 != 0 && i%20!= 1 && i%20 != 4 && i%20 != 8 && i%20 != 12){
+          strncat(pArray, columnData, 1);
+        }
+        break;
+      }
+      case 5: {// axel data //version 5 
+        if (i % 20 != 0 && i % 20 != 1 ) {
           strncat(pArray, columnData, 1);
         }
         break;
@@ -1555,6 +1568,12 @@ char check_identifier(char* token, int index_msgid){
           else if (token[index_msgid+1] == '6') {
             idfier = 'd';
           }
+          else if (token[index_msgid+1] == '7') { //msg_id 23 v5 accel 1 temperature
+            idfier = 'e';
+          }
+          else if (token[index_msgid+1] == '8') { //msg_id 24 v5 accel 2 temperature
+            idfier = 'f';
+          }
           break;
         } case '0': {
           if (token[index_msgid+1] == 'B')
@@ -1581,6 +1600,14 @@ char check_identifier(char* token, int index_msgid){
          }else if (token[index_msgid+1] == 'A'){
            idfier = 'y';
          }
+         break;
+        } case '3': {
+         //Serial.println(token[index_msgid+1]);
+         if (token[index_msgid+1] == '3'){        //version 5 accel 1
+           idfier = 'x';
+         } else if (token[index_msgid+1] == '4'){ //version 5 accel 2
+           idfier = 'y';
+         } 
          break;
         } case '6': {
           idfier = 'b';
@@ -1632,6 +1659,12 @@ int check_cutoff(char idf){
       cutoff = 133;  //15 chars only for axel
       break;
     } case 'd': {
+      cutoff = 136;  //15 chars only for axel
+      break;
+    } case 'e': {
+      cutoff = 136;  //15 chars only for axel
+      break;
+    } case 'f': {
       cutoff = 136;  //15 chars only for axel
       break;
     } case 'p' :{
@@ -1878,7 +1911,7 @@ void send_thru_lora(bool isDebug, char* columnData){
           while ( timenow - timestart < 9000 ) {
             timenow = millis();
           }
-          LORA.println("Time out...");
+//          LORA.println("Time out...");
           break;
         }
 
