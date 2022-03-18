@@ -776,7 +776,8 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
     <write_frame_to_dump>
 */
 void interpret_frame(CAN_FRAME incoming){
-  int id,d1,d2,d3,d4,d5,d6,d7,d8,x,y,z,somsr,temper;
+  int id,d1,d2,d3,d4,d5,d6,d7,d8,somsr,temper;
+  int16_t x,y,z;
   int tilt = 1;
   int soms = 0;
   char temp[6];
