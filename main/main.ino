@@ -4,7 +4,7 @@
 #include <Wire.h>
 #include <Adafruit_INA219.h>
 #include <avr/pgmspace.h>
-#include <XBee.h>
+// #include <XBee.h>
 #include <stdbool.h>
 #include <limits.h> 
 
@@ -14,8 +14,7 @@
 #define ATCMD     "AT" 
 #define ATECMDTRUE  "ATE"
 #define ATECMDFALSE "ATE0"
-#define ATRCVCAN    "ATRCV"
-#define ATSNDCAN    "ATSND"
+#define ATRCVCAN    "ATRCV"#define ATSNDCAN    "ATSND"
 #define ATGETSENSORDATA    "ATGSDT"
 #define ATSNIFFCAN  "ATSNIFF"
 #define ATDUMP    "ATDUMP"
@@ -48,7 +47,7 @@ const char base64[64] PROGMEM = {'A','B','C','D','E','F','G','H','I','J','K','L'
 '3','4','5','6','7','8','9','+','/'};
 
 File newconfig, oldconfig, root;
-XBee xbee = XBee();
+// XBee xbee = XBee();
 long timestart = 0;
 long timenow = 0;
 long arq_start_time = 0;
@@ -80,11 +79,11 @@ uint8_t b64 = 0;
 */
 uint8_t payload[200];
 
-XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00); //sets the data that it will only send to the coordinator
-ZBTxRequest zbTx = ZBTxRequest(addr64, payload, sizeof(payload));
-ZBTxStatusResponse txStatus = ZBTxStatusResponse();
-XBeeResponse response = XBeeResponse();
-ZBRxResponse rx = ZBRxResponse();
+// XBeeAddress64 addr64 = XBeeAddress64(0x00, 0x00); //sets the data that it will only send to the coordinator
+// ZBTxRequest zbTx = ZBTxRequest(addr64, payload, sizeof(payload));
+// ZBTxStatusResponse txStatus = ZBTxStatusResponse();
+// XBeeResponse response = XBeeResponse();
+// ZBRxResponse rx = ZBRxResponse();
 
 int g_chip_select = SS3;
 uint8_t datalogger_flag = 0;
@@ -100,7 +99,7 @@ bool can_flag;
   char xbee_response[200];
   --- 
 */
-char xbee_response[200];
+// char xbee_response[200];
 
 /*
   Variable: g_gids
@@ -320,18 +319,21 @@ void setup() {
   open_config();
   print_stored_config();
 
-  
+  /*
   if (g_datalogger_version == 3){
     strncpy(comm_mode,"XBEE",4);
     xbee.setSerial(DATALOGGER);  
-  } else if(g_datalogger_version == 2){
+  } else 
+  */
+  if(g_datalogger_version == 2){
     strncpy(comm_mode,"ARQ",3);
   } else if(g_datalogger_version == 4){
     strncpy(comm_mode,"LORA",4);  
-  } else {
+  } else if (g_datalogger_version == 1 || g_datalogger_version == 3 || g_datalogger_version == 5){
     Serial.print("g_datalogger_version == ");
-    Serial.println(g_datalogger_version);
-    strncpy(comm_mode,"ARQ",3);
+    Serial.print(g_datalogger_version);
+    Serial.println(" (default to LORA)");
+    strncpy(comm_mode,"LORA",4);
   }
     Serial.print("Comms: "); Serial.println(comm_mode);
     print_due_command2();
@@ -366,29 +368,29 @@ void loop(){
         Serial.println("Debug Mode!");
         getATCommand();  
         datalogger_flag = 1; // Kagpag nagdebug, wag na mag ops mode.
-      } else if (strcmp(comm_mode,"XBEE") == 0){// sira ito // fix by: ilabas yung pagkuha nung string dito tapos ipasa na lang yung cmd.
+      // } else if (strcmp(comm_mode,"XBEE") == 0){// sira ito // fix by: ilabas yung pagkuha nung string dito tapos ipasa na lang yung cmd.
 
-        char temp[1];
-        xbee_response[0] = '\0';
-        xbee.readPacket(); 
-        if (xbee.getResponse().isAvailable()) {
-          Serial.println("xbee.getResponse().isAvailable()!!!!");
-            if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
-                xbee.getResponse().getZBRxResponse(rx);
-                for (int i = 0; i < rx.getDataLength (); i++){
-                  temp[0] = (char)rx.getData(i);
-                  strncat(xbee_response,temp,1 ) ;        
-                }
-            }
-            Serial.print("response_string: ");
-            Serial.println(xbee_response);
-            operation(parse_cmd(xbee_response), comm_mode);
-            datalogger_flag = 1;
-            shut_down();
-        } else if ( xbee.getResponse().isError()){
-              Serial.print("Error ");
-              Serial.println(xbee.getResponse().getErrorCode());
-        }
+      //   char temp[1];
+      //   xbee_response[0] = '\0';
+      //   xbee.readPacket(); 
+      //   if (xbee.getResponse().isAvailable()) {
+      //     Serial.println("xbee.getResponse().isAvailable()!!!!");
+      //       if (xbee.getResponse().getApiId() == ZB_RX_RESPONSE) {
+      //           xbee.getResponse().getZBRxResponse(rx);
+      //           for (int i = 0; i < rx.getDataLength (); i++){
+      //             temp[0] = (char)rx.getData(i);
+      //             strncat(xbee_response,temp,1 ) ;        
+      //           }
+      //       }
+      //       Serial.print("response_string: ");
+      //       Serial.println(xbee_response);
+      //       operation(parse_cmd(xbee_response), comm_mode);
+      //       datalogger_flag = 1;
+      //       shut_down();
+      //   } else if ( xbee.getResponse().isError()){
+      //         Serial.print("Error ");
+      //         Serial.println(xbee.getResponse().getErrorCode());
+      //   }
       } else if ((strcmp(comm_mode,"ARQ") == 0) && (DATALOGGER.available()) ){ // sira ito       
           operation(wait_arq_cmd(), comm_mode);
           shut_down();
@@ -587,12 +589,12 @@ void getATCommand(){
           Serial.println(g_final_dump);
         }
         break;
-      case 'R': {         //AT+XBEE
-          wait_xbee_cmd(10000,xbee_response);
-          Serial.print("xbee_response :: ");
-          Serial.println(xbee_response);
-        }
-        break;
+      // case 'R': {         //AT+XBEE
+      //     wait_xbee_cmd(10000,xbee_response);
+      //     Serial.print("xbee_response :: ");
+      //     Serial.println(xbee_response);
+      //   }
+      //   break;
       case 'S': {          //AT+LOOPSEND
           while(1){
             Serial.println("sent.");
@@ -720,12 +722,12 @@ void operation(int sensor_type, char communication_mode[]){
       send_data(false, token1);    
     }else if(strcmp(comm_mode, "LORA") == 0){
       send_thru_lora(false,token1);
-    }else if(strcmp(comm_mode,"XBEE") == 0) {
-      while (send_thru_xbee(token1) == false){
-        if (counter == 10)
-          break;
-        counter ++;
-      }
+    // }else if(strcmp(comm_mode,"XBEE") == 0) {
+    //   while (send_thru_xbee(token1) == false){
+    //     if (counter == 10)
+    //       break;
+    //     counter ++;
+    //   }
     } else { //default
       send_data(true, token1); 
     }
@@ -1036,6 +1038,7 @@ int wait_lora_cmd(){
 
     - <parse_cmd> <loop>
 */
+/*
 int wait_xbee_cmd(int timeout, char* response_string){
   char temp[1];
   xbee_response[0] = '\0';
@@ -1062,7 +1065,7 @@ int wait_xbee_cmd(int timeout, char* response_string){
   Serial.println(response_string);
   return 0;
 }
-
+*/
 /* 
   Function: parse_cmd
 
@@ -1944,6 +1947,7 @@ void send_thru_lora(bool isDebug, char* columnData){
 
     boolean - States whether data is successfully sent or nor  
 */
+/*
 bool send_thru_xbee(char* load_data) {
   bool successFlag= false;
   int count_success=0;
@@ -1986,6 +1990,7 @@ bool send_thru_xbee(char* load_data) {
   delay(1000);
   return successFlag;
 }
+*/
 /*
   Function: serial_loopback
     Read and write loopback in Serial
