@@ -568,11 +568,11 @@ void getATCommand(){
       case 'N':         //AT+VOLTAGE
         read_voltage();
         break;
-      case 'O': {         //AT+TIMESTAMPPMM
+     /* case 'O': {         //AT+TIMESTAMPPMM
           String timestamp = getTimestamp("XBEE");
           Serial.println(timestamp);
         }
-        break;
+        break; */
       case 'P': {          //AT+SEND
           Serial.print(text_message);
           char *token1 = strtok(text_message,g_delim);
