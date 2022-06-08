@@ -508,18 +508,18 @@ void print_due_command2() {
     Serial.println("L.\tSniff CAN bus");
     Serial.println("M.\tRead Current draw");
     Serial.println("N.\tGet INA219 voltages");
-    Serial.println("O.\tGet XBEE Timestamp");
+    //Serial.println("O.\tGet XBEE Timestamp");
     Serial.println("P.\tSend data to DATALOGGER");
     Serial.println("Q.\tSample Piezo readout");
-    Serial.println("R.\tSample XBEE response");
-    Serial.println("S.\tSend commnad(3,3)");
-    Serial.println("T.\tR&W DATALOGGER Loopback");
-    Serial.println("U.\tR&W LORA Loopback");
-    Serial.println("V.\tFinal Dump");
-    Serial.println("W.\tChange Sensor Version W=<sensor version>");
-    Serial.println("X.\tOpen config.txt");
-    Serial.println("Y.\tSD Data Dump to PC (REALTERM)");
-    Serial.println("Z.\tSend SD card data backup to Server");
+   // Serial.println("R.\tSample XBEE response");
+    Serial.println("R.\tSend commnad(3,3)");
+    Serial.println("S.\tR&W DATALOGGER Loopback");
+    Serial.println("T.\tR&W LORA Loopback");
+    Serial.println("U.\tFinal Dump");
+    Serial.println("V.\tChange Sensor Version W=<sensor version>");
+    Serial.println("W.\tOpen config.txt");
+    Serial.println("X.\tSD Data Dump to PC (REALTERM)");
+    Serial.println("Y.\tSend SD card data backup to Server");
     Serial.println(F("================================="));
     Serial.println("Enter Choice:");
 
