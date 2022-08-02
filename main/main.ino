@@ -1,3 +1,5 @@
+//REV.22.08.02
+
 #include "variant.h"
 #include <due_can.h>
 #include <SD.h>
@@ -367,7 +369,7 @@ void loop(){
       if (Serial.available()){
         Serial.println("Debug Mode!");
         getATCommand();  
-        datalogger_flag = 1; // Kagpag nagdebug, wag na mag ops mode.
+      //  datalogger_flag = 1; // Kagpag nagdebug, wag na mag ops mode.
       // } else if (strcmp(comm_mode,"XBEE") == 0){// sira ito // fix by: ilabas yung pagkuha nung string dito tapos ipasa na lang yung cmd.
 
       //   char temp[1];
@@ -690,51 +692,50 @@ void operation(int sensor_type, char communication_mode[]){
    // if((minute > 5 && minute < 25) || (minute > 35 && minute < 55)){
     open_sdata();
   //  rename_sd();
-    //}
-  }else
-  {
-  int counter= 0;
-  int num_of_tokens = 0;
-  if (!SD.begin(g_chip_select)) {                  //create unsent.txt
-    Serial.println("SD card not detected");
-    return;
-  } else {
-    create_unsent = SD.open("unsent.txt", FILE_WRITE);
-    create_unsent.close();
-  }
-  
-  read_data_from_column(g_final_dump, g_sensor_version, sensor_type);// matagal ito.
-  Serial.print(F("g_final_dump: "));
-  Serial.println(F(g_final_dump));
-  if (b64 == 1) {
-    b64_build_text_msgs(comm_mode, g_final_dump, text_message);
-  } else {
-    build_txt_msgs(comm_mode, g_final_dump, text_message); 
-  }
-
-  Serial.println(text_message);
-  char *token1 = strtok(text_message,"~");
+   }
+   else if (sensor_type == 4)
+   {
+      //  for arQ rain gauge only
+      //  sends voltage data thru arQ
+      send_current_voltage_thru_arq();
+   }
+  else {
+    int counter= 0;
+    int num_of_tokens = 0;
+    if (!SD.begin(g_chip_select)) {                  //create unsent.txt
+      Serial.println("SD card not detected");
+      return;
+    } else {
+      create_unsent = SD.open("unsent.txt", FILE_WRITE);
+      create_unsent.close();
+    }
     
-  while (token1 != NULL){
-    Serial.print("Sending ::::");
-    Serial.println(token1);
-    if (strcmp(comm_mode,"ARQ") == 0) {
-      send_data(false, token1);    
-    }else if(strcmp(comm_mode, "LORA") == 0){
-      send_thru_lora(false,token1);
-    // }else if(strcmp(comm_mode,"XBEE") == 0) {
-    //   while (send_thru_xbee(token1) == false){
-    //     if (counter == 10)
-    //       break;
-    //     counter ++;
-    //   }
-    } else { //default
-      send_data(true, token1); 
+    read_data_from_column(g_final_dump, g_sensor_version, sensor_type);// matagal ito.
+    Serial.print(F("g_final_dump: "));
+    Serial.println(F(g_final_dump));
+    if (b64 == 1) {
+      b64_build_text_msgs(comm_mode, g_final_dump, text_message);
+    } else {
+      build_txt_msgs(comm_mode, g_final_dump, text_message); 
     }
-    token1 = strtok(NULL, g_delim);
-    num_of_tokens = num_of_tokens + 1;
+    
+    Serial.println(text_message);
+    char *token1 = strtok(text_message,"~");
+      
+    while (token1 != NULL){
+      Serial.print("Sending ::::");
+      Serial.println(token1);
+      if (strcmp(comm_mode,"ARQ") == 0) {
+        send_data(false, token1);    
+      }else if(strcmp(comm_mode, "LORA") == 0){
+        send_thru_lora(false,token1);
+      } else { //default
+        send_data(true, token1); 
+      }
+      token1 = strtok(NULL, g_delim);
+      num_of_tokens = num_of_tokens + 1;
     }
-  }
+   }
 }
 
 //Function: getArguments
@@ -1129,7 +1130,7 @@ int parse_cmd(char* command_string){
       Serial.println(g_timestamp);
       return 1;
     } else if (*(pch+strlen(cmd)) == 'G'){ // GSM
-      cmd_index = serial_line.indexOf('G',6); // ARQCMD has 6 characters
+      cmd_index = serial_line.indexOf('G',6); //ARQCMD6G ARQCMD has 6 characters
       temp_time = serial_line.substring(cmd_index+1); 
       slash_index = temp_time.indexOf('/');
       temp_time.remove(slash_index,1);
@@ -1137,7 +1138,17 @@ int parse_cmd(char* command_string){
       g_timestamp.trim();
       Serial.print("g_timestamp: ");
       Serial.println(g_timestamp);
-      return 3;   
+      return 3;
+    } else if (*(pch+strlen(cmd)) == 'V'){ // ARQCMD6V: Current and Voltage ONLY
+      cmd_index = serial_line.indexOf('V',6);
+      temp_time = serial_line.substring(cmd_index+1); 
+      slash_index = temp_time.indexOf('/');
+      temp_time.remove(slash_index,1);
+      g_timestamp = temp_time;
+      g_timestamp.trim();
+      Serial.print("g_timestamp: ");
+      Serial.println(g_timestamp);
+      return 4;
     } else {
       Serial.println("wait_arq_cmd returned 0");
       return 0;
@@ -1845,6 +1856,7 @@ void send_data(bool isDebug, char* columnData){
             unsent_log.println(new_unsent);
             unsent_log.close();
             Serial.println("data logged!");
+            break;
           }     
           OKFlag = true;
         }
@@ -2096,15 +2108,13 @@ void sensor_voltage_ver() {             //kailangan pang ayusin and triggers for
   can_flag = false;
 }
 
-
-void change_sensor_version (int new_version) {
+void change_sensor_version(int new_version) {
         if (g_sensor_version == new_version) {
           Serial.println("OK");
         } else if (copy_config_lines(String(new_version))) {
             replace_old_config(); 
             g_sensor_version = new_version;
-            }
-        
+        }
 }
 
 int unsent_count() {
@@ -2127,6 +2137,36 @@ int unsent_count() {
     unsent_counter= -1;
   }
   return(unsent_counter);   
+}
+
+
+void send_current_voltage_thru_arq()      //for arQ only
+{ 
+    static char v_test[50] = {'\0'};
+    static char v_final[50] = {'\0'};
+    
+    Serial.println(F("Sending current and voltage for arQ with RAIN GUAGE only"));
+
+    sprintf(v_test,">>1/1#%s*m*%2.4f*%2.4f*%2.4f*%2.4f<<",g_mastername,ina219.getCurrent_mA(),ina219.getBusVoltage_V(),ina219.getCurrent_mA(),ina219.getBusVoltage_V());
+    
+    int v_data_length = String(v_test).length() + 3;    //lenth of string to be sent plus 3 char data length
+    
+    sprintf(v_final, "%03d", v_data_length);
+    strcat(v_final, v_test); 
+    Serial.print(v_final);
+    
+    char *token1 = strtok(v_final,"~");
+      
+    while (token1 != NULL){
+      Serial.print("Sending ::::");
+      Serial.println(token1);
+      if (strcmp(comm_mode,"ARQ") == 0) {
+        send_data(false, token1);    
+      } else { //default
+        send_data(true, token1); 
+      }
+      token1 = strtok(NULL, g_delim);
+    }  
 }
 /*
 void reboot() {
