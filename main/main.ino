@@ -1,3 +1,5 @@
+//sample commit message
+
 //REV.22.08.02
 
 #include "variant.h"
@@ -553,8 +555,8 @@ void getATCommand(){
     
           g_timestamp = String("180607142000");
           b64_build_text_msgs(comm_mode, g_final_dump, text_message);
-          // Serial.println(text_message); 
-          // Serial.println(g_final_dump);
+          Serial.println(text_message); 
+          Serial.println(g_final_dump);
           Serial.println("OK");
         }
         break;
