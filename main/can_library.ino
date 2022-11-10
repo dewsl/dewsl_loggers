@@ -185,14 +185,30 @@ void get_data(int cmd, int transmit_id, char* final_dump){
       
       if( (respondents = get_all_frames(broad_timeout,g_can_buffer,g_num_of_nodes)) == g_num_of_nodes){
         Serial.println("Complete frames! :) ");
+        Serial2.println("Complete frames! :) ");
         turn_off_column();
         break;
       } else {
-        Serial.print(respondents); Serial.print(" / ");
-        Serial.print(g_num_of_nodes); Serial.println(" received / expected frames.");
+
+        print_buffer[0] = '/0';
+        itoa(respondents, num_buffer, 10);
+        strcpy(print_buffer, num_buffer);
+        strcat(print_buffer, " / ");
+        itoa(g_num_of_nodes, num_buffer, 10);
+        strcat(print_buffer, num_buffer);
+        strcat(print_buffer," received / expected frames.");
+        Serial.println(print_buffer);
+        if (strlen(print_buffer) != 0){
+            Serial2.println(print_buffer);
+        }
+        // Serial.print(respondents); Serial.print(" / ");
+        // Serial.print(g_num_of_nodes); Serial.println(" received / expected frames.");
+        // Serial2.print(g_num_of_nodes); Serial2.println(" received / expected frames.");
       }
       turn_off_column();
+
     }
+    
   } else if ( cmd == 255) {
     turn_on_column();
     // Serial.println("PIEZO ni RikZOh!");
@@ -271,6 +287,8 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   strcat(g_temp_dump, '\0');
   Serial.print("g_temp_dump: ");
   Serial.println(g_temp_dump);
+  Serial2.println(g_temp_dump);
+
   if (b64 == 1){
     b64_process_g_temp_dump(g_temp_dump,final_dump,g_no_gids_dump);
   } else {
@@ -294,6 +312,7 @@ void get_data(int cmd, int transmit_id, char* final_dump){
   strncat(g_build, "*",1);
   strncat(g_build, g_test, strlen(g_test)); 
   Serial.println(g_build);
+  Serial2.println(g_build);
   vc_flag = true;  
 }
 
@@ -776,6 +795,8 @@ void process_g_temp_dump(char* dump, char* final_dump, char* no_gids_dump){
     <write_frame_to_dump>
 */
 void interpret_frame(CAN_FRAME incoming){
+
+  print_buffer[0] = '\0';
   int id,d1,d2,d3,d4,d5,d6,d7,d8,somsr,temper;
   int16_t x,y,z;
   int tilt = 1;
@@ -801,19 +822,46 @@ void interpret_frame(CAN_FRAME incoming){
     z = compute_axis(d6,d7);
     v = ((d8+200.0)/100.0);
     
-    Serial.print("\t");
-    Serial.print(id,HEX); Serial.print("\t"); 
-    Serial.print(id); Serial.print('\t');
-    Serial.print(convert_uid_to_gid(id)); Serial.print('\t');
-    sprintf(temp, "%5d", x); Serial.print(temp);
-    temp[0] = '\0';
-    Serial.print(" "); 
-    sprintf(temp, "%5d", y); Serial.print(temp);
-    temp[0] = '\0';
-    sprintf(temp, "%5d", z);
-    Serial.print(" "); Serial.print(temp);
-    Serial.print(" "); Serial.print(v);
-    Serial.println("");
+    strcpy(print_buffer, "\t");
+    itoa(id,num_buffer,16);
+    strcat(print_buffer, num_buffer);
+    strcat(print_buffer, "\t");    
+    itoa(id,num_buffer,10);
+    strcat(print_buffer, num_buffer);
+    strcat(print_buffer, "\t");    
+    itoa(convert_uid_to_gid(id), num_buffer, 10);
+    strcat(print_buffer, num_buffer);
+    strcat(print_buffer, "\t\t");  
+    itoa(x, num_buffer, 10);
+    strcat(print_buffer, num_buffer);
+    strcat(print_buffer, "\t");
+    itoa(y, num_buffer, 10);
+    strcat(print_buffer, num_buffer);
+    strcat(print_buffer, "\t");
+    itoa(z, num_buffer, 10);
+    strcat(print_buffer, num_buffer);
+    strcat(print_buffer, "\t");
+    dtostrf(v,0,2,num_buffer); 
+    strcat(print_buffer, num_buffer);    
+    
+
+    // Serial.print("\t");
+    // Serial.print(id,HEX); Serial.print("\t"); 
+    // Serial.print(id); Serial.print('\t');
+    // Serial.print(convert_uid_to_gid(id)); Serial.print('\t');
+    // sprintf(temp, "%5d", x); Serial.print(temp);
+    // temp[0] = '\0';
+    // Serial.print(" "); 
+    // sprintf(temp, "%5d", y); Serial.print(temp);
+    // temp[0] = '\0';
+    // sprintf(temp, "%5d", z);
+    // Serial.print(" "); Serial.print(temp);
+    // Serial.print(" "); Serial.print(v);
+    // Serial.println("");
+
+    Serial.println(print_buffer);
+    Serial2.println(print_buffer);
+
     if (vdata_flag) {
       int newIndex = 0;
       for (int i=0; i<VDATASIZE; i++) {

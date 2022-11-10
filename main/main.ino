@@ -1,6 +1,4 @@
-//sample commit message
-
-//REV.22.08.02
+//REV.22.09.02
 
 #include "variant.h"
 #include <due_can.h>
@@ -243,10 +241,12 @@ char g_no_gids_dump[2500];
   <build_txt_msgs>
 */
 char text_message[5000];
-
 static char g_test[100] = "\0";
 char g_build[100] = "";
 char g_build_final[500] = "";
+
+char print_buffer[250];
+char num_buffer[20];
 /*
  * Variable: vc_flag
  * Global variable that triggers an additional sms with voltage and current reading (before, during, after polling)
@@ -401,6 +401,7 @@ void loop(){
           datalogger_flag = 1;
      } else if ((strcmp(comm_mode,"LORA") == 0) && (LORA.available()) ){
       operation(wait_lora_cmd(), comm_mode);
+      delay(500);
       LORA.println("STOPLORA");
       datalogger_flag = 1;
      }
@@ -636,13 +637,18 @@ void getATCommand(){
           int data;
           while ((data = root.read()) >= 0) {
             Serial.write(data);
+            Serial2.write(data);
           }
           Serial.println(" CONFIG.TXT end of file");
+          Serial2.println(" CONFIG.TXT end of file");
         } else {
           Serial.println("error opening config.txt");
+          Serial2.println("error opening config.txt");
         }
         root.close();
+        Serial2.print("OK");
         }
+        
         break;
       case 'Y': {
           dumpSDtoPC();
@@ -700,6 +706,34 @@ void operation(int sensor_type, char communication_mode[]){
       //  for arQ rain gauge only
       //  sends voltage data thru arQ
       send_current_voltage_thru_arq();
+   }
+   else if (sensor_type == 5)  // for sending config to v5 datalogger serial
+   {
+        
+        
+        
+        if (!SD.begin(g_chip_select))
+        {
+          Serial.println("error opening config.txt");
+          Serial2.println("error opening config.txt");
+        }
+        else
+        {
+          int data;
+          root = SD.open("config.txt");
+
+          while ((data = root.read()) >= 0)
+          {
+              Serial.write(data);
+              Serial2.write(data);
+          }
+          Serial.println(" CONFIG.TXT end of file");
+          Serial2.println(" CONFIG.TXT end of file");
+          root.close();
+
+        }
+        Serial.print("OK");
+        Serial2.print("OK");
    }
   else {
     int counter= 0;
@@ -1151,6 +1185,8 @@ int parse_cmd(char* command_string){
       Serial.print("g_timestamp: ");
       Serial.println(g_timestamp);
       return 4;
+    } else if (*(pch+strlen(cmd)) == 'C'){  //ARQCMD6C: SD card config
+      return 5;        
     } else {
       Serial.println("wait_arq_cmd returned 0");
       return 0;
@@ -1910,33 +1946,38 @@ void send_thru_lora(bool isDebug, char* columnData){
             break;
         }
         if (Serial.find("OK")){
-            OKFlag = true;
             Serial.println("moving on");
+            OKFlag = true;
+            
         } else{
             Serial.println(columnData);       
         }
     } while (OKFlag == false);
   } else {
+      
+      timestart = millis();
+
       do{   
         Serial.print("Sending: ");
         Serial.println(columnData);
         LORA.println(columnData);
 
-        timestart = millis();
-        timenow = millis();
-        while (!LORA.available()){
-          while ( timenow - timestart < 9000 ) {
-            timenow = millis();
-          }
-//          LORA.println("Time out...");
-          break;
-        }
-
+        // while (!LORA.available()){
+        //   while ( timenow - timestart < 9000 ) {
+        //     timenow = millis();
+        //   }
+        //   Serial.println("Time out...");
+        //   // LORA.println("Time out...");
+        //   break;
+        // }
+        
         if (LORA.find("OK")){
+          Serial.println("Received by LoRa..");
           OKFlag = true;
         }
         else{
-           LORA.println(columnData);     
+          delay(1000);
+          LORA.println(columnData);     
         }
 
         send_retry_limit++;
@@ -1944,7 +1985,8 @@ void send_thru_lora(bool isDebug, char* columnData){
           Serial.println("send_retry_limit reached.");
           OKFlag = true;
         }
-      } while (OKFlag == false);
+        timenow = millis();
+      } while (OKFlag == false || (timenow - timestart < 9000));
   }
   return;
 } 
