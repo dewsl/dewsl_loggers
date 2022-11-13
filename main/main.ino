@@ -1986,7 +1986,7 @@ void send_thru_lora(bool isDebug, char* columnData){
           OKFlag = true;
         }
         timenow = millis();
-      } while (OKFlag == false || (timenow - timestart < 9000));
+      } while (OKFlag == false && (timenow - timestart < 9000));
   }
   return;
 } 
