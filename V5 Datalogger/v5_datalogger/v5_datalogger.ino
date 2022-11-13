@@ -114,7 +114,7 @@ bool getSensorDataFlag = false;
 bool debug_flag_exit = false;
 bool send_rain_data_flag = true;
 
-char firmwareVersion[9] = "22.11.11";  // year . month . date
+char firmwareVersion[9] = "22.11.13";  // year . month . date
 char station_name[6] = "MADTA";
 char Ctimestamp[13] = "";
 char command[26];
@@ -1095,7 +1095,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
     if (strstr(streamBuffer, ">>")) {
       if (strstr(streamBuffer, "*")) {
         Serial.println("Getting sensor data. . .");
-        if (mode == 0 || mode == 1) {
+        if (mode == 0 || mode == 1 || mode == 2) {
           /**
            * Remove 1st and 2nd character data in string
            * Not needed in GSM mode
@@ -1124,6 +1124,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
           aggregate_received_data(streamBuffer);
           // send_thru_lora(streamBuffer);
           flashLed(LED_BUILTIN, 2, 100);
+          Serial.println("Data received mode 2..");
           DUESerial.write("OK");
         }
         // Serial.print(sending_stack);

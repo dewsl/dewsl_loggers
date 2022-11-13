@@ -1931,7 +1931,7 @@ void send_thru_lora(bool isDebug, char* columnData){
   int timenow = millis();
   bool OKFlag = false;
   uint8_t send_retry_limit = 0; 
-  if (isDebug == true){
+  /*if (isDebug == true){
     // Serial.print("Sending: ");
     // Serial.println(columnData);
 
@@ -1986,8 +1986,31 @@ void send_thru_lora(bool isDebug, char* columnData){
           OKFlag = true;
         }
         timenow = millis();
-      } while (OKFlag == false && (timenow - timestart < 9000));
-  }
+      } while (OKFlag == false || (timenow - timestart < 9000));
+  }*/
+  timestart = millis();
+
+  do{   
+    Serial.print("Sending: ");
+    Serial.println(columnData);
+    LORA.println(columnData);
+    
+    if (LORA.find("OK")){
+      Serial.println("Received by LoRa..");
+      OKFlag = true;
+    }
+    else{
+      delay(1000);
+      LORA.println(columnData);     
+    }
+
+    send_retry_limit++;
+    if (send_retry_limit == 3){
+      Serial.println("send_retry_limit reached.");
+      OKFlag = true;
+    }
+    timenow = millis();
+  } while (OKFlag == false && (timenow - timestart < 9000));
   return;
 } 
 /* 
