@@ -1335,9 +1335,9 @@ void send_message_segments(char *msg_dump) {
 
   Serial.println(ram_buffer);
 
-  if (get_logger_mode() != 2) {
-    send_thru_gsm(ram_buffer, get_serverNum_from_flashMem());
-  }
+  // if (get_logger_mode() != 2) {
+  //   send_thru_gsm(ram_buffer, get_serverNum_from_flashMem());
+  // }
   if (debug_flag == 0) {
     GSM_powermode_disable = 0;
     turn_OFF_GSM(get_gsm_power_mode());
