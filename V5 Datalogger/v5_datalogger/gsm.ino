@@ -676,7 +676,7 @@ void update_time_with_GPRS() {
   readGSMResponse();
   //Open bearer 
   GSMSerial.write("AT+SAPBR=1,1\r");                      
-  delay_millis(2000);
+  delay_millis(4000);
   readGSMResponse();
   GSMSerial.write("AT+CNTPCID=1\r");                    
   delay_millis(200);
