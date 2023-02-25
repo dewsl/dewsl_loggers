@@ -1095,7 +1095,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
     if (strstr(streamBuffer, ">>")) {
       if (strstr(streamBuffer, "*")) {
         Serial.println("Getting sensor data. . .");
-        if (mode == 0 || mode == 1 || mode == 2) {
+        if (mode == 0 || mode == 1) {
           /**
            * Remove 1st and 2nd character data in string
            * Not needed in GSM mode
@@ -1103,31 +1103,27 @@ void get_Due_Data(uint8_t mode, String serverNum) {
           for (byte i = 0; i < strlen(streamBuffer); i++) {
             streamBuffer[i] = streamBuffer[i + 2];
           }
-
-          // send_thru_gsm(streamBuffer, get_serverNum_from_flashMem());
-          // send_thru_gsm(streamBuffer, serverNum);
           aggregate_received_data(streamBuffer);
-          flashLed(LED_BUILTIN, 2, 100);
+          flashLed(LED_BUILTIN, 1, 100);
           Serial.println("Data received..");
           DUESerial.write("OK");
         } else if (mode == 6 || mode == 7) {
           strncat(streamBuffer, "<<", 2);
           delay(10);
           send_thru_lora(streamBuffer);
-          flashLed(LED_BUILTIN, 2, 100);
+          flashLed(LED_BUILTIN, 6, 50);
           DUESerial.write("OK");
-          // send_thru_lora(streamBuffer);
-          // flashLed(LED_BUILTIN, 2, 100);
-          // DUESerial.write("OK");
-        } else {
-
+        } else if (mode == 2) {
           aggregate_received_data(streamBuffer);
-          // send_thru_lora(streamBuffer);
           flashLed(LED_BUILTIN, 2, 100);
           Serial.println("Data received mode 2..");
           DUESerial.write("OK");
+        } else {
+          aggregate_received_data(streamBuffer);
+          flashLed(LED_BUILTIN, 4, 80);
+          Serial.println("Data received..");
+          DUESerial.write("OK");
         }
-        // Serial.print(sending_stack);
       } else {
         // maglagay ng counter max 5 then exit
         Serial.println("Message incomplete");
