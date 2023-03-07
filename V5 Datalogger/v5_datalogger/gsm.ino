@@ -30,16 +30,13 @@ void send_thru_gsm(char *inputMessage, String serverNumber) {
   bool timeout_flag = false;
   bool error_flag = false;  //true if error occurred when sending message
 
-  // Serial.println(millis());  //remove later
-
   gsmSerialFlush();
   GSMSerial.write(atCmgsNo);  //AT+CMGS="639XXXXXXXXX"\r
   delay_millis(100);
   GSMSerial.write(msgToSend);
-  delay_millis(500);
+  delay_millis(400);
   GSMSerial.write(26);
 
-  sprintf(response, readGSMResponse());
   while (!timeout_flag) {
 
     delay_millis(200);
@@ -61,7 +58,7 @@ void send_thru_gsm(char *inputMessage, String serverNumber) {
       GSMSerial.write(atCmgsNo);  //AT+CMGS="639XXXXXXXXX"\r
       delay_millis(100);
       GSMSerial.write(msgToSend);
-      delay_millis(100);
+      delay_millis(400);
       GSMSerial.write(26);
     }
 
@@ -74,12 +71,11 @@ void send_thru_gsm(char *inputMessage, String serverNumber) {
       GSMSerial.write(atCmgsNo);  //AT+CMGS="639XXXXXXXXX"\r
       delay_millis(100);
       GSMSerial.write(msgToSend);
-      delay_millis(100);
+      delay_millis(400);
       GSMSerial.write(26);
       timeout_flag = true;
     }
   }
-  // Serial.println(millis());  //remove later
 
   turn_OFF_GSM(get_gsm_power_mode());
 }
@@ -501,22 +497,12 @@ String simNetwork() {
 void gsmNetworkAutoConnect() {
   String response;
   Serial.println("Connecting GSM to network...");
-
+  delay_millis(2000);
   for (int i = 0; i < 10; i++) {
     gsmSerialFlush();
-    GSMSerial.write("AT+COPS=0,1;+CMGF=1;+COPS?;+CSQ\r");
-    delay_millis(2000);
+    GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=115200;+COPS?;+CSQ\r");
+    delay_millis(1000);
     if (strstr(readGSMResponse(), "OK")) {
-
-      // Serial.print("");
-      // Serial.print("GSM Connected!");
-      // GSMSerial.write("AT+CMGF=1\r");
-      // delay_millis(300);
-      // if (strstr(readGSMResponse(), "OK"))
-      // {
-      //     Serial.println(" ");
-      //     Serial.println("GSM module set to text mode.");
-      // }
       GSMSerial.write("ATE0&W\r");  //turn off echo
       if (gsmReadOK()) {
         Serial.println("GSM set to NO echo mode.");
@@ -527,7 +513,7 @@ void gsmNetworkAutoConnect() {
     } else {
       Serial.print(". ");
     }
-    if (i == 5 || i == 9) {
+    if (i == 7 || i == 9) {
       Serial.println("");
       Serial.println("Check GSM if connected or powered ON!");
     }

@@ -67,8 +67,7 @@ void getAtcommand()
         Serial.println("[10] LoRa Tx - Surficial Tilt");
         Serial.println("[11] Rain gauge mode only");
         Serial.println("[12] Surficial Tilt Gateway - LoRa Rx");
-        */
-        Serial.println(millis());        
+        */       
         if (get_logger_mode() == 0)
         {
             // default arQ like sending
@@ -236,7 +235,6 @@ void getAtcommand()
         //     Serial.print("Datalogger mode: ");
         //     Serial.println(get_logger_mode());
         // }
-        Serial.println(millis());
         Serial.println("* * * * * * * * * * * * * * * * * * * *");
     }
     else if (command == "B")

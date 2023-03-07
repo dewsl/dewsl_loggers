@@ -114,7 +114,7 @@ bool getSensorDataFlag = false;
 bool debug_flag_exit = false;
 bool send_rain_data_flag = true;
 
-char firmwareVersion[9] = "22.11.13";  // year . month . date
+char firmwareVersion[9] = "23.03.07";  // year . month . date
 char station_name[6] = "MADTA";
 char Ctimestamp[13] = "";
 char command[26];
@@ -278,33 +278,13 @@ void setup() {
     Serial.println(get_logger_mode());
     Serial.println("Default to GSM.");
     Serial.println("- - - - - - - - - -");
-
-    // if (get_gsm_power_mode() == 2) {
-    //   digitalWrite(GSMPWR, HIGH);
-    //   Serial.println("Turning ON GSM ");
-    //   gsmNetworkAutoConnect();
-    //   // send_thru_gsm("NORMAL POWER UP 2", get_serverNum_from_flashMem());;
-    //   // turn_OFF_GSM(get_gsm_power_mode());
-    // } else if (get_gsm_power_mode() == 1) {
-    //   digitalWrite(GSMPWR, HIGH);
-    //   Serial.println("Turning ON GSM ");
-    //   // send_thru_gsm("NORMAL POWER UP 1", get_serverNum_from_flashMem());
-    //   // turn_OFF_GSM(get_gsm_power_mode());
-    //   gsmNetworkAutoConnect();
-    //   // sleepGSM();
-    // } else {
-    //   digitalWrite(GSMPWR, HIGH);
-    //   Serial.println("Turning ON GSM ");
-    //   // send_thru_gsm("NORMAL POWER UP", get_serverNum_from_flashMem());
-    //   gsmNetworkAutoConnect();
-    // }
     
-    digitalWrite(GSMPWR, HIGH);
+    digitalWrite(GSMPWR, HIGH);    
+    delay(2000);
     Serial.println("Turning ON GSM ");
     flashLed(LED_BUILTIN, 10, 100);
-    // send_thru_gsm("NORMAL POWER UP", get_serverNum_from_flashMem());        //for testing only
+    // send_thru_gsm("LOGGER POWER UP", get_serverNum_from_flashMem());        //for testing only
     gsmNetworkAutoConnect();
-
   }
 
   /*Enter DEBUG mode within 10 seconds*/
@@ -1095,7 +1075,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
     if (strstr(streamBuffer, ">>")) {
       if (strstr(streamBuffer, "*")) {
         Serial.println("Getting sensor data. . .");
-        if (mode == 0 || mode == 1 || mode == 2) {
+        if (mode == 0 || mode == 1 ) {
           /**
            * Remove 1st and 2nd character data in string
            * Not needed in GSM mode
