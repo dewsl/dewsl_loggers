@@ -913,7 +913,7 @@ void setIMUdataRawCalib()
         Serial.print("Battery mode = ");
         Serial.println(raw_calib);
         delay_millis(50);
-        // imuRawCalib.write(raw_calib);
+        imuRawCalib.write(raw_calib);
     }
 }
 
