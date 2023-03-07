@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("g_t",["Variable"],[["g_timestamp",,[[,,,,0,"File:main.ino:g_timestamp"]]],["g_turn_on_delay",,[[,,,,0,"File:main.ino:g_turn_on_delay"]]]]);
+﻿NDSearch.OnPrefixDataLoaded("g_t",["Variable"],[["g_timestamp",,[[,,,,0,"File:main.ino:g_timestamp"]]],["g_turn_on_delay",,[[,,,,0,"File:main.ino:g_turn_on_delay"]]]]);

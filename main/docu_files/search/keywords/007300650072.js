@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("ser",["Function"],[["serial_loopback",,[[,,,,0,"File:main.ino:serial_loopback"]]]]);
+﻿NDSearch.OnPrefixDataLoaded("ser",["Function"],[["serial_loopback",,[[,,,,0,"File:main.ino:serial_loopback"]]]]);

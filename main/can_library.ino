@@ -179,7 +179,8 @@ void get_data(int cmd, int transmit_id, char* final_dump){
       dtostrf(g_voltage,0,4,g_test);
       strncat(g_build, "*",1);
       strncat(g_build, g_test, strlen(g_test));
-      strncat(g_build, "*",1); 
+      strncat(g_build, "*",1);
+      strncat(g_build, '\0',1);       
 
       send_command(cmd,transmit_id);
       
@@ -190,13 +191,14 @@ void get_data(int cmd, int transmit_id, char* final_dump){
         break;
       } else {
 
-        print_buffer[0] = '/0';
+        print_buffer[0] = '\0';
         itoa(respondents, num_buffer, 10);
         strcpy(print_buffer, num_buffer);
         strcat(print_buffer, " / ");
         itoa(g_num_of_nodes, num_buffer, 10);
         strcat(print_buffer, num_buffer);
         strcat(print_buffer," received / expected frames.");
+        strcat(print_buffer, '\0');
         Serial.println(print_buffer);
         if (strlen(print_buffer) != 0){
             Serial2.println(print_buffer);

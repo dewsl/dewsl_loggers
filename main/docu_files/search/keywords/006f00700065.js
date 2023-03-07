@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("ope",["Function"],[["open_config",,[[,,,,0,"File:sd_library.ino:open_config"]]],["operation",,[[,,,,0,"File:main.ino:operation"]]]]);
+﻿NDSearch.OnPrefixDataLoaded("ope",["Function"],[["operation",,[[,,,,0,"File:main.ino:operation"]]]]);

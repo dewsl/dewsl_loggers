@@ -1,0 +1,1 @@
+﻿NDFramePage.OnPageTitleLoaded("File:config.ino","config.ino");NDSummary.OnSummaryLoaded("File:config.ino",[["C++","C"]],[["Functions","Function"],["Groups","Group"]],[[94,0,1,"Functions","Functions"],[96,0,0,"Parse column IDs stored in the library configurations in to the array g_gids[i][i]","Parse_column_IDs_stored_in_the_library_configurations_in_to_the_array_g_gids[i]"]]);

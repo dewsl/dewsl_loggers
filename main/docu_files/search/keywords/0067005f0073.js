@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("g_s",["Variable"],[["g_sampling_max_retry",,[[,,,,0,"File:main.ino:g_sampling_max_retry"]]],["g_sensor_version",,[[,,,,0,"File:main.ino:g_sensor_version"]]]]);
+﻿NDSearch.OnPrefixDataLoaded("g_s",["Variable"],[["g_sampling_max_retry",,[[,,,,0,"File:main.ino:g_sampling_max_retry"]]],["g_sensor_version",,[[,,,,0,"File:main.ino:g_sensor_version"]]]]);

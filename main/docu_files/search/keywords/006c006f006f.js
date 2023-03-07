@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("loo",["Function"],[["loop",,[[,,,,0,"File:main.ino:loop"]]]]);
+﻿NDSearch.OnPrefixDataLoaded("loo",["Function"],[["loop",,[[,,,,0,"File:main.ino:loop"]]]]);

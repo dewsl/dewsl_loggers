@@ -1,1 +1,1 @@
-NDSearch.OnPrefixDataLoaded("arq",["Function"],[["arqwait_delay",,[[,,,,0,"File:main.ino:arqwait_delay"]]]]);
+﻿NDSearch.OnPrefixDataLoaded("arq",["Function"],[["arqwait_delay",,[[,,,,0,"File:main.ino:arqwait_delay"]]]]);
