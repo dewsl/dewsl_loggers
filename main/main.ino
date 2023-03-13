@@ -282,6 +282,7 @@ char column_id_holder[500];
 uint16_t LOGGER_COUNT = lib_LOGGER_COUNT;
 DueFlashStorage dueFlashStorage;
 
+
 struct f_config {
   char f_mastername[6];
   int override_lib_config;
@@ -336,7 +337,7 @@ void setup() {
   init_sd();
 
   Serial.println(F("======================================"));
-  Serial.println(F("Firmware version: 23.03.07"));
+  Serial.println(F("Firmware version: 23.03.13"));
   flash_fetch();
   print_due_command2();
 }
@@ -447,12 +448,12 @@ void getATCommand() {
       case 'C':
         print_due_command2();
         break;
-      case 'D': 
+      case 'D':
         name_entry();
         flash_fetch();
         Serial.println(OKSTR);
         break;
-      case 'E': 
+      case 'E':
         read_current();
         read_voltage();
         break;
@@ -474,7 +475,7 @@ void getATCommand() {
           }
         }
         break;
-  
+
       case 'H':
         {
           dumpSDtoPC();
@@ -497,22 +498,22 @@ void getATCommand() {
 
           opt.toUpperCase();
           opt.replace("\r", "");
-          if (opt = 'Y'){
-              byte f[sizeof(f_config)];
-              f_config write_override;
-              write_override.override_lib_config = 99;
-              memcpy (f, &write_override, sizeof(f_config));
-              dueFlashStorage.write(4, f, sizeof(f_config));
-              // Serial.println(F("SD card config override enabled"));
-              delay(1000);
-              flash_fetch();
+          if (opt = 'Y') {
+            byte f[sizeof(f_config)];
+            f_config write_override;
+            write_override.override_lib_config = 99;
+            memcpy(f, &write_override, sizeof(f_config));
+            dueFlashStorage.write(4, f, sizeof(f_config));
+            // Serial.println(F("SD card config override enabled"));
+            delay(1000);
+            flash_fetch();
           } else {
           }
-        Serial.print("OK");        
+          Serial.print("OK");
         }
         break;
 
-      
+
       case 'Z':
         {
           open_sdata();
@@ -564,9 +565,6 @@ void operation(int sensor_type, char communication_mode[]) {
     send_current_voltage_thru_arq();
   } else if (sensor_type == 5)  // for sending config to v5 datalogger serial
   {
-
-
-
     if (!SD.begin(g_chip_select)) {
       Serial.println("error opening config.txt");
       Serial2.println("error opening config.txt");
@@ -584,12 +582,14 @@ void operation(int sensor_type, char communication_mode[]) {
     }
     Serial.print("OK");
     Serial2.print("OK");
+
   } else {
     int counter = 0;
     int num_of_tokens = 0;
     if (!SD.begin(g_chip_select)) {  //create unsent.txt
-      Serial.println("SD card not detected");
-      return;
+      Serial.println(F("SD card not detected"));
+      Serial2.println(F("### CAUTION: SD CARD NOT DETECTED  ###"));
+      // return;
     } else {
       create_unsent = SD.open("unsent.txt", FILE_WRITE);
       create_unsent.close();

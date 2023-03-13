@@ -17,7 +17,7 @@
 */
 int init_sd() {
   if (!SD.begin(g_chip_select)) {
-    Serial.println("SD initialization failed!");
+    Serial.println("###  SD card initialization failed!  ###");
     return -1;
   }
   return 0;
@@ -180,17 +180,18 @@ void rename_sd() {
 */
 void print_stored_config() {
   char gid[2], uid[4], desc[25];
-  if(g_datalogger_version == 2){
-        strncpy(comm_mode,"ARQ",3);
-      } else if(g_datalogger_version == 4){
-        strncpy(comm_mode,"LORA",4);  
-      } else if (g_datalogger_version == 1 || g_datalogger_version == 3 || g_datalogger_version == 5){
-        Serial.print("g_datalogger_version == ");
-        Serial.print(g_datalogger_version);
-        Serial.println(" (default to LORA)");
-        strncpy(comm_mode,"LORA",4);
-      }
-      Serial.print("Comms: "); Serial.println(comm_mode);
+  if (g_datalogger_version == 2) {
+    strncpy(comm_mode, "ARQ", 3);
+  } else if (g_datalogger_version == 4) {
+    strncpy(comm_mode, "LORA", 4);
+  } else if (g_datalogger_version == 1 || g_datalogger_version == 3 || g_datalogger_version == 5) {
+    Serial.print("g_datalogger_version == ");
+    Serial.print(g_datalogger_version);
+    Serial.println(" (default to LORA)");
+    strncpy(comm_mode, "LORA", 4);
+  }
+  Serial.print("Comms: ");
+  Serial.println(comm_mode);
   Serial.println(F("======================================"));
   sprintf(desc, "%-24s", "Sensor Name:");
   Serial.print(desc);
@@ -361,10 +362,10 @@ void printDirectory(File dir, int numTabs) {
       Serial.print('\t');
     }
     Serial.println(entry.name());
-    
+
     if (entry.isDirectory()) {
       Serial.println("/");
-      printDirectory(entry, numTabs+1);
+      printDirectory(entry, numTabs + 1);
     } else {
       Serial.print("\t\t");
       Serial.println(entry.size(), DEC);
@@ -427,62 +428,61 @@ void dumpSDtoPC() {
 	
 		<open_config>
 */
-unsigned int process_config_line(char *one_line){
-	String str1;
-	int temp_int = 0;
-	str1 = String(one_line);
-	if ( (str1.startsWith("mastername")) | (str1.startsWith("MasterName")) ){
-		get_value_from_line(str1).toCharArray(g_mastername,6);
-		return 0;
+unsigned int process_config_line(char *one_line) {
+  String str1;
+  int temp_int = 0;
+  str1 = String(one_line);
+  if ((str1.startsWith("mastername")) | (str1.startsWith("MasterName"))) {
+    get_value_from_line(str1).toCharArray(g_mastername, 6);
+    return 0;
 
-	} else if(str1.startsWith("turn_on_delay")){
-		g_turn_on_delay = get_value_from_line(str1).toInt();
-		return 0;
+  } else if (str1.startsWith("turn_on_delay")) {
+    g_turn_on_delay = get_value_from_line(str1).toInt();
+    return 0;
 
-	} else if(str1.startsWith("PIEZO") | str1.startsWith("Piezo")){
-		temp_int = get_value_from_line(str1).toInt();
-		if (temp_int == 1){
-			has_piezo = true;
-		} else if ( temp_int == 0){
-			has_piezo = false;
-		} else {
-			has_piezo = false;
-		}
-		return 0;
+  } else if (str1.startsWith("PIEZO") | str1.startsWith("Piezo")) {
+    temp_int = get_value_from_line(str1).toInt();
+    if (temp_int == 1) {
+      has_piezo = true;
+    } else if (temp_int == 0) {
+      has_piezo = false;
+    } else {
+      has_piezo = false;
+    }
+    return 0;
 
-	} else if(str1.startsWith("dataloggerVersion")){
-		g_datalogger_version = get_value_from_line(str1).toInt();
-		return 0;
+  } else if (str1.startsWith("dataloggerVersion")) {
+    g_datalogger_version = get_value_from_line(str1).toInt();
+    return 0;
 
-	} else if(str1.startsWith("sensorVersion")){
-		g_sensor_version = get_value_from_line(str1).toInt();
-		return 0;
+  } else if (str1.startsWith("sensorVersion")) {
+    g_sensor_version = get_value_from_line(str1).toInt();
+    return 0;
 
-	} else if( (str1.startsWith("broadcastTimeout")) | (str1.startsWith("broadcast_timeout"))
-		| (str1.startsWith("broadcasttimeout")) | (str1.startsWith("BroadcastTimeout")) ){
-		broad_timeout = get_value_from_line(str1).toInt();
-		return 0;
+  } else if ((str1.startsWith("broadcastTimeout")) | (str1.startsWith("broadcast_timeout"))
+             | (str1.startsWith("broadcasttimeout")) | (str1.startsWith("BroadcastTimeout"))) {
+    broad_timeout = get_value_from_line(str1).toInt();
+    return 0;
 
-	} else if( (str1.startsWith("sampling_max_retry")) | 
-		(str1.startsWith("sampling_max_num_of_retry")) ){
-		g_sampling_max_retry = get_value_from_line(str1).toInt();
-		return 0;
+  } else if ((str1.startsWith("sampling_max_retry")) | (str1.startsWith("sampling_max_num_of_retry"))) {
+    g_sampling_max_retry = get_value_from_line(str1).toInt();
+    return 0;
 
-	}else if((str1.startsWith("columnids")) | (str1.startsWith("column1")) 
-		| (str1.startsWith("columnIDs")) | (str1.startsWith("columnIDs"))) {
-		g_num_of_nodes = process_column_ids(str1);
-		return 0;
+  } else if ((str1.startsWith("columnids")) | (str1.startsWith("column1"))
+             | (str1.startsWith("columnIDs")) | (str1.startsWith("columnIDs"))) {
+    g_num_of_nodes = process_column_ids(str1);
+    return 0;
 
-	} else if(str1.startsWith("b64")){
-		b64 = get_value_from_line(str1).toInt();
-		return 0;
+  } else if (str1.startsWith("b64")) {
+    b64 = get_value_from_line(str1).toInt();
+    return 0;
 
-	} else if((str1.startsWith("endofconfig")) | (str1.startsWith("ENDOFCONFIG"))){
-		return 1;
+  } else if ((str1.startsWith("endofconfig")) | (str1.startsWith("ENDOFCONFIG"))) {
+    return 1;
 
-	} else {
-		return 0;
-	}
+  } else {
+    return 0;
+  }
 }
 /*
 	Function: process_column_ids
@@ -494,26 +494,26 @@ unsigned int process_config_line(char *one_line){
 	See Also:
 		<process_config_line>
 */
-int process_column_ids(String line){
-	String delim = ",";
-	int i,i0,i1,i2,ilast,id;
-	i = 0;
-	ilast = line.lastIndexOf(delim);
-	i0 = line.lastIndexOf("=");
-	i1 = line.indexOf(delim);
-	id =  line.substring(i0+1,i1).toInt();
-	g_gids[i][0] = id;
-	i++;
-	while ((i1 <= ilast) & ( i < 40 )){
-		i2 = line.indexOf(delim,i1+1);
-		id = line.substring(i1+1,i2).toInt();
-		g_gids[i][0] = id;
-		i++;
-		i1 = i2;
-		if (i1 == -1)
-			break;
-	}
-	return i; // dating i+1
+int process_column_ids(String line) {
+  String delim = ",";
+  int i, i0, i1, i2, ilast, id;
+  i = 0;
+  ilast = line.lastIndexOf(delim);
+  i0 = line.lastIndexOf("=");
+  i1 = line.indexOf(delim);
+  id = line.substring(i0 + 1, i1).toInt();
+  g_gids[i][0] = id;
+  i++;
+  while ((i1 <= ilast) & (i < 40)) {
+    i2 = line.indexOf(delim, i1 + 1);
+    id = line.substring(i1 + 1, i2).toInt();
+    g_gids[i][0] = id;
+    i++;
+    i1 = i2;
+    if (i1 == -1)
+      break;
+  }
+  return i;  // dating i+1
 }
 
 /* 
@@ -529,35 +529,35 @@ int process_column_ids(String line){
 		<getATCommand>
 */
 void open_config() {
-	File g_file; 
-	char *temp; 							
-	int max_char_per_line = 1000;
-	char one_line[max_char_per_line];
-	g_file = SD.open("CONFIG.txt");
+  File g_file;
+  char *temp;
+  int max_char_per_line = 1000;
+  char one_line[max_char_per_line];
+  g_file = SD.open("CONFIG.txt");
 
-	if (!g_file){
-		Serial.println("CONFIG.txt not found.");
-		return;
-	} 
-	memset(one_line,0,sizeof(one_line));
-	// temp starts at address of one_line
-	temp = one_line; 
-	// para may paglalagyan ng result ng .peek()						
-	while((*temp = g_file.peek())!= -1) {  
-		// start ulit sa address ng one_line	
-		temp = one_line; 					
-		while(((*temp = g_file.read()) != '\n')) {
-			temp++;
-			if(*temp == -1)
-				break;
-		}
-		if (process_config_line(one_line)){
-			break;
-		}
-		memset(one_line,0,sizeof(one_line));
-	}
-	Serial.println("Finished config processing");
+  if (!g_file) {
+    Serial.println("CONFIG.txt not found.");
+    return;
+  }
+  memset(one_line, 0, sizeof(one_line));
+  // temp starts at address of one_line
+  temp = one_line;
+  // para may paglalagyan ng result ng .peek()
+  while ((*temp = g_file.peek()) != -1) {
+    // start ulit sa address ng one_line
+    temp = one_line;
+    while (((*temp = g_file.read()) != '\n')) {
+      temp++;
+      if (*temp == -1)
+        break;
+    }
+    if (process_config_line(one_line)) {
+      break;
+    }
+    memset(one_line, 0, sizeof(one_line));
+  }
+  Serial.println("Finished config processing");
   print_stored_config();
-	g_file.close();
-	return;
+  g_file.close();
+  return;
 }

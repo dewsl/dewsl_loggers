@@ -15,7 +15,7 @@ bool read_override() {
 }
 
 void flash_fetch() {
-  bool valid_flag = false;  
+  bool valid_flag = false;
   byte* b2 = dueFlashStorage.readAddress(4);
   char* flash_mastername;
   int flash_check, override_check;
@@ -23,8 +23,8 @@ void flash_fetch() {
   memcpy(&fetch_config, b2, sizeof(f_config));
   flash_mastername = fetch_config.f_mastername;
   flash_check = fetch_config.check;
-  override_check = fetch_config.override_lib_config;  
-  if (override_check == 99) {         //check whether a override value has been set
+  override_check = fetch_config.override_lib_config;
+  if (override_check == 99) {  //check whether a override value has been set
     //insert SD override function here
     Serial.println("SD CARD CONFIG IN USE");
     open_config();
@@ -38,15 +38,15 @@ void flash_fetch() {
       // Serial.println(g_mastername);
       // Serial.println(sizeof(g_mastername));
       char* name_buffer;
-      for (int i = 0; i<=(LOGGER_COUNT-1); i++) {
-        if (strcmp(config_container[i].lib_mastername,g_mastername) == 0) {
+      for (int i = 0; i <= (LOGGER_COUNT - 1); i++) {
+        if (strcmp(config_container[i].lib_mastername, g_mastername) == 0) {
           strcpy(g_mastername, config_container[i].lib_mastername);
           g_mastername[5] = '\0';
           // Serial.print("Saved configuration for sensor ");
           // Serial.println(g_mastername);
           // Serial.print("Column IDs: ");
           strcpy(column_id_holder, config_container[i].lib_column_ids);
-          column_id_holder[strlen(column_id_holder)+1] = '\0';
+          column_id_holder[strlen(column_id_holder) + 1] = '\0';
           // Serial.println(column_id_holder);
           parse_column_ids_from_library();
           g_num_of_nodes = config_container[i].lib_num_of_nodes;
@@ -67,9 +67,7 @@ void flash_fetch() {
         Serial.println("No matching datalogger configuration found in library.");
       }
     }
-
   }
-
 }
 /*
 Function: Accepts input from serial as SENSOR NAME to store in flash.
@@ -83,16 +81,16 @@ void name_entry() {
   delay(1000);
   do {
     serial_input = Serial.readStringUntil('\n');
-  } while(serial_input == "");
+  } while (serial_input == "");
   serial_input.trim();
   serial_input.toUpperCase();
   serial_input.toCharArray(flash_config.f_mastername, 6);
   flash_config.f_mastername[6] = '\0';
   Serial.println();
   Serial.print(flash_config.f_mastername);
-  
+
   flash_config.check = 99;
-  memcpy (f, &flash_config, sizeof(f_config));
+  memcpy(f, &flash_config, sizeof(f_config));
   dueFlashStorage.write(4, f, sizeof(f_config));
   Serial.println(F(" saved to flash"));
   delay(1000);
@@ -113,7 +111,7 @@ void parse_column_ids_from_library() {
   }
 
   // Serial.print("Stored node count: ");
-  // Serial.println(id_counter);  
+  // Serial.println(id_counter);
   // Serial.println("Saved IDs");
   // for (n=0;n<40;n++){
   //   if (g_gids[n][0] != 0) {
