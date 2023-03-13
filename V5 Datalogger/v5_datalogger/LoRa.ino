@@ -189,7 +189,7 @@ void receive_lora_data(uint8_t mode) {
                   if (check_duplicates_in_stack((char *)received)) {
                     Serial.print("Adding data from unlisted transmitter to sending stack: ");
                     aggregate_received_data(received);
-                    // tx_RSSI = String(rf95.lastRssi(), DEC);                    
+                    // tx_RSSI = String(rf95.lastRssi(), DEC);
                     // Serial.print("RSSI: ");
                     // Serial.println(tx_RSSI);
                   }
@@ -451,34 +451,34 @@ bool if_receive_valid(char *_received) {
       rf95.waitPacketSent();
     }
 
-  // } else if (strstr(ack_msg, _Elog) && get_logger_mode() == 7) {
+    // } else if (strstr(ack_msg, _Elog) && get_logger_mode() == 7) {
 
-  //   valid_LoRa_tx = true;
-  //   // sprintf(print_buffer, "Received from %s: %s", _Elog, _received);
-  //   Serial.print("Received from router 4");
-  //   Serial.print(_Elog);
-  //   Serial.print(" : ");
-  //   Serial.println(_received);
-  //   // Serial.println(print_buffer);
-  //   // print_buffer[0] = '\0';
-  //   if (logger_ack_filter_enabled()) {
-  //     rf95.send((uint8_t *)ack_msg, strlen(ack_msg));
-  //     rf95.waitPacketSent();
-  //   }
+    //   valid_LoRa_tx = true;
+    //   // sprintf(print_buffer, "Received from %s: %s", _Elog, _received);
+    //   Serial.print("Received from router 4");
+    //   Serial.print(_Elog);
+    //   Serial.print(" : ");
+    //   Serial.println(_received);
+    //   // Serial.println(print_buffer);
+    //   // print_buffer[0] = '\0';
+    //   if (logger_ack_filter_enabled()) {
+    //     rf95.send((uint8_t *)ack_msg, strlen(ack_msg));
+    //     rf95.waitPacketSent();
+    //   }
 
-  // } else if (strstr(ack_msg, _Flog) && get_logger_mode() == 8) {
-  //   valid_LoRa_tx = true;
-  //   // sprintf(print_buffer, "Received from %s: %s", _Flog, _received);
-  //   Serial.print("Received from router 5");
-  //   Serial.print(_Flog);
-  //   Serial.print(" : ");
-  //   Serial.println(_received);
-  //   // Serial.println(print_buffer);
-  //   // print_buffer[0] = '\0';
-  //   if (logger_ack_filter_enabled()) {
-  //     rf95.send((uint8_t *)ack_msg, strlen(ack_msg));
-  //     rf95.waitPacketSent();
-  //   }
+    // } else if (strstr(ack_msg, _Flog) && get_logger_mode() == 8) {
+    //   valid_LoRa_tx = true;
+    //   // sprintf(print_buffer, "Received from %s: %s", _Flog, _received);
+    //   Serial.print("Received from router 5");
+    //   Serial.print(_Flog);
+    //   Serial.print(" : ");
+    //   Serial.println(_received);
+    //   // Serial.println(print_buffer);
+    //   // print_buffer[0] = '\0';
+    //   if (logger_ack_filter_enabled()) {
+    //     rf95.send((uint8_t *)ack_msg, strlen(ack_msg));
+    //     rf95.waitPacketSent();
+    //   }
 
   } else {
     valid_LoRa_tx = false;
@@ -684,7 +684,7 @@ bool check_duplicates_in_stack(char *payload_to_check) {
 
   stack_temp[0] = '\0';
   strcpy(stack_temp, sending_stack);
-  stack_temp[strlen(sending_stack)+1] = '\0';
+  stack_temp[strlen(sending_stack) + 1] = '\0';
   bool continue_flag = true;
   // Serial.println("checking payload duplicates..");
   // Serial.println(payload_to_check);

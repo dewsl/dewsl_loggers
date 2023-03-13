@@ -26,7 +26,7 @@ By : DRM
 #include "Sodaq_DS3231.h"
 #include <SPI.h>
 #include <RH_RF95.h>
-#include <avr/dtostrf.h>      // dtostrf missing in Arduino Zero/Due
+#include <avr/dtostrf.h>  // dtostrf missing in Arduino Zero/Due
 #include <EnableInterrupt.h>
 #include <FlashStorage.h>
 #include <Arduino.h>         // required before wiring_private.h
@@ -43,10 +43,10 @@ By : DRM
 #define VBATPIN A7
 #define VBATEXT A5
 #define GSMRST 12
-#define GSMPWR A2         // not connected in rev3 (purple) boards
+#define GSMPWR A2  // not connected in rev3 (purple) boards
 #define GSMDTR A1
-#define GSMINT A0         // gsm ring interrupt
-#define IMU_POWER 9       // A3-17
+#define GSMINT A0    // gsm ring interrupt
+#define IMU_POWER 9  // A3-17
 
 // gsm related
 #define GSMBAUDRATE 9600
@@ -58,17 +58,17 @@ By : DRM
 #define RFM95_RST 4
 #define RFM95_INT 3
 
-#define RF95_FREQ 433.0           // Change to 434.0 or other frequency, must match RX's freq!
-#define DATALEN 200               // max size of dummy length
-#define LORATIMEOUT 500000        // 8.33 minutes delay  (temporarily unused)
-#define LORATIMEOUTMODE2 900000   // 15.0 mnutes  (temporarily unused)
-#define LORATIMEOUTMODE3 1200000  // 20.0 mnutes  (temporarily unused)
-#define DUETIMEOUT 210000         // 3.50 minutes timeout
-#define DUEDELAY 60000            // 1.0 minute delay
-#define RAININT A4                // rainfall interrupt pin A4
-#define DEBUGTIMEOUT 300000       // debug timeout in case no data recieved; 60K~1minute
-#define ACKWAIT 2000              // wait time for gateway acknowledgement
-#define LORATIMEOUTWITHACK 300000 // 5.0 min timeout for gateways
+#define RF95_FREQ 433.0            // Change to 434.0 or other frequency, must match RX's freq!
+#define DATALEN 200                // max size of dummy length
+#define LORATIMEOUT 500000         // 8.33 minutes delay  (temporarily unused)
+#define LORATIMEOUTMODE2 900000    // 15.0 mnutes  (temporarily unused)
+#define LORATIMEOUTMODE3 1200000   // 20.0 mnutes  (temporarily unused)
+#define DUETIMEOUT 210000          // 3.50 minutes timeout
+#define DUEDELAY 60000             // 1.0 minute delay
+#define RAININT A4                 // rainfall interrupt pin A4
+#define DEBUGTIMEOUT 300000        // debug timeout in case no data recieved; 60K~1minute
+#define ACKWAIT 2000               // wait time for gateway acknowledgement
+#define LORATIMEOUTWITHACK 300000  // 5.0 min timeout for gateways
 
 //Enables/disables some function and other flags used for testing. Limited functionality for now
 bool test_mode = false;
@@ -114,7 +114,7 @@ bool getSensorDataFlag = false;
 bool debug_flag_exit = false;
 bool send_rain_data_flag = true;
 
-char firmwareVersion[9] = "23.03.07";  // year . month . date
+char firmwareVersion[9] = "23.03.13";  // year . month . date
 char station_name[6] = "MADTA";
 char Ctimestamp[13] = "";
 char command[26];
@@ -278,8 +278,8 @@ void setup() {
     Serial.println(get_logger_mode());
     Serial.println("Default to GSM.");
     Serial.println("- - - - - - - - - -");
-    
-    digitalWrite(GSMPWR, HIGH);    
+
+    digitalWrite(GSMPWR, HIGH);
     delay(2000);
     Serial.println("Turning ON GSM ");
     flashLed(LED_BUILTIN, 10, 100);
@@ -296,7 +296,7 @@ void setup() {
       Serial.println("Debug Mode!");
       rain_test_flag = 1;
       if (test_mode && (get_logger_mode() != 2)) {
-        turn_ON_GSM(get_gsm_power_mode());  
+        turn_ON_GSM(get_gsm_power_mode());
         GSM_powermode_disable = 1;
         Serial.println("GSM power mode disabled.");
       }
@@ -711,49 +711,49 @@ void get_rssi(uint8_t mode) {
     rssiString[i] = 0;
   strncpy(rssiString, "GATEWAY*RSSI,", 13);
   strncat(rssiString, logger_name, sizeof(logger_name));
-  strncat(rssiString, ",", 1);
+  strcat(rssiString, ",");
   strncat(rssiString, get_logger_B_from_flashMem(), 20);
-  strncat(rssiString, ",", 1);
+  strcat(rssiString, ",");
   strncat(rssiString, convertRssi, 100);
-  strncat(rssiString, ",", 1);
+  strcat(rssiString, ",");
   strncat(rssiString, txVoltage, sizeof(txVoltage));  // voltage working 02-17-2020
   // strncat(dataToSend, parse_voltage(received), sizeof(parse_voltage(received)));
   if (mode == 4) {
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, get_logger_C_from_flashMem(), 20);
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, convertRssiB, 100);
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, txVoltageB, sizeof(txVoltageB));  // voltage working 02-17-2020
     // strncat(dataToSend, parse_voltage_B(received), sizeof(parse_voltage_B(received)));
   } else if (mode == 5) {
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, get_logger_C_from_flashMem(), 20);
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, convertRssiB, 100);
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, txVoltageB, sizeof(txVoltageB));  // voltage working 02-17-2020
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, get_logger_D_from_flashMem(), 20);  // sensorD
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, convertRssiC, 100);
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, txVoltageC, sizeof(txVoltageC));
   } else if (mode == 12) {
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, get_logger_C_from_flashMem(), 20);
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, convertRssiB, 100);
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, txVoltageB, sizeof(txVoltageB));  // voltage working 02-17-2020
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, get_logger_D_from_flashMem(), 20);  // sensorD
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, convertRssiC, 100);
-    strncat(rssiString, ",", 1);
+    strcat(rssiString, ",");
     strncat(rssiString, txVoltageC, sizeof(txVoltageC));
   }
-  strncat(rssiString, ",*", 2);
+  strcat(rssiString, ",*");
   strncat(rssiString, Ctimestamp, 12);
   delay_millis(500);
   aggregate_received_data(rssiString);
@@ -891,24 +891,24 @@ void send_rain_data(uint8_t sendTo) {
     strncpy((dataToSend), (get_logger_A_from_flashMem()), (20));
   }
   // strncpy((dataToSend), (get_logger_A_from_flashMem()), (20));
-  strncat(dataToSend, "W", 1);
-  strncat(dataToSend, ",", 1);
+  strcat(dataToSend, "W");
+  strcat(dataToSend, ",");
 
   snprintf(temp, sizeof temp, "%.2f", readTemp());
   strncat(dataToSend, temp, sizeof(temp));
-  strncat(dataToSend, ",", 1);
+  strcat(dataToSend, ",");
 
   snprintf(sendRainTip, sizeof sendRainTip, "%.2f", rainTips);
   strncat(dataToSend, sendRainTip, sizeof(sendRainTip));
-  strncat(dataToSend, ",", 1);
+  strcat(dataToSend, ",");
 
   snprintf(volt, sizeof volt, "%.2f", readBatteryVoltage(get_calib_param()));
   strncat(dataToSend, volt, sizeof(volt));
 
-  strncat(dataToSend, ",", 1);
+  strcat(dataToSend, ",");
   strncat(dataToSend, readCSQ(), sizeof(readCSQ()));
   // strncat(dataToSend, _csq, sizeof(_csq));
-  strncat(dataToSend, ",", 1);
+  strcat(dataToSend, ",");
   strncat(dataToSend, Ctimestamp, 12);
   // if (get_logger_mode() == 6)
   // {
@@ -951,12 +951,12 @@ char *read_batt_vol(uint8_t ver) {
   } else {
     strncpy(voltMessage, get_logger_A_from_flashMem(), 20);
   }
-  strncat(voltMessage, "*VOLT:", 7);
+  strcat(voltMessage, "*VOLT:");
   strncat(voltMessage, volt, sizeof(volt));
-  strncat(voltMessage, "*", 1);
+  strcat(voltMessage, "*");
   if (ver == 6) {
     strncat(voltMessage, Ctimestamp, 12);
-    strncat(voltMessage, "<<", 2);
+    strcat(voltMessage, "<<");
   } else {
     strncat(voltMessage, Ctimestamp, 12);
   }
@@ -1044,7 +1044,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
   }
   strcpy(command, get_sensCommand_from_flashMem());
   // Serial.println(command);
-  strncat(command, "/", 1);
+  strcat(command, "/");
   strncat(command, Ctimestamp, 12);
   Serial.println(command);
   DUESerial.write(command);
@@ -1075,7 +1075,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
     if (strstr(streamBuffer, ">>")) {
       if (strstr(streamBuffer, "*")) {
         Serial.println("Getting sensor data. . .");
-        if (mode == 0 || mode == 1 ) {
+        if (mode == 0 || mode == 1) {
           /**
            * Remove 1st and 2nd character data in string
            * Not needed in GSM mode
@@ -1091,7 +1091,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
           Serial.println("Data received..");
           DUESerial.write("OK");
         } else if (mode == 6 || mode == 7) {
-          strncat(streamBuffer, "<<", 2);
+          strcat(streamBuffer, "<<");
           delay(10);
           send_thru_lora(streamBuffer);
           flashLed(LED_BUILTIN, 2, 100);
@@ -1171,7 +1171,7 @@ void no_data_from_senslope(uint8_t mode) {
     strncat((streamBuffer), (get_logger_A_from_flashMem()), (20));
   }
 
-  strncat(streamBuffer, "*NODATAFROMSENSLOPE*", 22);
+  strcat(streamBuffer, "*NODATAFROMSENSLOPE*");
   strncat(streamBuffer, Ctimestamp, strlen(Ctimestamp));
 
   if (mode == 1 || mode == 0) {
@@ -1179,7 +1179,7 @@ void no_data_from_senslope(uint8_t mode) {
   } else if (mode == 2) {
     send_thru_lora(streamBuffer);
   } else {
-    strncat(streamBuffer, "<<", 2);
+    strcat(streamBuffer, "<<");
     send_thru_lora(streamBuffer);
   }
   customDueFlag = 1;
@@ -1266,7 +1266,7 @@ void aggregate_received_data(char *data_chunk) {
 
   // Serial.println(strlen(data_chunk));
   strncat(sending_stack, data_chunk, strlen(data_chunk));
-  strncat(sending_stack, "~", 1);
+  strcat(sending_stack, "~");
   sending_stack[strlen(sending_stack) + 1] = '\0';
   Serial.print("Added to sending stack: ");
   Serial.println(data_chunk);
@@ -1310,7 +1310,7 @@ void send_message_segments(char *msg_dump) {
 
   itoa(freeRam(), freeram_buf, 10);
   strncat(ram_buffer, get_logger_A_from_flashMem(), 5);
-  strncat(ram_buffer, " SRAM Remaining: ", 17);
+  strcat(ram_buffer, " SRAM Remaining: ");
   strncat(ram_buffer, freeram_buf, strlen(freeram_buf));
   ram_buffer[strlen(ram_buffer) + 1] = '\0';
 

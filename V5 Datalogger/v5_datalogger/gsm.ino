@@ -3,7 +3,7 @@
  * 
  * @return success: sent, failed: not sent
  */
-void send_thru_gsm(char *inputMessage, String serverNumber) {
+void send_thru_gsm(const char* inputMessage, String serverNumber) {
   turn_ON_GSM(get_gsm_power_mode());
   if (serverNumber == "") {
     serverNumber = default_serverNumber;
@@ -393,7 +393,7 @@ char *readGSMResponse() {
   // char response[100]; //200
   int length = sizeof(response);
 
-  for (int j = 0; j <= length; j++) {
+  for (int j = 0; j < length; j++) {
     response[j] = '\0';
   }
 
@@ -660,11 +660,11 @@ void update_time_with_GPRS() {
   GSMSerial.write("AT+SAPBR=3,1,\"APN\",\"CMNET\"\r");  //AT+SAPBR=3,1,"APN","CMNET"
   delay_millis(1000);
   readGSMResponse();
-  //Open bearer 
-  GSMSerial.write("AT+SAPBR=1,1\r");                      
+  //Open bearer
+  GSMSerial.write("AT+SAPBR=1,1\r");
   delay_millis(4000);
   readGSMResponse();
-  GSMSerial.write("AT+CNTPCID=1\r");                    
+  GSMSerial.write("AT+CNTPCID=1\r");
   delay_millis(200);
   readGSMResponse();
   GSMSerial.write("AT+CNTP=\"time.upd.edu.ph\",32\r");  //AT+CNTP="time.upd.edu.ph",32
@@ -712,72 +712,68 @@ void update_time_with_GPRS() {
 }
 
 // Hardcode: For changing server numbers
-void changeServerNumber()
-{
-    unsigned long startHere = millis();
-    // Serial.println("Default server numbers: GLOBE1 - 639175972526 ; SMART1 - 639088125642");
-    // Serial.println("Default server numbers: GLOBE2 - 639175388301 ; SMART2 - 639088125639");
-    Serial.print("Enter new server number: ");
-    while (!Serial.available())
-    {
-        if (timeOutExit(startHere, DEBUGTIMEOUT))
-        {
-            debug_flag_exit = true;
-            break;
-        }
+void changeServerNumber() {
+  unsigned long startHere = millis();
+  // Serial.println("Default server numbers: GLOBE1 - 639175972526 ; SMART1 - 639088125642");
+  // Serial.println("Default server numbers: GLOBE2 - 639175388301 ; SMART2 - 639088125639");
+  Serial.print("Enter new server number: ");
+  while (!Serial.available()) {
+    if (timeOutExit(startHere, DEBUGTIMEOUT)) {
+      debug_flag_exit = true;
+      break;
     }
-    if (Serial.available())
-    {
-        String ser_num = Serial.readStringUntil('\n');
-        
-        ser_num.toUpperCase();
-        ser_num.trim();
-        Serial.println(ser_num);
-        
-        if (ser_num.toInt() > 0) {
-            ser_num.toCharArray(flashServerNumber.inputNumber, 13);
-        } else if (ser_num == "GLOBE1") {
-            Serial.println("Server number set to: GLOBE1 - 639175972526");
-            strcpy(flashServerNumber.inputNumber, "639175972526");
-        } else if (ser_num == "GLOBE2") {
-            Serial.println("Server number set to: GLOBE2 - 639175388301");
-            strcpy(flashServerNumber.inputNumber, "639175388301");
-        } else if (ser_num == "SMART1") {
-            Serial.println("Server number set to: SMART1 - 639088125642");
-            strcpy(flashServerNumber.inputNumber, "639088125642");
-        } else if (ser_num == "SMART2") {
-            Serial.println("Server number set to: SMART2 - 639088125639");
-            strcpy(flashServerNumber.inputNumber, "639088125639");
-        } else if (ser_num == "DAN") {
-            Serial.println("Server number set to: 639762372823");
-            strcpy(flashServerNumber.inputNumber, "639762372823");
-        } else if (ser_num == "WEB") {
-            Serial.println("Server number set to: 639053648335");
-            strcpy(flashServerNumber.inputNumber, "639053648335");  
-        } else if (ser_num == "KATE") {
-            Serial.println("Server number set to: 639476873967");
-            strcpy(flashServerNumber.inputNumber, "639476873967");
-        } else if (ser_num == "LOUIE") {
-            Serial.println("Server number set to: 639561586434");
-            strcpy(flashServerNumber.inputNumber, "639561586434");
-        } else if (ser_num == "CARLA") {
-            Serial.println("Server number set to: 639557483156");
-            strcpy(flashServerNumber.inputNumber, "639557483156");
-        } else if (ser_num == "REYN") {
-            Serial.println("Server number set to: 639669622726");
-            strcpy(flashServerNumber.inputNumber, "639669622726");
-        } else if (ser_num == "KENNEX") {
-            Serial.println("Server number set to: 639293175812");
-            strcpy(flashServerNumber.inputNumber, "639293175812");
-        } else if (ser_num == "DON") {
-            Serial.println("Server number set to: 639179995183");
-            strcpy(flashServerNumber.inputNumber, "639179995183");            
-        } else {
-            Serial.println("Server number defaulted to GLOBE1");
-            strcpy(flashServerNumber.inputNumber, "639175972526");
-        }
-        newServerNum.write(flashServerNumber); // save to flash memory
+  }
+  if (Serial.available()) {
+    String ser_num = Serial.readStringUntil('\n');
+
+    ser_num.toUpperCase();
+    ser_num.trim();
+    Serial.println(ser_num);
+
+    if (ser_num.toInt() > 0) {
+      ser_num.toCharArray(flashServerNumber.inputNumber, 13);
+    } else if (ser_num == "GLOBE1") {
+      Serial.println("Server number set to: GLOBE1 - 639175972526");
+      strcpy(flashServerNumber.inputNumber, "639175972526");
+    } else if (ser_num == "GLOBE2") {
+      Serial.println("Server number set to: GLOBE2 - 639175388301");
+      strcpy(flashServerNumber.inputNumber, "639175388301");
+    } else if (ser_num == "SMART1") {
+      Serial.println("Server number set to: SMART1 - 639088125642");
+      strcpy(flashServerNumber.inputNumber, "639088125642");
+    } else if (ser_num == "SMART2") {
+      Serial.println("Server number set to: SMART2 - 639088125639");
+      strcpy(flashServerNumber.inputNumber, "639088125639");
+    } else if (ser_num == "DAN") {
+      Serial.println("Server number set to: 639762372823");
+      strcpy(flashServerNumber.inputNumber, "639762372823");
+    } else if (ser_num == "WEB") {
+      Serial.println("Server number set to: 639053648335");
+      strcpy(flashServerNumber.inputNumber, "639053648335");
+    } else if (ser_num == "KATE") {
+      Serial.println("Server number set to: 639476873967");
+      strcpy(flashServerNumber.inputNumber, "639476873967");
+    } else if (ser_num == "LOUIE") {
+      Serial.println("Server number set to: 639561586434");
+      strcpy(flashServerNumber.inputNumber, "639561586434");
+    } else if (ser_num == "CARLA") {
+      Serial.println("Server number set to: 639557483156");
+      strcpy(flashServerNumber.inputNumber, "639557483156");
+    } else if (ser_num == "REYN") {
+      Serial.println("Server number set to: 639669622726");
+      strcpy(flashServerNumber.inputNumber, "639669622726");
+    } else if (ser_num == "KENNEX") {
+      Serial.println("Server number set to: 639293175812");
+      strcpy(flashServerNumber.inputNumber, "639293175812");
+    } else if (ser_num == "DON") {
+      Serial.println("Server number set to: 639179995183");
+      strcpy(flashServerNumber.inputNumber, "639179995183");
+    } else {
+      Serial.println("Server number defaulted to GLOBE1");
+      strcpy(flashServerNumber.inputNumber, "639175972526");
     }
+    newServerNum.write(flashServerNumber);  // save to flash memory
+  }
 }
 
 /* Calculate day of week in proleptic Gregorian calendar. Sunday == 0. */
