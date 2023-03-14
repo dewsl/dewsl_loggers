@@ -308,7 +308,11 @@ void getAtcommand() {
       Serial.println("5,15,25... minute interval");
     }
     Serial.print("Logger mode:     ");
-    if (get_logger_mode() == 1) {
+    if (get_logger_mode() == 0) {
+      Serial.println("arQ mode");
+      Serial.print("Logger name: ");
+      Serial.println(get_logger_A_from_flashMem());
+    } else if (get_logger_mode() == 1) {
       Serial.println("Gateway mode Subsurface Sensor and 1 Router");
       Serial.print("Gateway sensor name: ");
       Serial.println(get_logger_A_from_flashMem());
