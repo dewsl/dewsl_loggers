@@ -768,6 +768,9 @@ void changeServerNumber() {
     } else if (ser_num == "DON") {
       Serial.println("Server number set to: 639179995183");
       strcpy(flashServerNumber.inputNumber, "639179995183");
+    } else if (ser_num == "JOSE") { 
+      Serial.println("Server number set to: 639451136212");
+      strcpy(flashServerNumber.inputNumber, "639451136212");
     } else {
       Serial.println("Server number defaulted to GLOBE1");
       strcpy(flashServerNumber.inputNumber, "639175972526");
