@@ -114,7 +114,7 @@ bool getSensorDataFlag = false;
 bool debug_flag_exit = false;
 bool send_rain_data_flag = true;
 
-char firmwareVersion[9] = "23.03.13";  // year . month . date
+char firmwareVersion[9] = "23.03.31";  // year . month . date
 char station_name[6] = "MADTA";
 char Ctimestamp[13] = "";
 char command[26];
