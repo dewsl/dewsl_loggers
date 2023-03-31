@@ -225,7 +225,7 @@ void getAtcommand() {
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
     Serial.readStringUntil('\n');
   } else if (command == "K") {
-    Serial.print("Alarm stored: ");
+    Serial.print("Alarm interval stored: ");
     Serial.println(alarmFromFlashMem());
     print_rtcInterval();
     if (isChangeParam())
@@ -292,25 +292,24 @@ void getAtcommand() {
     readTimeStamp();
     Serial.print("Real time clock: ");
     Serial.println(Ctimestamp);
-    Serial.print("Sending time:    ");
-    // Serial.println(alarmFromFlashMem());
+    Serial.print("Send interval:    ");
     if (alarmFromFlashMem() == 0) {
-      Serial.println("0th and 30th minute");
+      Serial.println("30 minutes (hh:00 and hh:30)");
     } else if (alarmFromFlashMem() == 1) {
-      Serial.println("5th and 35th minute");
+      Serial.println("15 minutes (hh:00, hh:15, hh:30, hh:45)");
     } else if (alarmFromFlashMem() == 2) {
-      Serial.println("10th and 40th minute");
+      Serial.println("10 minutes (hh:00, hh:10, hh:20, ... )");
     } else if (alarmFromFlashMem() == 3) {
-      Serial.println("15th and 45th minute");
+      Serial.println("5 minutes (hh:00, hh:05, hh:10, hh:15, ... )");
     } else if (alarmFromFlashMem() == 4) {
-      Serial.println("every 10th minute");
+      Serial.println("3 minutes (hh:00, hh:03, hh:06, hh:09, ... )");
     } else {
-      Serial.println("5,15,25... minute interval");
+      Serial.println("Default 30 minutes (hh:00 and hh:30)");
     }
     Serial.print("Logger mode:     ");
     if (get_logger_mode() == 0) {
       Serial.println("arQ mode");
-      Serial.print("Logger name: ");
+      Serial.print("Logger name:     ");
       Serial.println(get_logger_A_from_flashMem());
     } else if (get_logger_mode() == 1) {
       Serial.println("Gateway mode Subsurface Sensor and 1 Router");
@@ -320,13 +319,13 @@ void getAtcommand() {
       Serial.println(get_logger_B_from_flashMem());
     } else if (get_logger_mode() == 3) {
       Serial.println("Gateway mode with 1 Router");
-      Serial.print("Gateway name: ");
+      Serial.print("Gateway name:    ");
       Serial.println(get_logger_A_from_flashMem());
       Serial.print("Remote Sensor Name A: ");
       Serial.println(get_logger_B_from_flashMem());
     } else if (get_logger_mode() == 4) {
       Serial.println("Gateway mode with 2 Routers");
-      Serial.print("Gateway name:   ");
+      Serial.print("Gateway name:    ");
       Serial.println(get_logger_A_from_flashMem());
       Serial.print("Remote Sensor Name A: ");
       Serial.println(get_logger_B_from_flashMem());
@@ -334,7 +333,7 @@ void getAtcommand() {
       Serial.println(get_logger_C_from_flashMem());
     } else if (get_logger_mode() == 5) {
       Serial.println("Gateway mode with 3 Routers");
-      Serial.print("Gateway name:   ");
+      Serial.print("Gateway name:    ");
       Serial.println(get_logger_A_from_flashMem());
       Serial.print("Remote Sensor Name A: ");
       Serial.println(get_logger_B_from_flashMem());
@@ -434,7 +433,7 @@ void getAtcommand() {
     }
 
     // real time clock alarm settings
-    setAlarmEvery30(alarmFromFlashMem());
+    setNextAlarm(alarmFromFlashMem());
     delay_millis(75);
     rtc.clearINTStatus();  // needed to re-trigger rtc
     turn_OFF_GSM(get_gsm_power_mode());
@@ -472,11 +471,6 @@ void getAtcommand() {
     // change battery input *12volts *4.2volts
     Serial.print("Voltage: ");
     Serial.println(readBatteryVoltage(get_calib_param()));
-
-    // if (get_logger_mode() == 6)
-    // {
-    //     send_thru_lora(read_batt_vol(get_logger_mode()));
-    // }
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
   } else if (command == "SEND_RAIN_VIA_LORA") {
     disable_watchdog();
@@ -606,7 +600,7 @@ void printMenu() {
   Serial.println(F("[H] Change SERVER NUMBER"));
   Serial.println(F("[I] Reset GSM"));
   Serial.println(F("[J] Set rain collector type."));
-  Serial.println(F("[K] Change sending time."));
+  Serial.println(F("[K] Change sending interval."));
   Serial.println(F("[L] Set battery type (4.2V Li-ion / 12V Lead Acid)"));
   Serial.println(F("[M] Send CUSTOM SMS to SERVER"));
   Serial.println(F("[N] Set GSM POWER MODE"));
@@ -638,12 +632,12 @@ void printMenu2() {
 
 void print_rtcInterval() {
   // Serial.println("------------------------------------------------");
-  Serial.println("[0] Alarm for every 0 and 30 minutes interval");
-  Serial.println("[1] Alarm for every 5 and 35 minutes interval");
-  Serial.println("[2] Alarm for every 10 and 40 minutes interval");
-  Serial.println("[3] Alarm for every 15 and 45 minutes interval");
-  Serial.println("[4] Alarm for every 10 minutes interval");
-  Serial.println("[5] Alarm for every 5,15,25. . .  minutes interval");
+  Serial.println("[0] 30-minute interval from 0th minute (0,30)");
+  Serial.println("[1] 15-minute interval from 0th minute (0,15,30,45)");
+  Serial.println("[2] 10-minute interval from 0th minute (0,10,20,30...)");
+  Serial.println("[3] 5-minute interval from 0th minute (0,5,10,15...)");
+  Serial.println("[4] 3-minute interval from 0th minute (0,3,6,9,12...)");
+  // Serial.println("[5] Alarm for every 5,15,25. . .  minutes interval");
   // Serial.println("------------------------------------------------");
 }
 

@@ -261,7 +261,7 @@ void setup() {
 
   init_Sleep();  // initialize MCU sleep state
 
-  setAlarmEvery30(alarmFromFlashMem());  // rtc alarm settings
+  setNextAlarm(alarmFromFlashMem());  // rtc alarm settings
   rf95.sleep();
 
   delay_millis(3000);
@@ -398,175 +398,7 @@ void loop() {
       Watchdog.reset();
       attachInterrupt(RTCINTPIN, wake, FALLING);
       Watchdog.reset();
-    }
-    // else if (get_logger_mode() == 6)
-    // {
-    //   // default arabica LoRa transmitter
-    //   get_Due_Data(6, get_serverNum_from_flashMem());
-    //   Watchdog.reset();
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    // }
-    // else if (get_logger_mode() == 7)
-    // {
-    //   // Sends rain gauge data via LoRa
-    //   get_Due_Data(0, get_serverNum_from_flashMem());
-    //   Watchdog.reset();
-    //   delay_millis(1000);
-    //   Watchdog.reset();
-    //   send_rain_data(1);
-    //   Watchdog.reset();
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    // }
-    // else if (get_logger_mode() == 8)
-    // {
-    //   // Sends rain gauge data via LoRa
-    //   get_Due_Data(0, get_serverNum_from_flashMem());
-    //   Watchdog.reset();
-    //   delay_millis(1000);
-    //   Watchdog.reset();
-    //   send_rain_data(1);
-    //   Watchdog.reset();
-    //   send_thru_lora(dataToSend);
-    //   Watchdog.reset();
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    // }
-    // else if (get_logger_mode() == 9)
-    // {
-    //   // Sends IMU sensor data to GSM
-    //   /*
-    //   on_IMU();
-    //   Watchdog.reset();
-    //   turn_ON_GSM(get_gsm_power_mode());
-    //   Watchdog.reset();
-    //   send_rain_data(0);
-    //   Watchdog.reset();
-    //   delay_millis(1000);
-    //   Watchdog.reset();
-    //   send_thru_gsm(read_IMU_data(get_calib_param()), get_serverNum_from_flashMem());
-    //   Watchdog.reset();
-    //   delay_millis(1000);
-    //   Watchdog.reset();
-    //   turn_OFF_GSM(get_gsm_power_mode());
-    //   Watchdog.reset();
-    //   off_IMU();
-    //   Watchdog.reset();
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    //   */
-    // }
-    // else if (get_logger_mode() == 10)
-    // {
-    //   // LoRa transmitter of version 5 datalogger
-    //   get_Due_Data(2, get_serverNum_from_flashMem());
-    //   Watchdog.reset();
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    //   // Sends IMU sensor data to LoRa
-    //   /*
-    //   on_IMU();
-    //   Watchdog.reset();
-    //   send_thru_lora(read_IMU_data(get_calib_param()));
-    //   Watchdog.reset();
-    //   // delay_millis(1000);
-    //   // Watchdog.reset();
-    //   // send_rain_data(1);
-    //   // Watchdog.reset();
-    //   off_IMU();
-    //   Watchdog.reset();
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    //   */
-    // }
-    // else if (get_logger_mode() == 12)
-    // {
-    //   // Sends rain gauge data ONLY
-    //   // turn_ON_GSM(get_gsm_power_mode());
-    //   Watchdog.reset();
-    //   if (gsmPwrStat)
-    //   {
-    //     turn_ON_GSM(get_gsm_power_mode());
-    //     Watchdog.reset();
-    //   }
-    //   Watchdog.reset();
-    //   send_rain_data(0);
-    //   Watchdog.reset();
-    //   delay_millis(3000);
-    //   Watchdog.reset();
-    //   send_thru_gsm(dataToSend, "639161640761");
-    //   // send_thru_gsm(dataToSend, "639175388301");
-    //   Watchdog.reset();
-    //   delay_millis(1000);
-    //   Watchdog.reset();
-    //   // turn_OFF_GSM(get_gsm_power_mode());
-    //   if (gsmPwrStat)
-    //   {
-    //     turn_OFF_GSM(get_gsm_power_mode());
-    //     Watchdog.reset();
-    //   }
-    //   Watchdog.reset();
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    //   send_rain_data_flag = true;
-    // }
-    // else if (get_logger_mode() == 13)
-    // {
-    //   // UBLOX gateway SINTB
-    //   digitalWrite(LED_BUILTIN, HIGH);
-    //   if (gsmPwrStat)
-    //   {
-    //     turn_ON_GSM(get_gsm_power_mode());
-    //     Watchdog.reset();
-    //   }
-    //   get_Due_Data(1, get_serverNum_from_flashMem());
-    //   Watchdog.reset();
-    //   send_rain_data(0);
-    //   Watchdog.reset();
-    //   if (getSensorDataFlag == true && OperationFlag == true)
-    //   {
-    //     receive_lora_data_UBLOX(12);
-    //     Watchdog.reset();
-    //   }
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    //   if (gsmPwrStat)
-    //   {
-    //     turn_OFF_GSM(get_gsm_power_mode());
-    //     Watchdog.reset();
-    //   }
-    //   digitalWrite(LED_BUILTIN, LOW);
-    // }
-    // else if (get_logger_mode() == 14)
-    // {
-    //   // LoRa Gateway with max timeOut only
-    //   turn_ON_GSM(get_gsm_power_mode());
-    //   Watchdog.reset();
-    //   receive_lora_data_ONLY(14);
-    //   Watchdog.reset();
-    //   send_rain_data(0);
-    //   Watchdog.reset();
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    //   turn_OFF_GSM(get_gsm_power_mode());
-    //   Watchdog.reset();
-    // }
-    // else if (get_logger_mode() == 15)
-    // {
-    //   // Three transmitter
-    //   turn_ON_GSM(get_gsm_power_mode());
-    //   Watchdog.reset();
-    //   send_rain_data(0);
-    //   Watchdog.reset();
-    //   receive_lora_data(5);
-    //   Watchdog.reset();
-    //   attachInterrupt(RTCINTPIN, wake, FALLING);
-    //   Watchdog.reset();
-    //   turn_OFF_GSM(get_gsm_power_mode());
-    //   Watchdog.reset();
-    // }
-    else {
+    } else {
       // default arQ like sending
       turn_ON_GSM(get_gsm_power_mode());
       Watchdog.reset();
@@ -616,7 +448,7 @@ void loop() {
     gsmRingFlag = false;
   }
 
-  setAlarmEvery30(alarmFromFlashMem());
+  setNextAlarm(alarmFromFlashMem());
   delay_millis(75);
   rtc.clearINTStatus();
 
@@ -646,7 +478,7 @@ void wakeAndSleep(uint8_t verSion) {
       get_Due_Data(0, get_serverNum_from_flashMem());  // default arabica
     }
 
-    setAlarmEvery30(alarmFromFlashMem());
+    setNextAlarm(alarmFromFlashMem());
     rtc.clearINTStatus();  // needed to re-trigger rtc
     rf95.sleep();
     OperationFlag = false;
@@ -763,20 +595,6 @@ void get_rssi(uint8_t mode) {
   tx_RSSI = "";
   tx_RSSI_B = "";
   tx_RSSI_C = "";
-}
-
-/**
- * Get data allocated from flash memory
- */
-char *stationName_from_flashMem() {
-  String get_cmd;
-  char new_cmd[10];
-  sensCommand = passCommand.read();
-  // get_sensCommand_from_flashMem()
-  get_cmd = sensCommand.stationName;
-  get_cmd.replace("\r", "");
-  get_cmd.toCharArray(new_cmd, 10);
-  return new_cmd;
 }
 
 char *get_logger_A_from_flashMem() {
