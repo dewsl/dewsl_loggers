@@ -4,7 +4,7 @@
  * @return success: sent, failed: not sent
  */
 void send_thru_gsm(const char* inputMessage, String serverNumber) {
-  turn_ON_GSM(get_gsm_power_mode());
+  // turn_ON_GSM(get_gsm_power_mode());
   if (serverNumber == "") {
     serverNumber = default_serverNumber;
   }
@@ -77,7 +77,7 @@ void send_thru_gsm(const char* inputMessage, String serverNumber) {
     }
   }
 
-  turn_OFF_GSM(get_gsm_power_mode());
+  // turn_OFF_GSM(get_gsm_power_mode());
 }
 
 /**Commonly used AT commands
@@ -513,7 +513,7 @@ void gsmNetworkAutoConnect() {
     } else {
       Serial.print(". ");
     }
-    if (i == 7 || i == 9) {
+    if (i == 9) {
       Serial.println("");
       Serial.println("Check GSM if connected or powered ON!");
     }
@@ -600,14 +600,15 @@ void init_gsm() {
 
 void turn_ON_GSM(int _gsmPowerMode) {
   // disable_watchdog();
-  if (_gsmPowerMode == 2 && GSM_powermode_disable == 0) {
+  if (_gsmPowerMode == 2) {
     Serial.println("Turning ON GSM ");
     digitalWrite(GSMPWR, HIGH);
     delay_millis(2000);
     gsmNetworkAutoConnect();
-  }
-  if (_gsmPowerMode == 1 && GSM_powermode_disable == 0) {
+  } else if (_gsmPowerMode == 1) {
     wakeGSM();
+  } else {    // always OM
+
   }
   // enable_watchdog();
 }
@@ -615,7 +616,7 @@ void turn_ON_GSM(int _gsmPowerMode) {
 void turn_OFF_GSM(int _gsmPowerMode) {
 
   delay_millis(1000);
-  if (_gsmPowerMode == 2 && GSM_powermode_disable == 0) {
+  if (_gsmPowerMode == 2) {
     gsmDeleteReadSmsInbox();
     delay_millis(2000);
     Serial.println("Turning OFF GSM . . .");
@@ -625,7 +626,7 @@ void turn_OFF_GSM(int _gsmPowerMode) {
     delay_millis(300);
     readGSMResponse();
   }
-  if (_gsmPowerMode == 1 && GSM_powermode_disable == 0) {
+  if (_gsmPowerMode == 1) {
     gsmDeleteReadSmsInbox();
     delay_millis(2000);
     sleepGSM();
@@ -660,12 +661,11 @@ void update_time_with_GPRS() {
   GSMSerial.write("AT+SAPBR=3,1,\"APN\",\"CMNET\"\r");  //AT+SAPBR=3,1,"APN","CMNET"
   delay_millis(1000);
   readGSMResponse();
-  //Open bearer
-  GSMSerial.write("AT+SAPBR=1,1\r");
+  GSMSerial.write("AT+SAPBR=1,1\r");  //Open bearer
   delay_millis(4000);
   readGSMResponse();
   GSMSerial.write("AT+CNTPCID=1\r");
-  delay_millis(200);
+  delay_millis(500);
   readGSMResponse();
   GSMSerial.write("AT+CNTP=\"time.upd.edu.ph\",32\r");  //AT+CNTP="time.upd.edu.ph",32
   delay_millis(200);
@@ -714,8 +714,6 @@ void update_time_with_GPRS() {
 // Hardcode: For changing server numbers
 void changeServerNumber() {
   unsigned long startHere = millis();
-  // Serial.println("Default server numbers: GLOBE1 - 639175972526 ; SMART1 - 639088125642");
-  // Serial.println("Default server numbers: GLOBE2 - 639175388301 ; SMART2 - 639088125639");
   Serial.print("Enter new server number: ");
   while (!Serial.available()) {
     if (timeOutExit(startHere, DEBUGTIMEOUT)) {

@@ -45,6 +45,10 @@ void getAtcommand() {
     ate = false;
     Serial.println(OKSTR);
   } else if (command == "A") {
+
+    Serial.print("Datalogger mode: ");
+    get_logger_mode_equivalent();
+
     if (get_logger_mode() == 0) {
       // default arQ like sending
       turn_ON_GSM(get_gsm_power_mode());
@@ -98,8 +102,6 @@ void getAtcommand() {
       disable_watchdog();
       turn_OFF_GSM(get_gsm_power_mode());
     } else if (get_logger_mode() == 6) {
-      Serial.print("Datalogger mode: ");
-      Serial.println(get_logger_mode());
       // Sends rain gauge data ONLY
       turn_ON_GSM(get_gsm_power_mode());
       send_rain_data(0);
@@ -287,14 +289,14 @@ void getAtcommand() {
   }
 
   else if (command == "?") {
-    Serial.println("** Stored Parameters **");
+    Serial.println("*** Stored Parameters ***");
     Serial.print("");
     readTimeStamp();
     Serial.print("Real time clock: ");
     Serial.println(Ctimestamp);
-    Serial.print("Send interval:    ");
+    Serial.print("Send interval:   ");
     if (alarmFromFlashMem() == 0) {
-      Serial.println("30 minutes (hh:00 and hh:30)");
+      Serial.println("30 minutes (hh:00 & hh:30)");
     } else if (alarmFromFlashMem() == 1) {
       Serial.println("15 minutes (hh:00, hh:15, hh:30, hh:45)");
     } else if (alarmFromFlashMem() == 2) {
@@ -304,52 +306,10 @@ void getAtcommand() {
     } else if (alarmFromFlashMem() == 4) {
       Serial.println("3 minutes (hh:00, hh:03, hh:06, hh:09, ... )");
     } else {
-      Serial.println("Default 30 minutes (hh:00 and hh:30)");
+      Serial.println("Default 30 minutes (hh:00 & hh:30)");
     }
     Serial.print("Logger mode:     ");
-    if (get_logger_mode() == 0) {
-      Serial.println("arQ mode");
-      Serial.print("Logger name:     ");
-      Serial.println(get_logger_A_from_flashMem());
-    } else if (get_logger_mode() == 1) {
-      Serial.println("Gateway mode Subsurface Sensor and 1 Router");
-      Serial.print("Gateway sensor name: ");
-      Serial.println(get_logger_A_from_flashMem());
-      Serial.print("Remote sensor name: ");
-      Serial.println(get_logger_B_from_flashMem());
-    } else if (get_logger_mode() == 3) {
-      Serial.println("Gateway mode with 1 Router");
-      Serial.print("Gateway name:    ");
-      Serial.println(get_logger_A_from_flashMem());
-      Serial.print("Remote Sensor Name A: ");
-      Serial.println(get_logger_B_from_flashMem());
-    } else if (get_logger_mode() == 4) {
-      Serial.println("Gateway mode with 2 Routers");
-      Serial.print("Gateway name:    ");
-      Serial.println(get_logger_A_from_flashMem());
-      Serial.print("Remote Sensor Name A: ");
-      Serial.println(get_logger_B_from_flashMem());
-      Serial.print("Remote Sensor Name B: ");
-      Serial.println(get_logger_C_from_flashMem());
-    } else if (get_logger_mode() == 5) {
-      Serial.println("Gateway mode with 3 Routers");
-      Serial.print("Gateway name:    ");
-      Serial.println(get_logger_A_from_flashMem());
-      Serial.print("Remote Sensor Name A: ");
-      Serial.println(get_logger_B_from_flashMem());
-      Serial.print("Remote Sensor Name B: ");
-      Serial.println(get_logger_C_from_flashMem());
-      Serial.print("Remote Sensor Name C: ");
-      Serial.println(get_logger_D_from_flashMem());
-    } else if (get_logger_mode() == 6) {
-      Serial.println("Rain gauge only (GSM)");
-      Serial.print("Logger name:     ");
-      Serial.println(get_logger_A_from_flashMem());
-    } else {  //mode 2
-      Serial.println("Router mode");
-      Serial.print("Logger name:     ");
-      Serial.println(get_logger_A_from_flashMem());
-    }
+    get_logger_mode_equivalent();
     Serial.print("Sensor command:  ");
     // sensCommand = passCommand.read();
     Serial.println(get_sensCommand_from_flashMem());
@@ -426,24 +386,12 @@ void getAtcommand() {
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
     Serial.readStringUntil('\n');
   } else if (command == "EXIT" || command == "X") {
-    Serial.println("Exiting debug mode!");
-    if (test_mode) {
-      GSM_powermode_disable = 0;
-      Serial.println("GSM power mode enabled.");
-    }
 
-    // real time clock alarm settings
+    Serial.println("Exiting debug mode!");
+    resetRainTips();
     setNextAlarm(alarmFromFlashMem());
     delay_millis(75);
     rtc.clearINTStatus();  // needed to re-trigger rtc
-    turn_OFF_GSM(get_gsm_power_mode());
-    if (rain_test_flag == 1)
-      ;
-    {
-      rain_test_flag = 0;
-      resetRainTips();
-      Serial.println("Rain test mode disabled");
-    }
 
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
     debug_flag = 0;
@@ -478,7 +426,7 @@ void getAtcommand() {
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
   } else if (command == "LORA_WAIT_TEST") {
     Serial.print("Datalogger Mode: ");
-    Serial.println(get_logger_mode());
+    get_logger_mode_equivalent();
     receive_lora_data(get_logger_mode());
     disable_watchdog();
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
@@ -496,16 +444,6 @@ void getAtcommand() {
   } else if (command == "CSQ") {
     Serial.print("CSQ: ");
     Serial.println(readCSQ());
-    Serial.println("* * * * * * * * * * * * * * * * * * * *");
-  } else if (command == "RAIN_TEST") {
-    if (rain_test_flag == 1) {
-      rain_test_flag = 0;
-      resetRainTips();
-      Serial.println("Rain test mode disabled");
-    } else {
-      rain_test_flag = 1;
-      Serial.println("Rain test mode enabled");
-    }
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
   } else if (command == "RTC_TEMP") {
     Serial.print("RTC temperature: ");
@@ -622,7 +560,6 @@ void printMenu2() {
   Serial.println(F("[SEND_RAIN_VIA_LORA]"));
   Serial.println(F("[LORA_WAIT_TEST] Waits for LoRa data and sends it thru GSM."));
   Serial.println(F("[LORA_SEND_TEST] Sends one (1) instance of dummy data thru LoRa."));
-  Serial.println(F("[RAIN_TEST] Temporarily disables rain ISR printing."));
   Serial.println(F("[RTC_TEMP] Displays RTC temperature."));
   Serial.println(F("[SD] Prints customDue SD card contents (can only be used safely after reset)."));
   Serial.println(F("[T] Turns on customDue/trigger for 5 sec."));
@@ -719,6 +656,52 @@ void printLoggerMode() {
 uint8_t get_logger_mode() {
   int lversion = loggerMode.read();
   return lversion;
+}
+
+void get_logger_mode_equivalent() {
+  if (get_logger_mode() == 0) {
+    Serial.println("arQ mode");
+    Serial.print("Logger name:     ");
+    Serial.println(get_logger_A_from_flashMem());
+  } else if (get_logger_mode() == 1) {
+    Serial.println("Gateway mode Subsurface Sensor and 1 Router");
+    Serial.print("Gateway sensor name: ");
+    Serial.println(get_logger_A_from_flashMem());
+    Serial.print("Remote sensor name: ");
+    Serial.println(get_logger_B_from_flashMem());
+  } else if (get_logger_mode() == 3) {
+    Serial.println("Gateway mode with 1 Router");
+    Serial.print("Gateway name:    ");
+    Serial.println(get_logger_A_from_flashMem());
+    Serial.print("Remote Sensor Name A: ");
+    Serial.println(get_logger_B_from_flashMem());
+  } else if (get_logger_mode() == 4) {
+    Serial.println("Gateway mode with 2 Routers");
+    Serial.print("Gateway name:    ");
+    Serial.println(get_logger_A_from_flashMem());
+    Serial.print("Remote Sensor Name A: ");
+    Serial.println(get_logger_B_from_flashMem());
+    Serial.print("Remote Sensor Name B: ");
+    Serial.println(get_logger_C_from_flashMem());
+  } else if (get_logger_mode() == 5) {
+    Serial.println("Gateway mode with 3 Routers");
+    Serial.print("Gateway name:    ");
+    Serial.println(get_logger_A_from_flashMem());
+    Serial.print("Remote Sensor Name A: ");
+    Serial.println(get_logger_B_from_flashMem());
+    Serial.print("Remote Sensor Name B: ");
+    Serial.println(get_logger_C_from_flashMem());
+    Serial.print("Remote Sensor Name C: ");
+    Serial.println(get_logger_D_from_flashMem());
+  } else if (get_logger_mode() == 6) {
+    Serial.println("Rain gauge only (GSM)");
+    Serial.print("Logger name:     ");
+    Serial.println(get_logger_A_from_flashMem());
+  } else {  //mode 2
+    Serial.println("Router mode");
+    Serial.print("Logger name:     ");
+    Serial.println(get_logger_A_from_flashMem());
+  }
 }
 
 void setGsmPowerMode() {
@@ -1013,3 +996,16 @@ bool timeOutExit(unsigned long _startTimeOut, int _timeOut) {
     return false;
   }
 }
+
+void debug_println(const char* debugText) {
+  if (Serial.available()){
+    Serial.println(debugText);
+  }
+}
+
+void debug_print(const char* debugText) {
+  if (Serial.available()){
+    Serial.print(debugText);
+  }
+}
+

@@ -38,6 +38,7 @@ By : DRM
 #define DUEBAUD 9600
 #define DUESerial Serial1
 #define RTCINTPIN 6
+#define RTCSCLPIN 21
 #define DUETRIG 5
 #define DEBUG 1
 #define VBATPIN A7
@@ -70,9 +71,6 @@ By : DRM
 #define ACKWAIT 2000               // wait time for gateway acknowledgement
 #define LORATIMEOUTWITHACK 300000  // 5.0 min timeout for gateways
 
-//Enables/disables some function and other flags used for testing. Limited functionality for now
-bool test_mode = false;
-
 // Singleton instance of the radio driver
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
@@ -82,6 +80,22 @@ uint8_t payload[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t ack_payload[RH_RF95_MAX_MESSAGE_LEN];
 uint8_t len = sizeof(payload);
 char ack_key[8] = "^REC'D_";
+// Function: Used for determining sender reciever address
+const uint8_t LOGGER_COUNT = 111;
+char logger_names[LOGGER_COUNT][6] = { "phita", "agbsb", "agbta", "bakg", "bakta", "baktb", "baktc", "banta", "bantb", "barsc",
+                                       "bartb", "bayg", "baysb", "bayta", "baytc", "bcnta", "bcntb", "blcpz", "blcsb", "blcta",
+                                       "bolra", "bolta", "btog", "btota", "btotb", "cartc", "cartd", "cudra", "cudtb", "dadra",
+                                       "dadta", "gaasa", "gaatc", "gamra", "hinsa", "hinsb", "humb", "imera", "imesb", "imeta",
+                                       "imug", "imuta", "imutd", "imute", "inag", "inata", "inatc", "inaxa", "jorta", "knrta",
+                                       "knrtb", "labb", "labt", "laysa", "laysb", "lipra", "loota", "lootb", "lpasa", "lpasb",
+                                       "lteg", "ltesa", "ltetb", "lung", "luntc", "luntd", "magg", "magte", "mamta", "mamtb",
+                                       "marg", "marta", "martb", "mcata", "mngsa", "mngtb", "mslra", "mslta", "msura", "nagra",
+                                       "nurta", "nurtb", "oslra", "parta", "partb", "pepg", "pepsb", "peptc", "pinra", "plara",
+                                       "pngta", "pngtb", "pugra", "sagta", "sagtb", "sibta", "sinsa", "sintb", "sumta", "sumtc",
+                                       "talra", "tgata", "tgatb", "tueta", "tuetb", "umig", "testa", "testb", "testc", "teste",
+                                       "testf" };
+// When adding new datalogger names:   Increment the variabe "logger_count" subscript for every datalogger name added.
+//                                     Limit datalogger names to five (5) characters with the 6th as terminating character
 
 // LoRa received
 uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
@@ -105,16 +119,13 @@ static unsigned long last_interrupt_time = 0;
 const unsigned int DEBOUNCE_TIME = 75;  // 40
 volatile float rainTips = 0.00;
 char sendRainTip[7] = "0.00";
-uint8_t rain_test_flag = 0;
 
-volatile bool gsmRingFlag = false;   // gsm interrupt
-volatile bool rainFallFlag = false;  // rain tips
+volatile bool gsmRingFlag = false;  // gsm interrupt
 volatile bool OperationFlag = false;
 bool getSensorDataFlag = false;
 bool debug_flag_exit = false;
-bool send_rain_data_flag = true;
 
-char firmwareVersion[9] = "23.03.31";  // year . month . date
+char firmwareVersion[9] = "23.04.04";  // year . month . date
 char station_name[6] = "MADTA";
 char Ctimestamp[13] = "";
 char command[26];
@@ -126,7 +137,6 @@ char get_sensor_cmd[9];
 unsigned long timestart = 0;
 uint8_t serial_flag = 0;
 uint8_t debug_flag = 0;
-uint8_t GSM_powermode_disable = 0;
 uint8_t rcv_LoRa_flag = 0;
 uint16_t store_rtc = 00;  // store rtc alarm
 // uint8_t gsm_power = 0; //gsm power (sleep or hardware ON/OFF)
@@ -253,11 +263,13 @@ void setup() {
   digitalWrite(IMU_POWER, LOW);
 
   /* rain gauge interrupt */
-  attachInterrupt(RAININT, rainISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RAININT), rainISR, FALLING);
   /* rtc interrupt */
-  attachInterrupt(RTCINTPIN, wake, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RTCINTPIN), wakeISR, FALLING);
   /* ring interrupt */
-  attachInterrupt(GSMINT, ringISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(GSMINT), ringISR, FALLING);
+  /* sda ticker interrupt test*/
+  // attachInterrupt(digitalPinToInterrupt(RTCSCLPIN), rtcTicker, FALLING);
 
   init_Sleep();  // initialize MCU sleep state
 
@@ -280,11 +292,11 @@ void setup() {
     Serial.println("- - - - - - - - - -");
 
     digitalWrite(GSMPWR, HIGH);
-    delay(2000);
+    delay(2500);
     Serial.println("Turning ON GSM ");
     flashLed(LED_BUILTIN, 10, 100);
-    // send_thru_gsm("LOGGER POWER UP", get_serverNum_from_flashMem());        //for testing only
     gsmNetworkAutoConnect();
+    send_thru_gsm("LOGGER POWER UP", get_serverNum_from_flashMem());        //for testing only
   }
 
   /*Enter DEBUG mode within 10 seconds*/
@@ -294,13 +306,6 @@ void setup() {
     if (Serial.available()) {
       debug_flag = 1;
       Serial.println("Debug Mode!");
-      rain_test_flag = 1;
-      if (test_mode && (get_logger_mode() != 2)) {
-        turn_ON_GSM(get_gsm_power_mode());
-        GSM_powermode_disable = 1;
-        Serial.println("GSM power mode disabled.");
-      }
-
       serial_flag = 1;
     }
     // timeOut in case walang serial na makuha in ~10 seconds
@@ -323,12 +328,12 @@ void loop() {
       Serial.println("* * * * * * * * * * * * *");
       turn_OFF_GSM(get_gsm_power_mode());
       debug_flag = 0;
-      rain_test_flag = 0;
     }
   }
 
   if (OperationFlag) {
-    flashLed(LED_BUILTIN, 2, 50);
+    flashLed(LED_BUILTIN, 5, 100);
+    detachInterrupt(digitalPinToInterrupt(RTCINTPIN));
     enable_watchdog();
     if (get_logger_mode() == 1) {
       // Gateway with sensor with 1 LoRa transmitter
@@ -340,15 +345,12 @@ void loop() {
       Watchdog.reset();
       send_rain_data(0);
       Watchdog.reset();
-      attachInterrupt(RTCINTPIN, wake, FALLING);
-      Watchdog.reset();
+
       turn_OFF_GSM(get_gsm_power_mode());
       Watchdog.reset();
     } else if (get_logger_mode() == 2) {
       // LoRa transmitter of version 5 datalogger
       get_Due_Data(2, get_serverNum_from_flashMem());
-      Watchdog.reset();
-      attachInterrupt(RTCINTPIN, wake, FALLING);
       Watchdog.reset();
     } else if (get_logger_mode() == 3) {
       // Gateway only with 1 LoRa transmitter
@@ -357,8 +359,6 @@ void loop() {
       send_rain_data(0);
       Watchdog.reset();
       receive_lora_data(3);
-      Watchdog.reset();
-      attachInterrupt(RTCINTPIN, wake, FALLING);
       Watchdog.reset();
       turn_OFF_GSM(get_gsm_power_mode());
       Watchdog.reset();
@@ -370,8 +370,6 @@ void loop() {
       Watchdog.reset();
       receive_lora_data(4);
       Watchdog.reset();
-      attachInterrupt(RTCINTPIN, wake, FALLING);
-      Watchdog.reset();
       turn_OFF_GSM(get_gsm_power_mode());
       Watchdog.reset();
     } else if (get_logger_mode() == 5) {
@@ -382,21 +380,18 @@ void loop() {
       Watchdog.reset();
       receive_lora_data(5);
       Watchdog.reset();
-      attachInterrupt(RTCINTPIN, wake, FALLING);
-      Watchdog.reset();
       turn_OFF_GSM(get_gsm_power_mode());
       Watchdog.reset();
     } else if (get_logger_mode() == 6) {
-      // Rain gauge ONLY datalogger
+      debug_println("Begin: logger mode 6");
+      // Rain gauge ONLY datalogger - GSM
       turn_ON_GSM(get_gsm_power_mode());
       Watchdog.reset();
       send_rain_data(0);
-      Watchdog.reset();
-      delay_millis(1000);
+      // Watchdog.reset();
+      // delay_millis(1000);
       Watchdog.reset();
       turn_OFF_GSM(get_gsm_power_mode());
-      Watchdog.reset();
-      attachInterrupt(RTCINTPIN, wake, FALLING);
       Watchdog.reset();
     } else {
       // default arQ like sending
@@ -406,29 +401,15 @@ void loop() {
       Watchdog.reset();
       get_Due_Data(1, get_serverNum_from_flashMem());
       Watchdog.reset();
-      attachInterrupt(RTCINTPIN, wake, FALLING);
-      Watchdog.reset();
       turn_OFF_GSM(get_gsm_power_mode());
       Watchdog.reset();
     }
-
+    attachInterrupt(digitalPinToInterrupt(RTCINTPIN), wakeISR, FALLING);
+    Watchdog.reset();
     rf95.sleep();
     getSensorDataFlag = false;
     OperationFlag = false;
-  }
-
-  if (rainFallFlag) {
-    if (get_logger_mode() == 2) {
-      // wakeGSM();
-      flashLed(LED_BUILTIN, 2, 50);
-      // LoRa transmitter of version 5 datalogger
-      get_Due_Data(2, get_serverNum_from_flashMem());
-      // sleepGSM();
-    } else {
-      flashLed(LED_BUILTIN, 1, 50);
-      attachInterrupt(RAININT, rainISR, FALLING);
-      rainFallFlag = false;
-    }
+    flashLed(LED_BUILTIN, 5, 100);
   }
 
   if (gsmRingFlag) {
@@ -444,7 +425,7 @@ void loop() {
       processIncomingByte(GSMSerial.read(), 0);
     }
     turn_OFF_GSM(get_gsm_power_mode());
-    attachInterrupt(GSMINT, ringISR, FALLING);
+    attachInterrupt(digitalPinToInterrupt(GSMINT), ringISR, FALLING);
     gsmRingFlag = false;
   }
 
@@ -452,10 +433,11 @@ void loop() {
   delay_millis(75);
   rtc.clearINTStatus();
 
-  attachInterrupt(GSMINT, ringISR, FALLING);
-  attachInterrupt(RAININT, rainISR, FALLING);
-  attachInterrupt(RTCINTPIN, wake, FALLING);
+  attachInterrupt(digitalPinToInterrupt(GSMINT), ringISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RAININT), rainISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RTCINTPIN), wakeISR, FALLING);
   sleepNow();
+  Serial.end();
 }
 
 void enable_watchdog() {
@@ -468,37 +450,17 @@ void disable_watchdog() {
   Watchdog.disable();
 }
 
-void wakeAndSleep(uint8_t verSion) {
-  if (OperationFlag) {
-    flashLed(LED_BUILTIN, 5, 100);
-
-    if (verSion == 1) {
-      get_Due_Data(2, get_serverNum_from_flashMem());  // tx of v5 logger
-    } else {
-      get_Due_Data(0, get_serverNum_from_flashMem());  // default arabica
-    }
-
-    setNextAlarm(alarmFromFlashMem());
-    rtc.clearINTStatus();  // needed to re-trigger rtc
-    rf95.sleep();
-    OperationFlag = false;
-  }
-  // working as of May 28, 2019
-  sleepNow();
-  /*
-  attachInterrupt(digitalPinToInterrupt(RTCINTPIN), wake, FALLING);
-  SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk; //disable systick interrupt
-  LowPower.standby();                         //enters sleep mode
-  SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;  //Enabale systick interrupt
-  */
-}
-
 /*Enable sleep-standby*/
 void sleepNow() {
+  // disable_watchdog();
+  Watchdog.reset();
   Serial.println("MCU is going to sleep . . .");
-  SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;  // disable systick interrupt
-  LowPower.standby();                          // enters sleep mode
-  SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // Enabale systick interrupt
+  Serial.println("");
+  __WFI();
+  delay_millis(1000);
+  // SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;  // disable systick interrupt
+  // LowPower.standby();                          // enters sleep mode
+  // SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // Enabale systick interrupt
 }
 
 /**RTC Pin interrupt
@@ -506,15 +468,16 @@ void sleepNow() {
  * microcontroller will wake from sleep
  * execute the process
  */
-void wake() {
+void wakeISR() {
   OperationFlag = true;
   // detach the interrupt in the ISR so that multiple ISRs are not called
-  detachInterrupt(RTCINTPIN);
+  Serial.println("RTC interrupt");
+  Watchdog.reset();
 }
 
 void ringISR() {
   gsmRingFlag = true;
-  detachInterrupt(GSMINT);
+  detachInterrupt(digitalPinToInterrupt(GSMINT));
 }
 
 /**GATEWAY*RSSI,MAD,MADTA,rssi,voltage,MADTB,,,*200212141406
@@ -526,9 +489,6 @@ void get_rssi(uint8_t mode) {
   char convertRssiB[20];
   char convertRssiC[20];
   char logger_name[200];
-  // String old_rssi = String(tx_RSSI);
-  // String old_rssi_B = String(tx_RSSI_B);
-  // String old_rssi_C = String(tx_RSSI_C);
   tx_RSSI.toCharArray(convertRssi, sizeof(convertRssi));
   tx_RSSI_B.toCharArray(convertRssiB, sizeof(convertRssiB));
   tx_RSSI_C.toCharArray(convertRssiC, sizeof(convertRssiC));
@@ -740,17 +700,16 @@ void send_rain_data(uint8_t sendTo) {
     delay_millis(500);
     resetRainTips();
   }
-  send_rain_data_flag = false;
   enable_watchdog();
 }
 
-void flashLed(int pin, int times, int wait) {
-  for (int i = 0; i < times; i++) {
+void flashLed(int pin, int flashCount, int flashDuration) {
+  for (int i = 0; i < flashCount; i++) {
     digitalWrite(pin, HIGH);
-    delay_millis(wait);
+    delay_millis(flashDuration);
     digitalWrite(pin, LOW);
-    if (i + 1 < times) {
-      delay_millis(wait);
+    if (i + 1 < flashCount) {
+      delay_millis(flashDuration);
     }
   }
 }
@@ -817,9 +776,10 @@ float readBatteryVoltage(uint8_t ver) {
 void init_Sleep() {
   // working to as of 05-17-2019
   SYSCTRL->XOSC32K.reg |= (SYSCTRL_XOSC32K_RUNSTDBY | SYSCTRL_XOSC32K_ONDEMAND);  // set external 32k oscillator to run when idle or sleep mode is chosen
-  REG_GCLK_CLKCTRL |= GCLK_CLKCTRL_ID(GCM_EIC) |                                  // generic clock multiplexer id for the external interrupt controller
-                      GCLK_CLKCTRL_GEN_GCLK1 |                                    // generic clock 1 which is xosc32k
-                      GCLK_CLKCTRL_CLKEN;                                         // enable it
+
+  REG_GCLK_CLKCTRL |= GCLK_CLKCTRL_ID(GCM_EIC) |  // generic clock multiplexer id for the external interrupt controller
+                      GCLK_CLKCTRL_GEN_GCLK1 |    // generic clock 1 which is xosc32k
+                      GCLK_CLKCTRL_CLKEN;         // enable it
   while (GCLK->STATUS.bit.SYNCBUSY)
     ;  // write protected, wait for sync
 
@@ -833,6 +793,7 @@ void init_Sleep() {
 
   // It is either Idle mode or Standby mode, not both.
   SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;  // Enable Standby or "deep sleep" mode
+  __DSB();
 }
 
 /**
@@ -1016,7 +977,7 @@ void turn_OFF_due(uint8_t mode) {
 }
 
 void rainISR() {
-  detachInterrupt(digitalPinToInterrupt(RAININT));
+  // detachInterrupt(digitalPinToInterrupt(RAININT));
   unsigned long interrupt_time = millis();
   if (interrupt_time - last_interrupt_time > DEBOUNCE_TIME) {
     if (get_rainGauge_type() == 0) {
@@ -1026,7 +987,7 @@ void rainISR() {
     } else {
       rainTips += 1;
     }
-    if (rain_test_flag == 1 && debug_flag == 1) {
+    if (debug_flag == 1) {
       Serial.print("Rain tips: ");
       if (get_rainGauge_type() == 0) {
         Serial.println(rainTips * 2.0);
@@ -1038,11 +999,6 @@ void rainISR() {
     }
   }
   last_interrupt_time = interrupt_time;
-  if (OperationFlag == true || debug_flag == 1) {
-    attachInterrupt(RAININT, rainISR, FALLING);
-  } else {
-    rainFallFlag = true;
-  }
 }
 
 void resetRainTips() {
@@ -1104,10 +1060,6 @@ int freeRam() {
 }
 
 void send_message_segments(char *msg_dump) {
-  if (debug_flag == 0) {
-    turn_ON_GSM(get_gsm_power_mode());
-    GSM_powermode_disable = 1;
-  }
   char freeram_buf[6];
   char ram_buffer[30];
   ram_buffer[0] = '\0';
@@ -1133,14 +1085,6 @@ void send_message_segments(char *msg_dump) {
   ram_buffer[strlen(ram_buffer) + 1] = '\0';
 
   Serial.println(ram_buffer);
-
-  // if (get_logger_mode() != 2) {
-  //   send_thru_gsm(ram_buffer, get_serverNum_from_flashMem());
-  // }
-  if (debug_flag == 0) {
-    GSM_powermode_disable = 0;
-    turn_OFF_GSM(get_gsm_power_mode());
-  }
 }
 
 void delay_millis(int _delay) {
@@ -1154,4 +1098,8 @@ void delay_millis(int _delay) {
       // Serial.println("delay timeout!");
     }
   } while (delay_turn_on_flag == 0);
+}
+
+void rtcTicker() {
+  Serial.println("Tick");
 }

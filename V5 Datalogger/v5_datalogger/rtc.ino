@@ -50,6 +50,7 @@ char *readTempRTC() {
 }
 
 void readTimeStamp() {
+  // add function for generating easy to read date time 
   DateTime now = rtc.now();  //get the current date-time
   String ts = String(now.year());
 
@@ -94,7 +95,7 @@ void setNextAlarm(int intervalSET) {
   // enable rtc interrupt
   rtc.enableInterrupts(store_rtc, 00);  // interrupt at (minutes, seconds)
   if (DEBUG == 1) {
-    Serial.print("Next alarm: ");
+    Serial.print("Next alarm - hh:");
     Serial.println(store_rtc);  
   }
   readTimeStamp();
