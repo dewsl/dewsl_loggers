@@ -41,7 +41,6 @@
 #define CAN_ARRAY_BUFFER_SIZE 100
 File unsent_log;
 
-// comment
 
 // #define comm_mode "ARQ" // 1 for ARQ, 2 XBEE
 char comm_mode[5] = "ARQ";
