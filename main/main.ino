@@ -291,6 +291,7 @@ struct f_config {
   // space for more?
 };
 
+int g_sensor_type = 1;
 
 //Group: Main Loop Functions
 /* 
@@ -423,7 +424,12 @@ void getATCommand() {
         break;
       case 'A':
         {  //ATGETSENSORDATA
-          read_data_from_column(g_final_dump, g_sensor_version, 1);
+          if (g_mastername[3] == 'S') {
+              g_sensor_type = 2;
+            } else {
+              g_sensor_type = 1;
+            }
+          read_data_from_column(g_final_dump, g_sensor_version, g_sensor_type);
           int g_volt_size = sizeof(g_volt) / sizeof(g_volt[0]);
           //sample_send();
           /*
@@ -436,7 +442,12 @@ void getATCommand() {
         break;
       case 'B':
         {  //AT+POLL
-          read_data_from_column(g_final_dump, g_sensor_version, 2);
+          if (g_mastername[3] == 'S') {
+              g_sensor_type = 2;
+            } else {
+              g_sensor_type = 1;
+            }
+          read_data_from_column(g_final_dump, g_sensor_version, g_sensor_type);
           Serial.println(F(g_final_dump));
           if (b64 == 1) {
             b64_build_text_msgs(comm_mode, g_final_dump, text_message);
@@ -596,7 +607,12 @@ void operation(int sensor_type, char communication_mode[]) {
       create_unsent.close();
     }
 
-    read_data_from_column(g_final_dump, g_sensor_version, sensor_type);  // matagal ito.
+    if (g_mastername[3] == 'S') {
+      g_sensor_type = 2;
+    } else {
+      g_sensor_type = 1;
+    }
+    read_data_from_column(g_final_dump, g_sensor_version, g_sensor_type);  // matagal ito.
     Serial.print(F("g_final_dump: "));
     Serial.println(F(g_final_dump));
     if (b64 == 1) {
@@ -672,28 +688,37 @@ void getArguments(String at_cmd, String* arguments) {
 void read_data_from_column(char* column_data, int sensor_version, int sensor_type) {
   vdata_flag = true;
   if (sensor_version == 2) {
+    Serial.println("Accel data");
     get_data(32, 1, column_data);
     get_data(33, 1, column_data);
     if (sensor_type == 2) {
+      Serial.println("Soil Moisture sensor data");
       get_data(111, 1, column_data);
       get_data(112, 1, column_data);
     }
   } else if (sensor_version == 3) {
+    Serial.println("Accel data");
     get_data(11, 1, column_data);
     get_data(12, 1, column_data);
+    Serial.println("Temperature data");       //temp daw ito [22,23,24] sabi ni kate
     get_data(22, 1, column_data);
     if (sensor_type == 2) {
+      Serial.println("Soil Moisture sensor data");
       get_data(10, 1, column_data);
       get_data(13, 1, column_data);
     }
   } else if (sensor_version == 4) {
+    Serial.println("Accel data");
     get_data(41, 1, column_data);
     get_data(42, 1, column_data);
+    Serial.println("Temperature data");
     get_data(22, 1, column_data);
 
   } else if (sensor_version == 5) {
+    Serial.println("Accel data");
     get_data(51, 1, column_data);
     get_data(52, 1, column_data);
+    Serial.println("Temperature data");
     get_data(22, 1, column_data);
     get_data(23, 1, column_data);
     get_data(24, 1, column_data);
