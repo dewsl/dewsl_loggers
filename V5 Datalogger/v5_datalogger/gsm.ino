@@ -13,11 +13,15 @@ void send_thru_gsm(const char* inputMessage, String serverNumber) {
   String CR = ("\r");
   char msgToSend[250];
   char atCmgsNo[250];
+  atCmgsNo[0] = '\0';
+  msgToSend[0] = '\0';
   String incomingData = String(inputMessage);
   incomingData.replace("\r", "");
   incomingData.toCharArray(msgToSend, 250);
   String rawMsg = smsCMD + quote + serverNumber + quote + CR;
   rawMsg.toCharArray(atCmgsNo, 250);
+  atCmgsNo[strlen(atCmgsNo)+1] = '\0';
+  msgToSend[strlen(msgToSend)+1] = '\0';
 
   Serial.print("Sending to '");
   Serial.print(serverNumber);

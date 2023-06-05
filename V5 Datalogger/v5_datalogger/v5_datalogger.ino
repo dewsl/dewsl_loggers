@@ -409,6 +409,7 @@ void loop() {
     rf95.sleep();
     getSensorDataFlag = false;
     OperationFlag = false;
+    sending_stack[0] = '\0';
     flashLed(LED_BUILTIN, 5, 100);
   }
 
@@ -854,6 +855,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
     if (strstr(streamBuffer, ">>")) {
       if (strstr(streamBuffer, "*")) {
         Serial.println("Getting sensor data. . .");
+        
         if (mode == 0 || mode == 1) {
           /**
            * Remove 1st and 2nd character data in string
@@ -869,6 +871,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
           flashLed(LED_BUILTIN, 2, 100);
           Serial.println("Data received..");
           DUESerial.write("OK");
+
         } else if (mode == 6 || mode == 7) {
           strcat(streamBuffer, "<<");
           delay(10);
@@ -910,11 +913,14 @@ void get_Due_Data(uint8_t mode, String serverNum) {
   turn_OFF_due(get_logger_mode());
   DUESerial.end();
 
-  send_message_segments(sending_stack);
+
 
   if (mode == 2 || mode == 6) {
     delay_millis(2000);
     send_thru_lora(read_batt_vol(get_calib_param()));
+  } else {
+    send_message_segments(sending_stack);
+    sending_stack[0] = '\0';
   }
 
   flashLed(LED_BUILTIN, 4, 90);
