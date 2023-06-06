@@ -12,7 +12,8 @@ void getAtcommand() {
   int i_equals = 0;
   unsigned long startHere = millis();
   bool timeToExit;
-
+  sending_stack[0] = '\0'; 
+  
   do {
     timeToExit = timeOutExit(startHere, DEBUGTIMEOUT);
     serial_line = Serial.readStringUntil('\n');
@@ -807,8 +808,17 @@ void inputLoggerNames() {
       Serial.print("Input name of remote SENSOR: ");
       String inputLoggerB = Serial.readStringUntil('\n');
       Serial.println(inputLoggerB);
-      inputLoggerA.toCharArray(loggerName.sensorA, 6);
-      inputLoggerB.toCharArray(loggerName.sensorB, 6);
+
+      if (inputLoggerA.length() == 4) {
+        inputLoggerA.toCharArray(loggerName.sensorA, 6);
+        inputLoggerB.toCharArray(loggerName.sensorB, 6);
+        loggerName.sensorA[5] = '\0';
+        loggerName.sensorB[5] = '\0';
+      } else {
+        inputLoggerA.toCharArray(loggerName.sensorA, 6);
+        inputLoggerB.toCharArray(loggerName.sensorB, 6);
+      }
+      
       flashLoggerName.write(loggerName);
     }
   } else if (get_logger_mode() == 3) {

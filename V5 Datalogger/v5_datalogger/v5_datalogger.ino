@@ -125,7 +125,7 @@ volatile bool OperationFlag = false;
 bool getSensorDataFlag = false;
 bool debug_flag_exit = false;
 
-char firmwareVersion[9] = "23.04.04";  // year . month . date
+char firmwareVersion[9] = "23.06.07";  // year . month . date
 char station_name[6] = "MADTA";
 char Ctimestamp[13] = "";
 char command[26];
@@ -335,6 +335,7 @@ void loop() {
     flashLed(LED_BUILTIN, 5, 100);
     detachInterrupt(digitalPinToInterrupt(RTCINTPIN));
     enable_watchdog();
+    sending_stack[0] = '\0';
     if (get_logger_mode() == 1) {
       // Gateway with sensor with 1 LoRa transmitter
       receive_lora_data(1);
@@ -409,7 +410,7 @@ void loop() {
     rf95.sleep();
     getSensorDataFlag = false;
     OperationFlag = false;
-    sending_stack[0] = '\0';
+    // sending_stack[0] = '\0';
     flashLed(LED_BUILTIN, 5, 100);
   }
 
@@ -819,9 +820,9 @@ void get_Due_Data(uint8_t mode, String serverNum) {
   // sensCommand = passCommand.read();
 
   command[0] = '\0';
-  if (mode != 1) {
-    sending_stack[0] = '\0';
-  }
+  // if (mode != 1) {
+  //   sending_stack[0] = '\0';
+  // }
   strcpy(command, get_sensCommand_from_flashMem());
   // Serial.println(command);
   strcat(command, "/");
@@ -913,15 +914,12 @@ void get_Due_Data(uint8_t mode, String serverNum) {
   turn_OFF_due(get_logger_mode());
   DUESerial.end();
 
-
-
-  if (mode == 2 || mode == 6) {
+  send_message_segments(sending_stack);
+  
+  if (mode == 2 || mode == 7) {
     delay_millis(2000);
     send_thru_lora(read_batt_vol(get_calib_param()));
-  } else {
-    send_message_segments(sending_stack);
-    sending_stack[0] = '\0';
-  }
+  } 
 
   flashLed(LED_BUILTIN, 4, 90);
   customDueFlag = 0;

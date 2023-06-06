@@ -61,9 +61,12 @@ void send_thru_lora(char *radiopacket) {
       do {
         if (rf95.waitAvailableTimeout(ACKWAIT)) {
           if (rf95.recv(ack_payload, &len2)) {
+            Serial.print("ack payload: ");
+            Serial.println((char *)ack_payload);
             if (strstr((char *)ack_payload, ack_key)) {
               key_gen((char *)payload);  //generate own key [passed to the variable ack_msg] to be matched with gateway ack_msg
               if (check_loRa_ack((char *)ack_payload)) {
+                flashLed(LED_BUILTIN, 2, 30);
                 Serial.print("Received ack_key from gateway: ");
                 Serial.println((char *)ack_payload);
                 Serial.print("RSSI: ");
@@ -90,7 +93,8 @@ void send_thru_lora(char *radiopacket) {
     }
   } else {
     // do not stack
-    Serial.print("Sending to LoRa: ");
+    Serial.print("Sending to LoRa [no ack]: ");
+    flashLed(LED_BUILTIN, 2, 30);
     Serial.println((char *)payload);
     // Serial.println("sending payload!");
     rf95.send(payload, length);  // sending data to LoRa
@@ -121,29 +125,40 @@ void send_thru_lora(char *radiopacket) {
 // }
 
 void key_gen(char *_payload_received) {
-  // char *key_ptr;
-
+  String ack_name = String(get_logger_A_from_flashMem()); 
+  ack_name.trim();
   ack_msg[0] = '\0';
   if (get_logger_mode() == 2) {
-    // key_ptr = strncat(ack_msg, get_logger_A_from_flashMem(), 5);
-    // key_ptr = strncat(ack_msg, ack_key, 7);
-    strncat(ack_msg, get_logger_A_from_flashMem(), 5);
-    strncat(ack_msg, ack_key, 7);
+    if (ack_name.length() == 4 ) { //for version 1 and other 4 letter names + DUE
+      strncat(ack_msg, get_logger_A_from_flashMem(), 4);  //gets 4 charaters from saved logger name
+      strncat(ack_msg, ack_key, 7);
+      ack_msg[12] = '\0';   
+    } else {
+      strncat(ack_msg, get_logger_A_from_flashMem(), 5);  //gets 5 charaters from saved logger name
+      strncat(ack_msg, ack_key, 7);
+      ack_msg[13] = '\0';
+    }
+
   } else {
-    // key_ptr = strncat(ack_msg, _payload_received, 5);
-    // key_ptr = strncat(ack_msg, ack_key, 7);
-    strncat(ack_msg, _payload_received, 5);
-    strncat(ack_msg, ack_key, 7);
+    if (ack_name.length() == 4 ) { //for version 1 and other 4 letter names + DUE
+      strncat(ack_msg, _payload_received, 4);             //gets first 4 charaters from payload to compare
+      strncat(ack_msg, ack_key, 7);
+      ack_msg[12] = '\0';   
+    } else {
+      strncat(ack_msg, _payload_received, 5);             //gets first 5 charaters from payload to compare
+      strncat(ack_msg, ack_key, 7);
+      ack_msg[13] = '\0';
+    }
+  
   }
   // Serial.print("ack key: ");
-  // Serial.println(ack_msg);
-  ack_msg[13] = '\0';
+  // Serial.println(ack_msg);                               
 }
 
 bool check_loRa_ack(char *_received) {
   bool lora_tx_flag = false;  //will retry sending by default unless valid ack_msg is received
   if (strstr(_received, ack_msg)) {
-    Serial.print("Ack valid");
+    Serial.print("Ack valid ");
     // Serial.println((char *)_received);
     lora_tx_flag = true;
   }
@@ -156,9 +171,9 @@ void receive_lora_data(uint8_t mode) {
   disable_watchdog();
   int count = 0;
   int count2 = 0;
-  sending_stack[0] = '\0';
+  // sending_stack[0] = '\0';
   unsigned long start = millis();
-  Serial.println("waiting for LoRa data . . .");
+  Serial.println("waiting for LoRa data . . ");
   while (rcv_LoRa_flag == 0) {
     if (rf95.available()) {
       // Should be a message for us now
@@ -169,7 +184,7 @@ void receive_lora_data(uint8_t mode) {
         }
         received[i] = (uint8_t)'\0';
 
-        if (strstr(received, ">>")) { /*NOT LoRa: 0, 2, 6, 7*/
+        if (strstr(received, ">>")) { /*NOT LoRa: 0, 2, 7*/
           flashLed(LED_BUILTIN, 3, 60);
           if (mode == 1 || mode == 3 || mode == 4 || mode == 5) {  // LoRa mode only
             /*remove 1st & 2nd character*/
@@ -395,6 +410,10 @@ bool if_receive_valid(char *_received) {
   String _loggerB = String(get_logger_B_from_flashMem());
   String _loggerC = String(get_logger_C_from_flashMem());
   String _loggerD = String(get_logger_D_from_flashMem());
+  _loggerB.trim();
+  _loggerC.trim();
+  _loggerD.trim();
+
   // String _loggerE = String(get_logger_E_from_flashMem());
   // String _loggerF = String(get_logger_F_from_flashMem());
 
@@ -608,7 +627,7 @@ void receive_lora_data_ONLY(uint8_t mode) {
   int count = 0;
   int count2 = 0;
   unsigned long start = millis();
-  Serial.println("waiting for LoRa data . . .");
+  Serial.println("waiting for LoRa data . . ..");
   while (rcv_LoRa_flag == 0) {
     uint8_t buf2[RH_RF95_MAX_MESSAGE_LEN];
     uint8_t len3 = sizeof(buf2);
