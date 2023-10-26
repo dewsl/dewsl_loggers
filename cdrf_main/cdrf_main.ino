@@ -1,4 +1,26 @@
-//sample print
+/**
+ * @file cdrf_main.ino
+ * This runs the setup() and loop(). 
+ * 
+ */
+
+/**
+ * @mainpage 
+ * 
+ * This is the main page. Dito yung mga hanash niyo tungkol sa project.
+ * 
+ * Kapag galit kayo dito niyo ilagay.
+ * 
+ * Ito ay puro comments lang sa code.
+ *  
+*/
+
+/**  
+ * Delay (in milliseconds)
+ * 
+ * Used in #columnOn and #columnsOff
+ */
+#define MSDELAY 100
 
 const byte numChars = 32;
 char receivedChars[numChars];   // an array to store the received data
