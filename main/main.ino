@@ -334,14 +334,14 @@ void setup() {
   pinMode(RELAYPIN, OUTPUT);
   pinMode(LED1, OUTPUT);
   init_can();
-  init_char_arrays();
-  init_gids();
-  init_sd();
+  // init_char_arrays();
+  // init_gids();
+  // init_sd();
 
-  Serial.println(F("======================================"));
-  Serial.println(F("Firmware version: 23.03.13"));
-  flash_fetch();
-  print_due_command2();
+  // Serial.println(F("======================================"));
+  // Serial.println(F("Firmware version: 23.03.13"));
+  // flash_fetch();
+  // print_due_command2();
 }
 
 
@@ -367,22 +367,29 @@ void setup() {
     <operation> <getATCommand> 
 */
 void loop() {
-  int timestart = millis();
-  while ((millis() - timestart < 30000) && (datalogger_flag == 0)) {
-    if (Serial.available() > 0) {
-      getATCommand();
-    } else if ((strcmp(comm_mode, "ARQ") == 0) && (DATALOGGER.available())) {  // sira ito
-      operation(wait_arq_cmd(), comm_mode);
-      shut_down();
-      datalogger_flag = 1;
-    } else if ((strcmp(comm_mode, "LORA") == 0) && (LORA.available())) {
-      operation(wait_lora_cmd(), comm_mode);
-      delay(500);
-      LORA.println("STOPLORA");
-      datalogger_flag = 1;
-    }
-  }
-  delay(100);
+  turn_on_column();
+  send_command(51,1);
+  can_sniff2(3000);
+  send_command(52,1);
+  can_sniff2(3000);
+  turn_off_column();
+  delay(1000);
+  // int timestart = millis();
+  // while ((millis() - timestart < 30000) && (datalogger_flag == 0)) {
+  //   if (Serial.available() > 0) {
+  //     getATCommand();
+  //   } else if ((strcmp(comm_mode, "ARQ") == 0) && (DATALOGGER.available())) {  // sira ito
+  //     operation(wait_arq_cmd(), comm_mode);
+  //     shut_down();
+  //     datalogger_flag = 1;
+  //   } else if ((strcmp(comm_mode, "LORA") == 0) && (LORA.available())) {
+  //     operation(wait_lora_cmd(), comm_mode);
+  //     delay(500);
+  //     LORA.println("STOPLORA");
+  //     datalogger_flag = 1;
+  //   }
+  // }
+  // delay(100);
 }
 
 //Function: getATCommand

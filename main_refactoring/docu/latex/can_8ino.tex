@@ -1,0 +1,255 @@
+\doxysection{can.\+ino File Reference}
+\hypertarget{can_8ino}{}\label{can_8ino}\index{can.ino@{can.ino}}
+
+
+contains functions for the controller area network ( CAN )  
+
+
+{\ttfamily \#include $<$due\+\_\+can.\+h$>$}\newline
+{\ttfamily \#include "{}variant.\+h"{}}\newline
+Include dependency graph for can.\+ino\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=212pt]{can_8ino__incl}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \mbox{\hyperlink{can_8ino_a1e833201796f7bee40344d27e3fb5c49}{CAN\+\_\+\+BAUD\+\_\+\+RATE}}~40000
+\begin{DoxyCompactList}\small\item\em CAN Bus Baudrate. \end{DoxyCompactList}\item 
+\#define \mbox{\hyperlink{can_8ino_ad373659f24bf57cbd0499c1b365ac319}{CAN0\+\_\+\+EN}}~50
+\begin{DoxyCompactList}\small\item\em Enable Pin for Due / SAM3X board. \end{DoxyCompactList}\item 
+\#define \mbox{\hyperlink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{COLUMN\+\_\+\+SWITCH\+\_\+\+PIN}}~44
+\begin{DoxyCompactList}\small\item\em GPIO for controlling the column switch. \end{DoxyCompactList}\item 
+\#define \mbox{\hyperlink{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9}{LED1}}~48
+\begin{DoxyCompactList}\small\item\em GPIO for controlling the LED indicator for the column switch. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+bool \mbox{\hyperlink{can_8ino_ac60bea41c2126a7af8b6fb42628a930c}{can\+Init}} ()
+\begin{DoxyCompactList}\small\item\em Set the CAN baudrate, CAN Enable Pin. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{can_8ino_a4cd75fb75c17639386c734c7641d5280}{can\+Send}} (int command)
+\begin{DoxyCompactList}\small\item\em Send a CAN message via Can0. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{can_8ino_a75a4cfe9e193dcc85891bdb11df71685}{column\+On}} ()
+\begin{DoxyCompactList}\small\item\em Power on the sensor column. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{can_8ino_a9bde7ba62f54aa4f1c4d3117879bb9ae}{column\+Off}} ()
+\begin{DoxyCompactList}\small\item\em Power off the sensor column. \end{DoxyCompactList}\item 
+uint8\+\_\+t \mbox{\hyperlink{can_8ino_ade9587dcaafd2c1b2705dd7ec0e8fbe5}{can\+Receive}} (uint16\+\_\+t timeout)
+\begin{DoxyCompactList}\small\item\em Receive CAN messages via Can0 until the timeout (in milliseconds) expires. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+contains functions for the controller area network ( CAN ) 
+
+
+
+Definition in file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+
+
+
+\doxysubsection{Macro Definition Documentation}
+\Hypertarget{can_8ino_ad373659f24bf57cbd0499c1b365ac319}\label{can_8ino_ad373659f24bf57cbd0499c1b365ac319} 
+\index{can.ino@{can.ino}!CAN0\_EN@{CAN0\_EN}}
+\index{CAN0\_EN@{CAN0\_EN}!can.ino@{can.ino}}
+\doxysubsubsection{\texorpdfstring{CAN0\_EN}{CAN0\_EN}}
+{\footnotesize\ttfamily \#define CAN0\+\_\+\+EN~50}
+
+
+
+Enable Pin for Due / SAM3X board. 
+
+
+
+Definition at line \mbox{\hyperlink{can_8ino_source_l00018}{18}} of file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+
+\Hypertarget{can_8ino_a1e833201796f7bee40344d27e3fb5c49}\label{can_8ino_a1e833201796f7bee40344d27e3fb5c49} 
+\index{can.ino@{can.ino}!CAN\_BAUD\_RATE@{CAN\_BAUD\_RATE}}
+\index{CAN\_BAUD\_RATE@{CAN\_BAUD\_RATE}!can.ino@{can.ino}}
+\doxysubsubsection{\texorpdfstring{CAN\_BAUD\_RATE}{CAN\_BAUD\_RATE}}
+{\footnotesize\ttfamily \#define CAN\+\_\+\+BAUD\+\_\+\+RATE~40000}
+
+
+
+CAN Bus Baudrate. 
+
+
+
+Definition at line \mbox{\hyperlink{can_8ino_source_l00013}{13}} of file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+
+\Hypertarget{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}\label{can_8ino_a57b9fb4edb40836a09b8b052e4f78880} 
+\index{can.ino@{can.ino}!COLUMN\_SWITCH\_PIN@{COLUMN\_SWITCH\_PIN}}
+\index{COLUMN\_SWITCH\_PIN@{COLUMN\_SWITCH\_PIN}!can.ino@{can.ino}}
+\doxysubsubsection{\texorpdfstring{COLUMN\_SWITCH\_PIN}{COLUMN\_SWITCH\_PIN}}
+{\footnotesize\ttfamily \#define COLUMN\+\_\+\+SWITCH\+\_\+\+PIN~44}
+
+
+
+GPIO for controlling the column switch. 
+
+
+
+Definition at line \mbox{\hyperlink{can_8ino_source_l00023}{23}} of file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+
+\Hypertarget{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9}\label{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9} 
+\index{can.ino@{can.ino}!LED1@{LED1}}
+\index{LED1@{LED1}!can.ino@{can.ino}}
+\doxysubsubsection{\texorpdfstring{LED1}{LED1}}
+{\footnotesize\ttfamily \#define LED1~48}
+
+
+
+GPIO for controlling the LED indicator for the column switch. 
+
+
+
+Definition at line \mbox{\hyperlink{can_8ino_source_l00028}{28}} of file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+
+
+
+\doxysubsection{Function Documentation}
+\Hypertarget{can_8ino_ac60bea41c2126a7af8b6fb42628a930c}\label{can_8ino_ac60bea41c2126a7af8b6fb42628a930c} 
+\index{can.ino@{can.ino}!canInit@{canInit}}
+\index{canInit@{canInit}!can.ino@{can.ino}}
+\doxysubsubsection{\texorpdfstring{canInit()}{canInit()}}
+{\footnotesize\ttfamily bool can\+Init (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+Set the CAN baudrate, CAN Enable Pin. 
+
+Set the CAN baudrate for Can0 to \doxylink{can_8ino_a1e833201796f7bee40344d27e3fb5c49}{CAN\+\_\+\+BAUD\+\_\+\+RATE}.
+
+Set mailbox0 as receiver.
+
+Set mailbox0 to receive the extended ID format.
+
+Set mask to recieve all.
+
+Set mailbox1 transfer ID to extended ID format.
+
+Set GPIO \doxylink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{COLUMN\+\_\+\+SWITCH\+\_\+\+PIN} to output mode.
+
+Set GPIO \doxylink{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9}{LED1} to output mode.
+
+Write LOW to \doxylink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{COLUMN\+\_\+\+SWITCH\+\_\+\+PIN}.
+
+\begin{DoxyNote}{Note}
+CAN Enable Pin for Can0 -\/\texorpdfstring{$>$}{>} 50 
+
+CAN Enable Pin for Can1 -\/\texorpdfstring{$>$}{>} 48 \textbackslash{}source 
+\end{DoxyNote}
+\begin{DoxyReturn}{Returns}
+Return false on failure of setting CAN\+\_\+\+BAUD\+\_\+\+RATE. 
+\end{DoxyReturn}
+
+
+Definition at line \mbox{\hyperlink{can_8ino_source_l00054}{54}} of file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+
+\Hypertarget{can_8ino_ade9587dcaafd2c1b2705dd7ec0e8fbe5}\label{can_8ino_ade9587dcaafd2c1b2705dd7ec0e8fbe5} 
+\index{can.ino@{can.ino}!canReceive@{canReceive}}
+\index{canReceive@{canReceive}!can.ino@{can.ino}}
+\doxysubsubsection{\texorpdfstring{canReceive()}{canReceive()}}
+{\footnotesize\ttfamily uint8\+\_\+t can\+Receive (\begin{DoxyParamCaption}\item[{uint16\+\_\+t}]{timeout }\end{DoxyParamCaption})}
+
+
+
+Receive CAN messages via Can0 until the timeout (in milliseconds) expires. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em timeout} & unsigned 16 bit integer that specifies the wait time (in milliseconds) for incoming CAN\+\_\+\+FRAMES\\
+\hline
+\end{DoxyParams}
+Initialize an unsigned long as start to mark the runtime start of the function.
+
+Create a struct CAN\+\_\+\+FRAME incoming.
+
+Create an integer read\+\_\+frames and set to 0;
+
+Receive frames as long as the specified timeout is not reached and increment read\+\_\+frames.
+
+\begin{DoxyReturn}{Returns}
+unsigned 8 bit integer read\+\_\+frames equal to the number of frames read within the elapsed timeout 
+\end{DoxyReturn}
+
+
+Definition at line \mbox{\hyperlink{can_8ino_source_l00140}{140}} of file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+
+\Hypertarget{can_8ino_a4cd75fb75c17639386c734c7641d5280}\label{can_8ino_a4cd75fb75c17639386c734c7641d5280} 
+\index{can.ino@{can.ino}!canSend@{canSend}}
+\index{canSend@{canSend}!can.ino@{can.ino}}
+\doxysubsubsection{\texorpdfstring{canSend()}{canSend()}}
+{\footnotesize\ttfamily void can\+Send (\begin{DoxyParamCaption}\item[{int}]{command }\end{DoxyParamCaption})}
+
+
+
+Send a CAN message via Can0. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em command} & integer sent to sensor column\\
+\hline
+\end{DoxyParams}
+Create a struct CAN\+\_\+\+FRAME outgoing.
+
+Set the the extended flag for the CAN\+\_\+\+FRAME to true.
+
+Set the outgoing id to 1.
+
+Set lenth of the frame to 1 and the first data byte to command. (subsurface sensors only take the first byte as command)
+
+\begin{DoxyReturn}{Returns}
+N/A 
+\end{DoxyReturn}
+
+
+Definition at line \mbox{\hyperlink{can_8ino_source_l00088}{88}} of file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+
+\Hypertarget{can_8ino_a9bde7ba62f54aa4f1c4d3117879bb9ae}\label{can_8ino_a9bde7ba62f54aa4f1c4d3117879bb9ae} 
+\index{can.ino@{can.ino}!columnOff@{columnOff}}
+\index{columnOff@{columnOff}!can.ino@{can.ino}}
+\doxysubsubsection{\texorpdfstring{columnOff()}{columnOff()}}
+{\footnotesize\ttfamily void column\+Off (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+Power off the sensor column. 
+
+Set \doxylink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{COLUMN\+\_\+\+SWITCH\+\_\+\+PIN} and \doxylink{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9}{LED1} to LOW. Also implement a delay defined by \doxylink{main__refactoring_8ino_a8e1c3cec69124033c21f1a730128b5c9}{MSDELAY}. 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em none} & \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+none 
+\end{DoxyReturn}
+
+
+Definition at line \mbox{\hyperlink{can_8ino_source_l00118}{118}} of file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+
+\Hypertarget{can_8ino_a75a4cfe9e193dcc85891bdb11df71685}\label{can_8ino_a75a4cfe9e193dcc85891bdb11df71685} 
+\index{can.ino@{can.ino}!columnOn@{columnOn}}
+\index{columnOn@{columnOn}!can.ino@{can.ino}}
+\doxysubsubsection{\texorpdfstring{columnOn()}{columnOn()}}
+{\footnotesize\ttfamily void column\+On (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+Power on the sensor column. 
+
+Set \doxylink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{COLUMN\+\_\+\+SWITCH\+\_\+\+PIN} and \doxylink{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9}{LED1} to HIGH. Also implement a delay defined by \doxylink{main__refactoring_8ino_a8e1c3cec69124033c21f1a730128b5c9}{MSDELAY}.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em none} & \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+none 
+\end{DoxyReturn}
+
+
+Definition at line \mbox{\hyperlink{can_8ino_source_l00105}{105}} of file \mbox{\hyperlink{can_8ino_source}{can.\+ino}}.
+

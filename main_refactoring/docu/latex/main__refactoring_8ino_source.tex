@@ -1,0 +1,28 @@
+\doxysection{main\+\_\+refactoring.\+ino}
+\hypertarget{main__refactoring_8ino_source}{}\label{main__refactoring_8ino_source}\mbox{\hyperlink{main__refactoring_8ino}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00024}\mbox{\hyperlink{main__refactoring_8ino_a8e1c3cec69124033c21f1a730128b5c9}{00024}}\ \textcolor{preprocessor}{\#define\ MSDELAY\ 100}}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00025}00025\ }
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00027}\mbox{\hyperlink{main__refactoring_8ino_a4fc01d736fe50cf5b977f755b675f11d}{00027}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{main__refactoring_8ino_a4fc01d736fe50cf5b977f755b675f11d}{setup}}()\ \{}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00028}00028\ \ \ \textcolor{comment}{//\ put\ your\ setup\ code\ here,\ to\ run\ once:}}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00029}00029\ \ \ Serial.begin(115200);}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00030}00030\ \ \ \mbox{\hyperlink{can_8ino_ac60bea41c2126a7af8b6fb42628a930c}{canInit}}();}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00031}00031\ \ \ \mbox{\hyperlink{can_8ino_a75a4cfe9e193dcc85891bdb11df71685}{columnOn}}();}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00032}00032\ \ \ \mbox{\hyperlink{can_8ino_a4cd75fb75c17639386c734c7641d5280}{canSend}}(51);}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00033}00033\ \}}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00034}00034\ }
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00036}\mbox{\hyperlink{main__refactoring_8ino_afe461d27b9c48d5921c00d521181f12f}{00036}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{main__refactoring_8ino_afe461d27b9c48d5921c00d521181f12f}{loop}}()\ \{}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00037}00037\ \ \ \mbox{\hyperlink{can_8ino_a75a4cfe9e193dcc85891bdb11df71685}{columnOn}}();}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00038}00038\ \ \ delay(\mbox{\hyperlink{main__refactoring_8ino_a8e1c3cec69124033c21f1a730128b5c9}{MSDELAY}});}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00039}00039\ \ \ \mbox{\hyperlink{can_8ino_a4cd75fb75c17639386c734c7641d5280}{canSend}}(51);}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00040}00040\ \ \ \mbox{\hyperlink{can_8ino_ade9587dcaafd2c1b2705dd7ec0e8fbe5}{canReceive}}(2000);}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00041}00041\ \ \ \mbox{\hyperlink{can_8ino_a9bde7ba62f54aa4f1c4d3117879bb9ae}{columnOff}}();}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00042}00042\ \ \ delay(\mbox{\hyperlink{main__refactoring_8ino_a8e1c3cec69124033c21f1a730128b5c9}{MSDELAY}});}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00043}00043\ \}}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00044}00044\ }
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00051}\mbox{\hyperlink{main__refactoring_8ino_aaf223575d284c431f4a242e4133bbf42}{00051}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{main__refactoring_8ino_aaf223575d284c431f4a242e4133bbf42}{function1}}(\textcolor{keywordtype}{int}\ var1,\ \textcolor{keywordtype}{char}\ var2)\{}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00052}00052\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{\Hypertarget{main__refactoring_8ino_source_l00053}00053\ \}}
+
+\end{DoxyCode}

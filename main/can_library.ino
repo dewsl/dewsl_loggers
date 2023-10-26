@@ -484,6 +484,31 @@ void can_sniff(int timeout_ms, CAN_FRAME can_buffer[]) {
   }
 }
 
+void can_sniff2(int timeout_ms) {
+  int timestart = millis();
+  int i = 0;
+  CAN_FRAME incoming;
+  while ((millis() - timestart) < timeout_ms) {
+    check_can_status();
+    if (Can0.available()) {
+      Can0.read(incoming);
+      
+      // Serial.print(incoming.id);
+      // can_buffer[i].data.byte[0] = incoming.data.byte[0];
+      // can_buffer[i].data.byte[1] = incoming.data.byte[1];
+      // can_buffer[i].data.byte[2] = incoming.data.byte[2];
+      // can_buffer[i].data.byte[3] = incoming.data.byte[3];
+      // can_buffer[i].data.byte[4] = incoming.data.byte[4];
+      // can_buffer[i].data.byte[5] = incoming.data.byte[5];
+      // can_buffer[i].data.byte[6] = incoming.data.byte[6];
+      // can_buffer[i].data.byte[7] = incoming.data.byte[7];
+      Serial.print("id :::");
+      Serial.println(incoming.id);
+      i++;
+    }
+  }
+}
+
 /* 
   Function: process_all_frames
 

@@ -1,0 +1,75 @@
+\doxysection{can.\+ino}
+\hypertarget{can_8ino_source}{}\label{can_8ino_source}\mbox{\hyperlink{can_8ino}{Go to the documentation of this file.}}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00001}00001\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00007}00007\ \textcolor{preprocessor}{\#include\ <due\_can.h>}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00008}00008\ \textcolor{preprocessor}{\#include\ "{}variant.h"{}}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00009}00009\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00013}\mbox{\hyperlink{can_8ino_a1e833201796f7bee40344d27e3fb5c49}{00013}}\ \textcolor{preprocessor}{\#define\ CAN\_BAUD\_RATE\ 40000}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00014}00014\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00018}\mbox{\hyperlink{can_8ino_ad373659f24bf57cbd0499c1b365ac319}{00018}}\ \textcolor{preprocessor}{\#define\ CAN0\_EN\ 50}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00019}00019\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00023}\mbox{\hyperlink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{00023}}\ \textcolor{preprocessor}{\#define\ COLUMN\_SWITCH\_PIN\ 44}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00024}00024\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00028}\mbox{\hyperlink{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9}{00028}}\ \textcolor{preprocessor}{\#define\ LED1\ 48}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00029}00029\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00054}\mbox{\hyperlink{can_8ino_ac60bea41c2126a7af8b6fb42628a930c}{00054}}\ \textcolor{keywordtype}{bool}\ \mbox{\hyperlink{can_8ino_ac60bea41c2126a7af8b6fb42628a930c}{canInit}}()\{}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00055}00055\ \ \ pinMode(\mbox{\hyperlink{can_8ino_ad373659f24bf57cbd0499c1b365ac319}{CAN0\_EN}},\ OUTPUT);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00056}00056\ \ \ \textcolor{keywordflow}{if}\ (!Can0.begin(\mbox{\hyperlink{can_8ino_a1e833201796f7bee40344d27e3fb5c49}{CAN\_BAUD\_RATE}},\ \mbox{\hyperlink{can_8ino_ad373659f24bf57cbd0499c1b365ac319}{CAN0\_EN}}))\ \{}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00057}00057\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00058}00058\ \ \ \}\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00059}00059\ \ \ Can0.watchFor();}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00060}00060\ \ \ Can0.mailbox\_set\_mode(0,\ CAN\_MB\_RX\_MODE);\ \ \textcolor{comment}{//\ Set\ mailbox0\ as\ receiver}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00061}00061\ \ \ Can0.mailbox\_set\_id(0,\ 0,\ \textcolor{keyword}{true});\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Set\ mailbox0\ receive\ extendedID\ formats}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00062}00062\ \ \ Can0.mailbox\_set\_accept\_mask(0,\ 0,\ \textcolor{keyword}{true});\ \ \textcolor{comment}{//\ receive\ everything.\ //\ aralin\ yung\ mask}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00063}00063\ \ \ Can0.mailbox\_set\_mode(1,\ CAN\_MB\_TX\_MODE);\ \ \textcolor{comment}{//\ Set\ mailbox1\ as\ transmitter}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00064}00064\ \ \ Can0.mailbox\_set\_id(1,\ 1,\ \textcolor{keyword}{true});\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Set\ mailbox1\ transfer\ ID\ to\ 1\ extended\ id}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00065}00065\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00066}00066\ \ \ pinMode(\mbox{\hyperlink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{COLUMN\_SWITCH\_PIN}},OUTPUT);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00067}00067\ \ \ pinMode(\mbox{\hyperlink{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9}{LED1}},OUTPUT);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00068}00068\ \ \ digitalWrite(\mbox{\hyperlink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{COLUMN\_SWITCH\_PIN}},\ LOW);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00069}00069\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00070}00070\ \}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00071}00071\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00088}\mbox{\hyperlink{can_8ino_a4cd75fb75c17639386c734c7641d5280}{00088}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{can_8ino_a4cd75fb75c17639386c734c7641d5280}{canSend}}(\textcolor{keywordtype}{int}\ command)\{}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00089}00089\ \ \ CAN\_FRAME\ outgoing;}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00090}00090\ \ \ outgoing.extended\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00091}00091\ \ \ outgoing.id\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00092}00092\ \ \ outgoing.length\ =\ 1;}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00093}00093\ \ \ outgoing.data.byte[0]\ =\ command;}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00094}00094\ \ \ Can0.sendFrame(outgoing);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00095}00095\ \}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00096}00096\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00105}\mbox{\hyperlink{can_8ino_a75a4cfe9e193dcc85891bdb11df71685}{00105}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{can_8ino_a75a4cfe9e193dcc85891bdb11df71685}{columnOn}}()\{}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00106}00106\ \ \ digitalWrite(\mbox{\hyperlink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{COLUMN\_SWITCH\_PIN}},\ HIGH);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00107}00107\ \ \ digitalWrite(\mbox{\hyperlink{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9}{LED1}},\ HIGH);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00108}00108\ \ \ delay(\mbox{\hyperlink{main__refactoring_8ino_a8e1c3cec69124033c21f1a730128b5c9}{MSDELAY}});}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00109}00109\ \}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00110}00110\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00118}\mbox{\hyperlink{can_8ino_a9bde7ba62f54aa4f1c4d3117879bb9ae}{00118}}\ \textcolor{keywordtype}{void}\ \mbox{\hyperlink{can_8ino_a9bde7ba62f54aa4f1c4d3117879bb9ae}{columnOff}}()\{}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00119}00119\ \ \ digitalWrite(\mbox{\hyperlink{can_8ino_a57b9fb4edb40836a09b8b052e4f78880}{COLUMN\_SWITCH\_PIN}},LOW);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00120}00120\ \ \ digitalWrite(\mbox{\hyperlink{can_8ino_a8aa85ae9867fabf70ec72cd3bf6fb6b9}{LED1}},\ LOW);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00121}00121\ \ \ delay(\mbox{\hyperlink{main__refactoring_8ino_a8e1c3cec69124033c21f1a730128b5c9}{MSDELAY}});}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00122}00122\ \}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00123}00123\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00140}\mbox{\hyperlink{can_8ino_ade9587dcaafd2c1b2705dd7ec0e8fbe5}{00140}}\ uint8\_t\ \mbox{\hyperlink{can_8ino_ade9587dcaafd2c1b2705dd7ec0e8fbe5}{canReceive}}(uint16\_t\ timeout)\{}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00141}00141\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ start\ =\ millis();}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00142}00142\ \ \ CAN\_FRAME\ incoming;}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00143}00143\ \ \ uint8\_t\ read\_frames\ =\ 0;}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00144}00144\ \ \ \textcolor{keywordflow}{while}\ (\ millis()\ -\/\ start\ <\ timeout)\{}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00145}00145\ \ \ \ \ \textcolor{keywordflow}{if}\ (Can0.available())\{}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00146}00146\ \ \ \ \ \ \ Can0.read(incoming);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00147}00147\ \ \ \ \ \ \ Serial.print(\textcolor{stringliteral}{"{}ID:\ "{}});}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00148}00148\ \ \ \ \ \ \ Serial.print(incoming.id);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00149}00149\ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i<8;\ i++)\{}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00150}00150\ \ \ \ \ \ \ \ \ Serial.print(\textcolor{stringliteral}{"{}\ "{}});}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00151}00151\ \ \ \ \ \ \ \ \ Serial.print(incoming.data.byte[i],HEX);}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00152}00152\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00153}00153\ \ \ \ \ \ \ Serial.println();}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00154}00154\ \ \ \ \ \ \ read\_frames++;}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00155}00155\ \ \ \ \ \}\ }
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00156}00156\ \ \ \}}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00157}00157\ \ \ \textcolor{keywordflow}{return}\ read\_frames;}
+\DoxyCodeLine{\Hypertarget{can_8ino_source_l00158}00158\ \}}
+
+\end{DoxyCode}
