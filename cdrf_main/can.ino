@@ -52,21 +52,22 @@
  * \return Return false on failure of setting CAN_BAUD_RATE.
 */
 bool canInit(){
-  pinMode(CAN0_EN, OUTPUT);
-  if (!Can0.begin(CAN_BAUD_RATE, CAN0_EN)) {
-    return false;
-  } 
-  Can0.watchFor();
-  Can0.mailbox_set_mode(0, CAN_MB_RX_MODE);  // Set mailbox0 as receiver
-  Can0.mailbox_set_id(0, 0, true);           // Set mailbox0 receive extendedID formats
-  Can0.mailbox_set_accept_mask(0, 0, true);  // receive everything. // aralin yung mask
-  Can0.mailbox_set_mode(1, CAN_MB_TX_MODE);  // Set mailbox1 as transmitter
-  Can0.mailbox_set_id(1, 1, true);           // Set mailbox1 transfer ID to 1 extended id
+    pinMode(CAN0_EN, OUTPUT);
+    if (!Can0.begin(CAN_BAUD_RATE, CAN0_EN)) 
+    {
+        return false;
+    } 
+    Can0.watchFor();
+    Can0.mailbox_set_mode(0, CAN_MB_RX_MODE);  // Set mailbox0 as receiver
+    Can0.mailbox_set_id(0, 0, true);           // Set mailbox0 receive extendedID formats
+    Can0.mailbox_set_accept_mask(0, 0, true);  // receive everything. // aralin yung mask
+    Can0.mailbox_set_mode(1, CAN_MB_TX_MODE);  // Set mailbox1 as transmitter
+    Can0.mailbox_set_id(1, 1, true);           // Set mailbox1 transfer ID to 1 extended id
 
-  pinMode(COLUMN_SWITCH_PIN,OUTPUT);
-  pinMode(LED1,OUTPUT);
-  digitalWrite(COLUMN_SWITCH_PIN, LOW);
-  return true;
+    pinMode(COLUMN_SWITCH_PIN,OUTPUT);
+    pinMode(LED1,OUTPUT);
+    digitalWrite(COLUMN_SWITCH_PIN, LOW);
+    return true;
 }
 
 /** 
@@ -86,12 +87,12 @@ bool canInit(){
  * \return N/A
 */
 void canSend(int command){
-  CAN_FRAME outgoing;
-  outgoing.extended = true;
-  outgoing.id = 1;
-  outgoing.length = 1;
-  outgoing.data.byte[0] = command;
-  Can0.sendFrame(outgoing);
+    CAN_FRAME outgoing;
+    outgoing.extended = true;
+    outgoing.id = 1;
+    outgoing.length = 1;
+    outgoing.data.byte[0] = command;
+    Can0.sendFrame(outgoing);
 }
 
 /** 
@@ -103,9 +104,9 @@ void canSend(int command){
  * @return none
 */
 void columnOn(){
-  digitalWrite(COLUMN_SWITCH_PIN, HIGH);
-  digitalWrite(LED1, HIGH);
-  delay(MSDELAY);
+    digitalWrite(COLUMN_SWITCH_PIN, HIGH);
+    digitalWrite(LED1, HIGH);
+    delay(MSDELAY);
 }
 
 /** 
@@ -116,9 +117,10 @@ void columnOn(){
  * @return none
 */
 void columnOff(){
-  digitalWrite(COLUMN_SWITCH_PIN,LOW);
-  digitalWrite(LED1, LOW);
-  delay(MSDELAY);
+  
+    digitalWrite(COLUMN_SWITCH_PIN,LOW);
+    digitalWrite(LED1, LOW);
+    delay(MSDELAY);
 }
 
 /** 
@@ -138,21 +140,24 @@ void columnOff(){
  * within the elapsed timeout 
 */
 uint8_t canReceive(uint16_t timeout){
-  unsigned long start = millis();
-  CAN_FRAME incoming;
-  uint8_t read_frames = 0;
-  while ( millis() - start < timeout){
-    if (Can0.available()){
-      Can0.read(incoming);
-      Serial.print("ID: ");
-      Serial.print(incoming.id);
-      for (int i = 0; i<8; i++){
-        Serial.print(" ");
-        Serial.print(incoming.data.byte[i],HEX);
-      }
-      Serial.println();
-      read_frames++;
-    } 
-  }
-  return read_frames;
+    unsigned long start = millis();
+    CAN_FRAME incoming;
+    uint8_t read_frames = 0;
+    while ( millis() - start < timeout)
+    {
+        if (Can0.available())
+        {
+            Can0.read(incoming);
+            Serial.print("ID: ");
+            Serial.print(incoming.id);
+            for (int i = 0; i<8; i++)
+            {
+                Serial.print(" ");
+                Serial.print(incoming.data.byte[i],HEX);
+            }
+            Serial.println();
+            read_frames++;
+        } 
+    }
+    return read_frames;
 }
