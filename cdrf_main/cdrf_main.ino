@@ -15,6 +15,8 @@
  *  
 */
 
+#include "Due_config.h"
+
 /**  
  * Delay (in milliseconds)
  * 
@@ -22,9 +24,17 @@
  */
 #define MSDELAY 100
 
+/**
+ * Char array for name of subsurface sensor.
+ * Defaults to "XXXXX"
+ */
+char MASTERNAME[6] = "XXXXX"; 
+
 const byte numChars = 32;
 char receivedChars[numChars];   // an array to store the received data
 boolean newData = false;
+
+lib_config cfg;
 
 void setup()
 {
@@ -68,16 +78,41 @@ void showNewData()
     char temp[3];
     int cmd = 0;
     if (newData == true)
-    {
-        if (strcmp(receivedChars,"send")>= 0)
+    {   
+        if (strstr(receivedChars,"name:"))
         {
-            Serial.print("CMD:");
+            Serial.println(strlen(receivedChars));
+            // v1 - 4 chars tapos may \n na kinukuha ng recvWithEndMarker tapos 5 sa "name:"
+            if (strlen(receivedChars) == 10)  
+            {
+                strncpy(MASTERNAME,receivedChars+5,5);
+                Serial.println(MASTERNAME);
+            } else if (strlen(receivedChars) == 11)
+            {
+                strncpy(MASTERNAME,receivedChars+5,6);
+                Serial.println(MASTERNAME);
+            } else 
+            {
+                Serial.println("Invalid sensor name!");
+            }
+        } else if (strstr(receivedChars,"send:"))
+        {
+            Serial.print("send:");
         }
-        temp[0] = receivedChars[4];
-        temp[1] = receivedChars[5];
-        temp[2] = '\0';
+        // if (strcmp(receivedChars,"send")>= 0)
+        // {
+        //     Serial.print("CMD:");
+        //     temp[0] = receivedChars[4];
+        //     temp[1] = receivedChars[5];
+        //     temp[2] = '\0';
 
-        Serial.println(atoi(strchr(receivedChars,'d') + 1));
+        //     Serial.println(atoi(strchr(receivedChars,'d') + 1));
+        // } 
+        // else if(strcmp(receivedChars,""))
+        // {
+
+        // } 
+
         /*cmd = atoi(temp);
         Serial.print("cmd = ");
         Serial.println(cmd);*/
@@ -92,4 +127,12 @@ void showNewData()
         delay(1000);
         newData = false;
     }
+}
+
+
+/**
+ * Load lib_config for given subsurface sensor
+ */
+void loadConfig(){
+
 }
