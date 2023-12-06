@@ -16,7 +16,8 @@
 */
 
 #include "Due_config.h"
-
+#include <due_can.h>
+#include "variant.h"
 /**  
  * Delay (in milliseconds)
  * 
@@ -24,27 +25,56 @@
  */
 #define MSDELAY 100
 
+// #define LIB_LOGGER_COUNT 79;
 /**
  * Char array for name of subsurface sensor.
  * Defaults to "XXXXX"
  */
 char MASTERNAME[6] = "XXXXX"; 
 
+
+/**  
+ * 2 dimensional integer array that stores the links the unique id with the geographic id
+ *  
+ */
+int GIDS[2][40];
+
+/**  
+ * Unsigned global 8 bit integer indicating sensor version ( 1 - 5 )
+ *  
+ */
+uint8_t SENSORVERSION;
+
+/**  
+ * Unsigned global 8 bit integer indicating datalogger version ( 1 - 5 )
+ *  
+ */
+uint8_t DATALOGGERVERSION;
+
+/**
+* Struct containing configuration for subsurface sensor
+*
+*/
+libConfig CONFIG;
+
 const byte numChars = 32;
 char receivedChars[numChars];   // an array to store the received data
 boolean newData = false;
 
-lib_config cfg;
-
 void setup()
 {
    Serial.begin(115200);
+   canInit();
 }
 
 void loop()
 {
-    recvWithEndMarker();
-    showNewData();
+    // recvWithEndMarker();
+    // showNewData();
+    // loadConfig("MNGSA");
+    // printConfig();
+    delay(4000);
+    b64_timestamp("231206102100");
 }
 
 void recvWithEndMarker()
@@ -86,11 +116,11 @@ void showNewData()
             if (strlen(receivedChars) == 10)  
             {
                 strncpy(MASTERNAME,receivedChars+5,5);
-                Serial.println(MASTERNAME);
+                // Serial.println(MASTERNAME);
             } else if (strlen(receivedChars) == 11)
             {
                 strncpy(MASTERNAME,receivedChars+5,6);
-                Serial.println(MASTERNAME);
+                // Serial.println(MASTERNAME);
             } else 
             {
                 Serial.println("Invalid sensor name!");
@@ -133,6 +163,78 @@ void showNewData()
 /**
  * Load lib_config for given subsurface sensor
  */
-void loadConfig(){
+bool loadConfig(char* mastername){
+    for (int i=0; i < LIB_LOGGER_COUNT; i++)
+    {
+        if ( strstr(config_container[i].lib_mastername, mastername) )
+        {
+            CONFIG = config_container[i];
+            // Serial.print(config_container[i].lib_mastername);
+            // Serial.println(" loaded to CONFIG!");
+            return true; 
+        }
+    }
+    Serial.print("No CONFIG for:");
+    Serial.println(mastername);
+    return false;
+}
 
+void printConfig(){
+    SENSORVERSION = CONFIG.lib_sensor_version;
+    if (SENSORVERSION >= 1)
+    {
+        strncpy(MASTERNAME,CONFIG.lib_mastername,5);
+    } 
+    else if (CONFIG.lib_sensor_version == 1) 
+    {
+        strncpy(MASTERNAME,CONFIG.lib_mastername,4);
+    }
+    // check MASTERNAME
+    if (MASTERNAME[3] == 'S' || MASTERNAME[3] == 'T' || MASTERNAME[3] == 'B')
+    {
+        Serial.println(MASTERNAME);
+    }  
+    parseGids();
+    displayGIDS();
+}
+
+void parseGids(){
+    char *p;
+    char tmp[250];
+    int a = 0, b=0;
+    strncpy(tmp,CONFIG.lib_column_ids,strlen(CONFIG.lib_column_ids) + 1);
+    p = strtok(tmp,",");
+    for (b=0; b<40; b++)
+    {
+        if (p==NULL)
+        {
+            break;
+        } 
+        GIDS[0][a] = atoi(p);
+        GIDS[1][a] = b+1;
+        if(strlen(p) > 0)
+        {
+            a++;
+        }
+        p = strtok(NULL, ",");
+    }
+    if ( b == CONFIG.lib_num_of_nodes) {
+       Serial.println("Same number of nodes listed on CONFIG and count of nodes.");
+    }
+}
+
+void displayGIDS(){
+    char display[40],temp[5], temp2[3];
+    display[0] = '\0';
+    Serial.println("===============================");
+    for (int a = 0; a < CONFIG.lib_num_of_nodes; a++){
+        strncat(display,"\t", 3);
+        snprintf(temp2,3,"%02d",GIDS[1][a]);
+        snprintf(temp,5,"%04d",GIDS[0][a]);
+        strncat(display,temp2,3);
+        strncat(display,"\t",2);
+        strncat(display,temp,5);
+        Serial.println(display);
+        display[0] = '\0';
+    }
 }

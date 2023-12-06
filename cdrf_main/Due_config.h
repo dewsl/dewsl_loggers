@@ -8,7 +8,7 @@
 
 #include "Arduino.h"
 
-struct lib_config {
+struct libConfig {
   char* lib_mastername;
   char* lib_column_ids;
   uint8_t lib_num_of_nodes;
@@ -20,7 +20,7 @@ struct lib_config {
   uint8_t lib_sampling_max_retry;
   uint8_t lib_b64;
 };
-
-extern struct lib_config config_container[];
-extern uint16_t lib_LOGGER_COUNT;
+extern const int LIB_LOGGER_COUNT;
+extern struct libConfig config_container[];
+// 
 #endif

@@ -4,8 +4,7 @@
  * 
  */
 
-#include <due_can.h>
-#include "variant.h"
+
 
 /** 
  * CAN Bus Baudrate.
@@ -148,14 +147,15 @@ uint8_t canReceive(uint16_t timeout){
         if (Can0.available())
         {
             Can0.read(incoming);
-            Serial.print("ID: ");
-            Serial.print(incoming.id);
-            for (int i = 0; i<8; i++)
-            {
-                Serial.print(" ");
-                Serial.print(incoming.data.byte[i],HEX);
-            }
-            Serial.println();
+            interpretFrame(incoming, 1);
+            // Serial.print("ID: ");
+            // Serial.print(incoming.id);
+            // for (int i = 0; i<8; i++)
+            // {
+            //     Serial.print(" ");
+            //     Serial.print(incoming.data.byte[i],HEX);
+            // }
+            // Serial.println();
             read_frames++;
         } 
     }
