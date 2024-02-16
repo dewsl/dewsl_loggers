@@ -33,6 +33,12 @@ void init_lora() {
 }
 
 void send_thru_lora(char *radiopacket) {
+  char ack_from_gateway[13];
+  ack_from_gateway[0]=0x00;
+  if (debug_flag == 0) { //reset watchdog before resuming
+    Watchdog.reset();
+  }
+
   int length = sizeof(payload);
   int i = 0, j = 0;
   bool ack_wait = true;
@@ -50,6 +56,14 @@ void send_thru_lora(char *radiopacket) {
 
   if (logger_ack_filter_enabled()) {
     for (j = 0; j <= LORA_SEND_RETRY_LIMIT; j++) {
+      if (strstr(radiopacket, "*VOLT")) {
+        LORA_SEND_RETRY_LIMIT = 0;      //temporary: remove retry for *VOLT messages to prevent cutoffs
+      } else {
+        LORA_SEND_RETRY_LIMIT = 3;
+      }
+      if (debug_flag == 0) { //reset watchdog before resuming
+        Watchdog.reset();
+      }
       Serial.print("Sending to LoRa: ");
       Serial.println((char *)payload);
       // Serial.println("sending payload!");
@@ -61,14 +75,17 @@ void send_thru_lora(char *radiopacket) {
       do {
         if (rf95.waitAvailableTimeout(ACKWAIT)) {
           if (rf95.recv(ack_payload, &len2)) {
-            Serial.print("ack payload: ");
-            Serial.println((char *)ack_payload);
-            if (strstr((char *)ack_payload, ack_key)) {
-              key_gen((char *)payload);  //generate own key [passed to the variable ack_msg] to be matched with gateway ack_msg
-              if (check_loRa_ack((char *)ack_payload)) {
+            // Serial.print("ack payload: ");
+            // Serial.println((char *)ack_payload);
+            strncat(ack_from_gateway, (char *)ack_payload, 12);
+            ack_from_gateway[13]=0x00;
+            if (strstr(ack_from_gateway, ack_key)) {
+              key_gen(get_logger_A_from_flashMem());  //generate own key [passed to the variable ack_msg] to be matched with gateway ack_msg
+              // Serial.println(strcmp(ack_from_gateway,ack_msg));
+              if (strcmp(ack_from_gateway, ack_msg) == 0) {
                 flashLed(LED_BUILTIN, 2, 30);
-                Serial.print("Received ack_key from gateway: ");
-                Serial.println((char *)ack_payload);
+                Serial.println("Received ack_key from gateway");
+                // Serial.println(ack_from_gateway);
                 Serial.print("RSSI: ");
                 Serial.println(rf95.lastRssi(), DEC);
                 exit_retry = true;
@@ -93,6 +110,9 @@ void send_thru_lora(char *radiopacket) {
     }
   } else {
     // do not stack
+    if (debug_flag == 0) { //reset watchdog before resuming
+      Watchdog.reset();
+    }
     Serial.print("Sending to LoRa [no ack]: ");
     flashLed(LED_BUILTIN, 2, 30);
     Serial.println((char *)payload);
@@ -101,6 +121,9 @@ void send_thru_lora(char *radiopacket) {
     delay_millis(100);
   }
   delay_millis(1000);
+  if (debug_flag == 0) { //reset watchdog before resuming
+    Watchdog.reset();
+  }
 }
 
 // bool ack_LoRa_reply(char *LoRa_reply)
@@ -124,57 +147,57 @@ void send_thru_lora(char *radiopacket) {
 //     }
 // }
 
-void key_gen(char *_payload_received) {
-  String ack_name = String(get_logger_A_from_flashMem()); 
-  ack_name.trim();
+void key_gen(char *_reference_string) {
+
   ack_msg[0] = '\0';
+  // if (get_logger_mode() == 2) {
+  //   strncat(ack_msg, get_logger_A_from_flashMem(), 5);   //gets 5 charaters from saved logger name
+  //   ack_msg[strlen(ack_msg)+1] = 0x00;
+  //   strcat(ack_msg, ack_key);
+  //   ack_msg[13] = '\0';
+  // } else {
+  //   strncat(ack_msg, _reference_string, 5);             //gets first 5 charaters from payload to compare
+  //   ack_msg[strlen(ack_msg)+1] = 0x00;
+  //   strcat(ack_msg, ack_key);
+  //   ack_msg[13] = '\0';
+  // }
   if (get_logger_mode() == 2) {
-    if (ack_name.length() == 4 ) { //for version 1 and other 4 letter names + DUE
-      strncat(ack_msg, get_logger_A_from_flashMem(), 4);  //gets 4 charaters from saved logger name
-      strncat(ack_msg, ack_key, 7);
-      ack_msg[12] = '\0';   
-    } else {
-      strncat(ack_msg, get_logger_A_from_flashMem(), 5);  //gets 5 charaters from saved logger name
-      strncat(ack_msg, ack_key, 7);
-      ack_msg[13] = '\0';
-    }
-
+    //  gets first charaters (depending on router char length) from reference to generate acknowledgement key
+    strncat(ack_msg, _reference_string, (strlen(loggerName.sensorA)));             
   } else {
-    if (ack_name.length() == 4 ) { //for version 1 and other 4 letter names + DUE
-      strncat(ack_msg, _payload_received, 4);             //gets first 4 charaters from payload to compare
-      strncat(ack_msg, ack_key, 7);
-      ack_msg[12] = '\0';   
-    } else {
-      strncat(ack_msg, _payload_received, 5);             //gets first 5 charaters from payload to compare
-      strncat(ack_msg, ack_key, 7);
-      ack_msg[13] = '\0';
-    }
-  
-  }
-  // Serial.print("ack key: ");
-  // Serial.println(ack_msg);                               
+    //  gets first charaters (depending on router char length) from reference to generate acknowledgement key
+    strncat(ack_msg, _reference_string, (strlen(loggerName.sensorB)));             
+  }    
+  ack_msg[strlen(ack_msg)+1] = 0x00;
+  strcat(ack_msg, ack_key);
+  ack_msg[13] = '\0';
+  // Serial.print("generated key: ");
+  // Serial.println(ack_msg);                    
 }
 
-bool check_loRa_ack(char *_received) {
-  bool lora_tx_flag = false;  //will retry sending by default unless valid ack_msg is received
-  if (strstr(_received, ack_msg)) {
-    Serial.print("Ack valid ");
-    // Serial.println((char *)_received);
-    lora_tx_flag = true;
-  }
-  return lora_tx_flag;
-}
+// bool check_loRa_ack(char *_received) {
+//   bool lora_tx_flag = false;  // will retry sending by default unless valid ack_msg is received
+//   if (strstr(_received, ack_msg)) {
+//     Serial.print("Ack valid ");
+//     // Serial.println((char *)_received);
+//     lora_tx_flag = true;
+//   }
+//   return lora_tx_flag;
+// }
 
 void receive_lora_data(uint8_t mode) {
   lora_TX_end = 0;
   rcv_LoRa_flag = 0;
-  disable_watchdog();
+
   int count = 0;
   int count2 = 0;
   // sending_stack[0] = '\0';
   unsigned long start = millis();
   Serial.println("waiting for LoRa data . . ");
   while (rcv_LoRa_flag == 0) {
+    if (debug_flag == 0) {
+      Watchdog.reset();
+    }
     if (rf95.available()) {
       // Should be a message for us now
       if (rf95.recv(buf, &len2)) {
@@ -317,9 +340,79 @@ void receive_lora_data(uint8_t mode) {
             Serial.println(received);
             if (allow_unlisted()) {
               if (check_duplicates_in_stack((char *)received)) {
-                aggregate_received_data(received);
-                Serial.print("RSSI: ");
-                Serial.println(tx_RSSI);
+                lora_TX_end++;
+                if (mode == 4) {  // 2 LoRa transmitter
+                  count2++;
+                  Serial.print("recieved counter: ");
+                  Serial.println(count2);
+                  if (count2 == 1) {
+                    // SENSOR A
+                    tx_RSSI = String(rf95.lastRssi(), DEC);
+                    Serial.print("RSSI: ");
+                    Serial.println(tx_RSSI);  
+                    //  parse voltage, MADTB*VOLT:12.33*200214111000
+                    parse_voltage(received).toCharArray(txVoltage, sizeof(txVoltage));
+                    Serial.print("TX Voltage A: ");
+                    Serial.println(txVoltage);
+                  } else if (count2 == 2) {
+                    // SENSOR B
+                    tx_RSSI_B = String(rf95.lastRssi(), DEC);
+                    Serial.print("RSSI: ");
+                    Serial.println(tx_RSSI_B);
+                    parse_voltage(received).toCharArray(txVoltageB, sizeof(txVoltageB));
+                    Serial.print("TX Voltage B: ");
+                    Serial.println(txVoltageB);
+                    delay_millis(500);
+                    get_rssi(get_logger_mode());
+                    count2 = 0;
+                    // rcv_LoRa_flag = 1;
+                  }
+                } else if (mode == 5) {  // 3 LoRa transmitter
+                  count2++;
+                  Serial.print("counter: ");
+                  Serial.println(count2);
+                  if (count2 == 1) {
+                    // SENSOR A
+                    tx_RSSI = String(rf95.lastRssi(), DEC);
+                    Serial.print("RSSI: ");
+                    Serial.println(tx_RSSI);
+                    // parse voltage, MADTB*VOLT:12.33*200214111000
+                    parse_voltage(received).toCharArray(txVoltage, sizeof(txVoltage));
+                    Serial.print("TX Voltage A: ");
+                    Serial.println(txVoltage);
+                  } else if (count2 == 2) {
+                    // SENSOR B
+                    tx_RSSI_B = String(rf95.lastRssi(), DEC);
+                    Serial.print("RSSI: ");
+                    Serial.println(tx_RSSI);
+                    //  parse voltage, MADTB*VOLT:12.33*200214111000
+                    parse_voltage(received).toCharArray(txVoltageB, sizeof(txVoltageB));
+                    Serial.print("TX Voltage B: ");
+                    Serial.println(txVoltageB);
+                  } else if (count2 == 3) {
+                    // SENSOR C
+                    tx_RSSI_C = String(rf95.lastRssi(), DEC);
+                    Serial.print("RSSI: ");
+                    Serial.println(tx_RSSI_B);
+                    parse_voltage(received).toCharArray(txVoltageC, sizeof(txVoltageC));
+                    Serial.print("TX Voltage C: ");
+                    Serial.println(txVoltageC);
+                    get_rssi(get_logger_mode());
+                    count2 = 0;
+                    // rcv_LoRa_flag = 1;
+                  }
+                } else {
+                  /*only 1 transmitter*/
+                  tx_RSSI = String(rf95.lastRssi(), DEC);
+                  Serial.print("RSSI: ");
+                  Serial.println(tx_RSSI);
+                  //  parse voltage, MADTB*VOLT:12.33*200214111000
+                  parse_voltage(received).toCharArray(txVoltage, sizeof(txVoltage));
+                  Serial.print("Received Voltage: ");
+                  Serial.println(txVoltage);
+                  get_rssi(get_logger_mode());
+                  // rcv_LoRa_flag = 1;
+                }
               }
             }
           }
@@ -353,6 +446,9 @@ void receive_lora_data(uint8_t mode) {
     }
 
     if ((millis() - start) > LORATIMEOUTWITHACK) {
+      if (debug_flag == 0) {
+        Watchdog.reset();
+      }
       start = millis();
       // send gateway rssi values if nothing received from transmitter
       get_rssi(get_logger_mode());
@@ -371,6 +467,9 @@ void receive_lora_data(uint8_t mode) {
         rcv_LoRa_flag = 1;
       }
     }
+    if (debug_flag == 0) {
+      Watchdog.reset();
+    }
   }  // while (rcv_LoRa_flag == 0); //if NOT same with condition Loop will exit
 
   //Split and send aggregated data [sending_stack] here
@@ -388,48 +487,44 @@ void receive_lora_data(uint8_t mode) {
   txVoltageB[0] = '\0';
   txVoltageC[0] = '\0';
   flashLed(LED_BUILTIN, 3, 80);
-  enable_watchdog();
+  if (debug_flag == 0) {
+    Watchdog.reset();
+  }
 }
 
 bool if_receive_valid(char *_received) {
 
   // Check if received payload is from valid transmitter
-  // if transmission is valid and acknowledgement is broadcasted
+  // if transmission is valid, an acknowledgement is broadcasted
   bool valid_LoRa_tx = false;
   uint8_t _tx_name = 0;
   char _Blog[6];
   char _Clog[6];
   char _Dlog[6];
-  // char _Elog[6];
-  // char _Flog[6];
+
+  // _Blog[0] = 0x00;
+  // _Clog[0] = 0x00;
+  // _Dlog[0] = 0x00;
+
+  // strncat(ack_msg, get_logger_B_from_flashMem(), strlen(get_logger_B_from_flashMem()));
+  // strncat(ack_msg, get_logger_C_from_flashMem(), strlen(get_logger_C_from_flashMem()));
+  // strncat(ack_msg, get_logger_D_from_flashMem(), strlen(get_logger_D_from_flashMem()));
+  
+  // _Blog[strlen(_Blog)+1] = 0x00;
+  // _Clog[strlen(_Clog)+1] = 0x00;
+  // _Dlog[strlen(_Dlog)+1] = 0x00;
+
   char print_buffer[250];
   print_buffer[0] = '\0';
 
   key_gen(_received);
 
-  String _loggerB = String(get_logger_B_from_flashMem());
-  String _loggerC = String(get_logger_C_from_flashMem());
-  String _loggerD = String(get_logger_D_from_flashMem());
-  _loggerB.trim();
-  _loggerC.trim();
-  _loggerD.trim();
-
-  // String _loggerE = String(get_logger_E_from_flashMem());
-  // String _loggerF = String(get_logger_F_from_flashMem());
-
-  _loggerB.toCharArray(_Blog, sizeof(_Blog));
-  _loggerC.toCharArray(_Clog, sizeof(_Clog));
-  _loggerD.toCharArray(_Dlog, sizeof(_Dlog));
-  // _loggerE.toCharArray(_Elog, sizeof(_Elog));
-  // _loggerF.toCharArray(_Flog, sizeof(_Flog));
-
-
-  if (strstr(ack_msg, _Blog)) {
+  if (strstr(ack_msg, get_logger_B_from_flashMem())) {
 
     valid_LoRa_tx = true;
     // sprintf(print_buffer, "Received from %s: %s", _Blog, _received);
     Serial.print("Received from ");
-    Serial.print(_Blog);
+    Serial.print(get_logger_B_from_flashMem());
     Serial.print(" : ");
     Serial.println(_received);
     // Serial.println(print_buffer);
@@ -437,15 +532,15 @@ bool if_receive_valid(char *_received) {
     if (logger_ack_filter_enabled()) {
       rf95.send((uint8_t *)ack_msg, strlen(ack_msg));
       rf95.waitPacketSent();
-      // Serial.println("acknowledgement sent!");
+      Serial.println("acknowledgement sent!");
     }
 
-  } else if (strstr(ack_msg, _Clog)) {
+  } else if (strstr(ack_msg, get_logger_C_from_flashMem())) {
 
     valid_LoRa_tx = true;
     // sprintf(print_buffer, "Received from %s: %s", _Blog, _received);
     Serial.print("Received from ");
-    Serial.print(_Blog);
+    Serial.print(get_logger_C_from_flashMem());
     Serial.print(" : ");
     Serial.println(_received);
     // Serial.println(print_buffer);
@@ -455,12 +550,12 @@ bool if_receive_valid(char *_received) {
       rf95.waitPacketSent();
     }
 
-  } else if (strstr(ack_msg, _Dlog)) {
+  } else if (strstr(ack_msg, get_logger_D_from_flashMem())) {
 
     valid_LoRa_tx = true;
     // sprintf(print_buffer, "Received from %s: %s", _Clog, _received);
     Serial.print("Received from ");
-    Serial.print(_Clog);
+    Serial.print(get_logger_D_from_flashMem());
     Serial.print(" : ");
     Serial.println(_received);
     // Serial.println(print_buffer);
@@ -509,7 +604,11 @@ bool if_receive_valid(char *_received) {
 
 
 void receive_lora_data_UBLOX(uint8_t mode) {
-  disable_watchdog();
+
+  if (debug_flag == 0) {
+    Watchdog.reset();
+  }
+  
   int count = 0;
   int count2 = 0;
   unsigned long start = millis();
@@ -613,7 +712,9 @@ void receive_lora_data_UBLOX(uint8_t mode) {
   txVoltageB[0] = '\0';
   txVoltageC[0] = '\0';
   flashLed(LED_BUILTIN, 3, 80);
-  enable_watchdog();
+  if (debug_flag == 0) {
+    Watchdog.reset();
+  }
 }
 
 /**
@@ -623,7 +724,9 @@ void receive_lora_data_UBLOX(uint8_t mode) {
  */
 
 void receive_lora_data_ONLY(uint8_t mode) {
-  disable_watchdog();
+  if (debug_flag == 0) {
+    Watchdog.reset();
+  }
   int count = 0;
   int count2 = 0;
   unsigned long start = millis();
@@ -696,7 +799,9 @@ void receive_lora_data_ONLY(uint8_t mode) {
   }
   rcv_LoRa_flag = 0;
   flashLed(LED_BUILTIN, 3, 80);
-  enable_watchdog();
+  if (debug_flag == 0) {
+    Watchdog.reset();
+  }
 }
 
 bool check_duplicates_in_stack(char *payload_to_check) {
