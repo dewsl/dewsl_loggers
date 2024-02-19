@@ -1,6 +1,6 @@
 #include "Due_config.h"
 
-const int LIB_LOGGER_COUNT = 80;
+const int lib_LOGGER_COUNT = 78;
 // #define LIB_LOGGER_COUNT 80
 // READ FIRST:
 // #define LIB_LOGGER_COUNT 79
@@ -20,8 +20,20 @@ const int LIB_LOGGER_COUNT = 80;
 // 10. b64
 
 
-struct libConfig config_container[LIB_LOGGER_COUNT] = {
-  {
+struct libConfig config_container[lib_LOGGER_COUNT] = {
+ // {
+    /*"EXPSA",                          // Mastername (5 char string)
+    "5022,5028,5032,5045,5059,5073,5075,5093,5094,5095,5101,5106,5112,5121,5136,5169,5199,5216,5329,5380,5398",  // column IDs
+    21,                                // number of nodes
+    5,                                // sensor version
+    4,                                // datalogger version
+    0,                                // piezo
+    1000,                              // turn on delay
+    3000,                             // broadcast timeout
+    3,                                // max sampling retry
+    1                                 // b64
+  },*/
+  /*{
     "EXPTA",                          // Mastername (5 char string)
     "5363,5324,5355,5344,5352,5180",  // column IDs
     6,                                // number of nodes
@@ -32,21 +44,20 @@ struct libConfig config_container[LIB_LOGGER_COUNT] = {
     3000,                             // broadcast timeout
     3,                                // max sampling retry
     1                                 // b64
-  },
+  },*/
 
   {
-    "EXPSA",                          // Mastername (5 char string)
-    "2272,2094",  // column IDs
-    2,                                // number of nodes
-    3,                                // sensor version
-    2,                                // datalogger version
+    "TESTA",                          // Mastername (5 char string)
+    "5067,5115,5116,5201,5202",  // column IDs
+    4,                                // number of nodes
+    5,                                // sensor version
+    4,                                // datalogger version
     0,                                // piezo
     1000,                              // turn on delay
     3000,                             // broadcast timeout
     3,                                // max sampling retry
     1                                 // b64
   },
-
   { "AGBSB","2647,2674,2683,2695,2719,2738,2768,2779,2793,2794,2833,2857,2865,2800,2904,2946,2961,2903,2964,2965",20,3,4,0,1000,3000,3,1 },
   { "AGBTA","850,799,1134,967,637,580,560,492,432,429,383,245",12,3,4,0,1000,3000,3,1 },
   { "BAKTA","641,648,682,683,976,1016,1022,1070,1147,1199,1229,1414,1459,1550,1561,1604,1621,1623,1634,2710",20,3,4,0,1000,3000,3,1 },
@@ -166,7 +177,7 @@ struct libConfig config_container[LIB_LOGGER_COUNT] = {
     "1636,1638,1659,1773,1817,1834,1837,1875,2039,2048,2075,2082,2112,2116,2128,2133,2135,2144,2163,2168,2205,2574,2587,2799",
     24,
     2,
-    2,
+    4,
     0,
     1000,
     3000,
