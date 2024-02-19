@@ -1,6 +1,6 @@
 /*
   Due_config.h - Library of configurations
-  2022.12.16
+  2024.02.01
 */
 
 #ifndef Due_config_h
@@ -20,7 +20,7 @@ struct libConfig {
   uint8_t lib_sampling_max_retry;
   uint8_t lib_b64;
 };
-extern const int LIB_LOGGER_COUNT;
+extern const int lib_LOGGER_COUNT;
 extern struct libConfig config_container[];
 // 
 #endif

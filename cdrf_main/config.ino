@@ -27,7 +27,7 @@ void flash_fetch() {
   if (override_check == 99) {  //check whether a override value has been set
     //insert SD override function here
     Serial.println("SD CARD CONFIG IN USE");
-    openfig();
+    open_config();
   } else {
     if (flash_check != 99) {
       Serial.println("NO SENSOR NAME SET FOR CONFIG!");
@@ -69,23 +69,40 @@ void flash_fetch() {
     }
   }
 }
-/*
-Function: Accepts input from serial as SENSOR NAME to store in flash.
-*/
+
+char* trim(char* str) {
+    // Trim leading whitespace
+    while (isspace(*str)) {
+        str++;
+    }
+
+    // Trim trailing whitespace
+    char* end = str + strlen(str) - 1;
+    while (end > str && isspace(*end)) {
+        end--;
+    }
+    *(end + 1) = '\0'; // Null-terminate the trimmed string
+
+    return str;
+}
+
 void name_entry() {
   byte f[sizeof(f_config)];
-  char name_holder[6];
-  String serial_input;
+  char name_holder[7]; // Increased by 1 for null terminator
+  char serial_input[20]; // Adjusted size based on requirements
   f_config flash_config;
   Serial.print("Input datalogger name: ");
   delay(1000);
   do {
-    serial_input = Serial.readStringUntil('\n');
-  } while (serial_input == "");
-  serial_input.trim();
-  serial_input.toUpperCase();
-  serial_input.toCharArray(flash_config.f_mastername, 6);
-  flash_config.f_mastername[6] = '\0';
+    while (!Serial.available()) {
+      // Wait for serial input
+    }
+    Serial.readBytesUntil('\n', serial_input, sizeof(serial_input)); // Read serial input
+  } while (strlen(serial_input) == 0); // Check if input is empty
+  serial_input[strlen(serial_input)] = '\0'; // Ensure null termination
+  strupr(serial_input); // Convert input to uppercase
+  strncpy(flash_config.f_mastername, serial_input, sizeof(flash_config.f_mastername) - 1); // Copy input to flash_config
+  flash_config.f_mastername[sizeof(flash_config.f_mastername) - 1] = '\0'; // Ensure null termination
   Serial.println();
   Serial.print(flash_config.f_mastername);
 
@@ -95,7 +112,6 @@ void name_entry() {
   Serial.println(F(" saved to flash"));
   delay(1000);
 }
-
 /*
 Function: Parse column IDs stored in the library configurations in to the column ID holder array g_gids[i][i]   
 */
@@ -110,15 +126,4 @@ void parse_column_ids_from_library() {
     id_token = strtok(NULL, ",");
   }
 
-  // Serial.print("Stored node count: ");
-  // Serial.println(id_counter);
-  // Serial.println("Saved IDs");
-  // for (n=0;n<40;n++){
-  //   if (g_gids[n][0] != 0) {
-  //     Serial.print("Node ");
-  //     Serial.print(n);
-  //     Serial.print(" ");
-  //     Serial.println(g_gids[n][0]);
-  //   }
-  // }
 }

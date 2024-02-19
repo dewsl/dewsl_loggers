@@ -14,23 +14,20 @@
  * Ito ay puro comments lang sa code.
  *  
 */
-
-#include "Due_config.h"
-#include <due_can.h>
-#include "variant.h"
 /**  
  * Delay (in milliseconds)
  * 
  * Used in #columnOn and #columnsOff
  */
 #define MSDELAY 100
+#define VDATASIZE 300
 
 // #define LIB_LOGGER_COUNT 79;
 /**
  * Char array for name of subsurface sensor.
  * Defaults to "XXXXX"
  */
-char MASTERNAME[6] = "XXXXX"; 
+char MASTERNAME[6] = "XXXXX";
 
 
 /**  
@@ -55,186 +52,988 @@ uint8_t DATALOGGERVERSION;
 * Struct containing configuration for subsurface sensor
 *
 */
-libConfig CONFIG;
+//libConfig CONFIG;
 
-const byte numChars = 32;
-char receivedChars[numChars];   // an array to store the received data
-boolean newData = false;
+#include "variant.h"
+#include <due_can.h>
+#include <SD.h>
+#include <Wire.h>
+#include <Adafruit_INA219.h>
+#include <avr/pgmspace.h>
+// #include <XBee.h>
+#include <stdbool.h>
+#include <limits.h>
+#include <RTCDue.h>
+#include <avr/dtostrf.h>
+#include "Due_config.h"
+#include <DueFlashStorage.h>
+#include <SPI.h>
 
-void setup()
-{
-   Serial.begin(115200);
-   canInit();
+#define ATCMD "AT"
+#define ATECMDTRUE "ATE"
+#define ATECMDFALSE "ATE0"
+#define ATRCVCAN "ATRCV" #define ATSNDCAN "ATSND"
+#define ATGETSENSORDATA "ATGSDT"
+#define ATSNIFFCAN "ATSNIFF"
+#define ATDUMP "ATDUMP"
+#define OKSTR "OK"
+#define ERRORSTR "ERROR"
+#define ATSD "ATSD"
+#define DATALOGGER Serial1  // Change this to Serial1 if using ARQ
+#define LORA Serial2
+#define powerM Serial3
+
+#define VERBOSE 0
+//#define RELAYPIN 44
+#define COLUMN_SWITCH_PIN 44
+#define LED1 48
+#define POLL_TIMEOUT 5000
+#define BAUDRATE 9600
+#define LORABAUDRATE 9600
+#define ARQTIMEOUT 30000
+#define VDATASIZE 300
+
+#define ENABLE_RTC 0
+#define CAN_ARRAY_BUFFER_SIZE 100
+File unsent_log;
+
+
+// #define comm_mode "ARQ" // 1 for ARQ, 2 XBEE
+char comm_mode[5] = "LORA";
+
+const char base64[64] PROGMEM = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+                                  'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+                                  'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2',
+                                  '3', '4', '5', '6', '7', '8', '9', '+', '/' };
+
+File newconfig, oldconfig, root;
+long timestart = 0;
+long timenow = 0;
+long arq_start_time = 0;
+// Group: Global Variables
+// These are the variables declared globally.
+
+/* 
+  Variable: b64
+  global variable that turns on the b64 data representation mode. 0 by default.
+
+  An AT Command can be used to toggle this. *AT+SWITCHB64* command toggles on and off
+  the b64 data representation. 
+
+  Variable declaration:
+  --- Code
+  uint8_t b64 = 0;
+  --- 
+*/
+uint8_t b64 = 0;
+
+/* 
+  Variable: payload
+  global variable uint8_t array that will hold the data from xbee
+
+  Variable declaration:
+  --- Code
+  uint8_t payload[200];
+  --- 
+*/
+uint8_t payload[200];
+
+int g_chip_select = SS3;
+uint8_t datalogger_flag = 0;
+int volt_last_val = 0;
+// boolean vdata_flag;
+bool can_flag;
+
+/*
+  Variable: g_gids
+  2 dimensional integer array that stores the links the unique id with the geographic id
+  
+  Variable declaration:
+  --- Code
+  int g_gids[40][2];
+  ---
+*/
+int g_gids[40][2];
+
+/*
+  Variable: g_num_of_nodes
+  integer that stores the number of nodes. This variable is overwritten by *<process_config_line>*. This variable is also used by *<init_char_arrays>*.
+
+  Variable declaration:
+  --- Code
+  uint8_t g_num_of_nodes = 40;
+  --- 
+*/
+uint8_t g_num_of_nodes = 40;
+
+/*
+  Variable: g_mastername
+  global char array that holds the 5 char mastername. This variable is overwrittern by *<process_config_line>*. This variable defaults to "XXXXX".
+
+  *SD Card Config Line* usage:
+  --- Code
+  mastername = INATA
+  ---
+*/
+char g_mastername[6] = "XXXXX";
+
+/*
+  Variable: g_volt
+  global char array that holds the node voltage values with respect to gids. This used by is by get_v_value.
+
+  Variable Declaration:
+  --- Code
+  VDATASIZE = 40
+  ---
+*/
+float g_volt[VDATASIZE];
+
+/*
+  Variable: g_turn_on_delay
+  integer that determines the delay in centi seconds ( ie. 100 centiseconds = 1 sec ) introduced by the firmware after the column switch turns on. 
+  This ensures the voltage stability for the column.
+
+  *SD Card Config Line* usage:
+  --- Code
+  turn_on_delay = 100
+  ---
+*/
+uint16_t g_turn_on_delay = 10;
+
+/*
+  Variable: g_sensor_version
+  integer that determines the sensor version ( 1, 2, or 3 ). This variable is overwrittern by *<process_config_line>*. 
+
+  *SD Card Config Line* usage:
+  --- Code
+  sensorVersion = 3
+  ---*/
+uint8_t g_sensor_version = 3;
+
+/*
+  Variable: g_datalogger_version
+  integer that determines the datalogger version ( 2 ARQ or 3 Regular,V3 ). This variable is overwrittern by *<process_config_line>*. 
+  
+  Variable declaration:
+  --- Code
+  uint8_t g_datalogger_version = 3;
+  ---
+*/
+uint8_t g_datalogger_version = 0;
+
+/* 
+  Variable: broad_timeout
+  integer that determines the timeout duration of broadcast (in milliseconds ). This variable is overwrittern by *<process_config_line>*. 
+
+  *SD Card Config Line* usage:
+  --- Code
+  brodcast_timeout = 3000  ---
+*/
+int broad_timeout = 3000;
+
+/* 
+  Variable: has_piezo
+  boolean variable that decides the sampling of the piezometer readout board
+
+  *SD Card Config Line* usage:
+  --- Code
+  PIEZO = 1
+  ---
+*/
+bool has_piezo = false;
+
+/* 
+  Variable: g_sampling_max_retry
+  integer that determines the number of column sampling retry
+  
+  *SD Card Config Line* usage:
+  --- Code
+  sampling_max_retry = 3
+  ---
+*/
+int g_sampling_max_retry = 3;
+
+/* 
+  Variable: g_delim
+  global char array that holds the delimiter used for separating data from different commands
+  
+  Variable declaration:
+  --- Code
+  char g_delim[2] = "~";
+  ---
+*/
+char g_delim[2] = "~";
+// CAN-related
+char g_temp_dump[5000];
+char g_final_dump[5000];
+char g_no_gids_dump[5000];
+
+/* 
+  Variable: text_message
+  char array that holds the formatted messages to be sent
+
+  Intial Variable declaration:
+  --- Code
+  char text_message[5000];
+  ---
+  
+  See Also:
+
+  <build_txt_msgs>
+*/
+char text_message[5000];
+char vc_container[20];  //temporary container for voltage current data
+char g_build[200];
+char g_build_final[500];
+
+char print_buffer[250];
+char num_buffer[20];
+
+char g_string[20];
+char g_string_proc[20];
+
+CAN_FRAME g_can_buffer[CAN_ARRAY_BUFFER_SIZE];
+
+//
+char rcvdChars[32] = {};
+
+/*
+  Variable: g_timestamp
+  global String that holds the timestamp.This variable is overwritten by the timestamp from the string sent by the ARQ. This variable defaults to "TIMESTAMP000".
+
+  Intial Variable declaration:
+  --- Code
+ String g_timestamp = "TIMESTAMP000";
+  ---
+*/
+
+char g_timestamp[] = "TIMESTAMP000";
+
+//current sensor
+Adafruit_INA219 ina219(0x41);
+bool ate = true;
+
+//  for config use
+
+char column_id_holder[500];
+uint16_t LOGGER_COUNT = lib_LOGGER_COUNT;
+DueFlashStorage dueFlashStorage;
+
+
+struct f_config {
+  char f_mastername[6];
+  int override_lib_config;
+  int check;
+};
+
+int g_sensor_type = 1;
+
+
+void setup() {
+  //int _EXFUN(strcmp, (const char*, const char*));
+  Serial.begin(BAUDRATE);
+  DATALOGGER.begin(9600);
+  LORA.begin(LORABAUDRATE);
+  ina219.begin();
+  pinMode(COLUMN_SWITCH_PIN, OUTPUT);
+  pinMode(LED1, OUTPUT);
+  canInit();
+  init_char_arrays();
+  init_gids();
+  init_sd();
+
+
+  Serial.println(F("======================================"));
+  Serial.println(F("Firmware version: 02.01.24"));
+  flash_fetch();
+  due_command();
 }
 
-void loop()
-{
-    // recvWithEndMarker();
-    // showNewData();
-    // loadConfig("MNGSA");
-    // printConfig();
-    delay(4000);
-    b64_timestamp("231206102100");
+void loop() {
+  int timestart = millis();
+  while ((millis() - timestart < 30000) && (datalogger_flag == 0)) {
+    if (Serial.available() > 0) {
+      getATCommand();
+      // Serial.println(F(comm_mode));
+
+    } else if ((strcmp(comm_mode, "LORA") == 0) && (LORA.available())) {
+      // Serial.println("LORA.available main loop");
+      rcvdChars[0] = '\0';
+      wait_lora_cmd(rcvdChars);
+      Serial.print("rcvdChars::::::");
+      Serial.println(rcvdChars);
+      operation(parse_cmd(rcvdChars), comm_mode);
+      //shut_down();
+      delay (500);
+      LORA.println("STOPLORA");
+      datalogger_flag = 1;
+    }
+  }
+  delay(100);
 }
 
-void recvWithEndMarker()
-{
-    static byte ndx = 0;
-    char endMarker = '\n';
-    char rc;
-    while (Serial.available() > 0 && newData == false)
-    {
-        rc = Serial.read();
-        if (rc != endMarker)
+void getATCommand() {
+  char serial_line[256];  // Adjust the size as needed
+  char command[256], extra_parameters[256];
+  char converted[5] = {};
+  char padded[5] = {};
+  char atSwitch;
+  int i_equals = 0;
+
+  if (Serial.available() > 0) {
+    do {
+      Serial.readBytesUntil('\n', serial_line, sizeof(serial_line));
+    } while (strcmp(serial_line, "") == 0);
+
+    for (int i = 0; i < sizeof(serial_line); i++) {
+      serial_line[i] = toupper(serial_line[i]);
+      if (serial_line[i] == '\r') {
+        serial_line[i] = '\0'; // Replace '\r' with null terminator
+      }
+    }
+
+    if (ate) Serial.println(serial_line);
+
+    i_equals = -1;
+    for (int i = 0; i < sizeof(serial_line); i++) {
+      if (serial_line[i] == '=') {
+        i_equals = i;
+        break;
+      }
+    }
+
+    if (i_equals == -1) {
+      strcpy(command, serial_line);
+    } else {
+      strncpy(command, serial_line, i_equals);
+      command[i_equals] = '\0';  // Null terminate the command string
+    }
+
+    for (int i = 0; i < VDATASIZE; ++i) {
+      g_volt[i] = (float)0;
+    }
+
+    atSwitch = serial_line[0];
+    switch (atSwitch) {
+      case '?':
         {
-            receivedChars[ndx] = rc;
-            ndx++;
-            if (ndx >= numChars)
-            {
-                ndx = numChars - 1;
+          // flash_fetch();
+          print_stored_config();
+        }
+        break;
+      case 'A':
+        {  //ATGETSENSORDATA
+          if (g_mastername[3] == 'S') {
+            g_sensor_type = 2;
+          } else {
+            g_sensor_type = 1;
+          }
+          char dummy[22] = "ARQCMD6T/202402151700";
+          operation(parse_cmd(dummy),comm_mode);
+          // read_data_from_column(g_final_dump, g_sensor_version, g_sensor_type);
+          // int g_volt_size = sizeof(g_volt) / sizeof(g_volt[0]);
+
+          Serial.println(OKSTR);
+        }
+        break;
+
+      case 'B':
+        {  //AT+POLL
+          if (g_mastername[3] == 'S') {
+              g_sensor_type = 2;
+            } else {
+              g_sensor_type = 1;
             }
+          read_data_from_column(g_final_dump, g_sensor_version, g_sensor_type);
+          Serial.println(F(g_final_dump));
+          b64_build_text_msgs(comm_mode, g_final_dump, text_message);
+          Serial.println(OKSTR);
         }
-        else
+        break;
+
+      case 'C':
+        due_command();
+        break;
+
+      case 'D':
+        name_entry();
+        flash_fetch();
+        Serial.println(OKSTR);
+        break;
+
+      case 'E':
+        read_current();
+        read_voltage();
+        break;
+
+      case 'F':
+        {  //ATDUMP
+          Serial.print("g_final_dump: ");
+          Serial.println(g_final_dump);
+          Serial.println(OKSTR);
+        }
+        break;
+      case 'G':
+        {  //ATECMDFALSE
+          if (SD.begin(g_chip_select)) {
+            File sdDir = SD.open("/");
+            printDirectory(sdDir, 0);
+            Serial.println(OKSTR);
+          } else {
+            Serial.println("ERR: Unable to access SD card");
+          }
+        }
+        break;
+
+      case 'H':
         {
-            receivedChars[ndx] = '\0'; // terminate the string
-            ndx = 0;
-            newData = true;
+          dumpSDtoPC();
+          Serial.print("OK");
         }
+        break;
+
+
+      default:
+          Serial.println(ERRORSTR);
+          break;
     }
+  } else
+    return;
 }
 
-void showNewData()
+void operation(int sensor_type, char communication_mode[]) {
+  File create_unsent;
+  if (sensor_type == 3) {
+    // if((minute > 5 && minute < 25) || (minute > 35 && minute < 55)){
+    open_sdata();
+    //  rename_sd();
+  } else if (sensor_type == 4) {
+    //  for arQ rain gauge only
+    //  sends voltage data thru arQ
+    send_current_voltage_thru_arq();
+  } else if (sensor_type == 5)  // for sending config to v5 datalogger serial
+  {
+    if (!SD.begin(g_chip_select)) {
+      Serial.println("error opening config.txt");
+      Serial2.println("error opening config.txt");
+    } else {
+      int data;
+      root = SD.open("config.txt");
+
+      while ((data = root.read()) >= 0) {
+        Serial.write(data);
+        Serial2.write(data);
+      }
+      Serial.println(" CONFIG.TXT end of file");
+      Serial2.println(" CONFIG.TXT end of file");
+      root.close();
+    }
+    Serial.print("OK");
+    Serial2.print("OK");
+
+  } else {
+    int counter = 0;
+    int num_of_tokens = 0;
+    if (!SD.begin(g_chip_select)) {  //create unsent.txt
+      Serial.println(F("SD card not detected"));
+      Serial2.println(F("### CAUTION: SD CARD NOT DETECTED  ###"));
+      // return;
+    } else {
+      create_unsent = SD.open("unsent.txt", FILE_WRITE);
+      create_unsent.close();
+    }
+
+    if (g_mastername[3] == 'S') {
+      g_sensor_type = 2;
+    } else {
+      g_sensor_type = 1;
+    }
+    read_data_from_column(g_final_dump, g_sensor_version, g_sensor_type);  // matagal ito.
+    Serial.print(F("g_final_dump: "));
+    Serial.println(F(g_final_dump));
+    b64_build_text_msgs(comm_mode, g_final_dump, text_message);
+
+    Serial.println(text_message);
+    char* token1 = strtok(text_message, "~");
+
+    while (token1 != NULL) {
+      Serial.print("Sending ::::");
+      Serial.println(token1);
+      if (strcmp(comm_mode, "LORA") == 0) {
+        send_thru_lora(false, token1);
+      } else {  //default
+        send_data(true, token1);
+      }
+      token1 = strtok(NULL, g_delim);
+      num_of_tokens = num_of_tokens + 1;
+    }
+
+    if (strcmp(comm_mode, "LORA") == 0) {
+      char ts_container[13];
+      char unsent_value[10];
+      char b64_ts[13] = {};
+      itoa(unsent_count(),unsent_value, 10);
+      unsent_value[(strlen(unsent_value))+1];
+      strcpy(g_build_final,">>");
+      strncat(g_build_final, g_build, strlen(g_build));
+      strcat(g_build_final,">");
+      strncat(g_build_final, unsent_value,strlen(unsent_value));
+      strcat(g_build_final,"*");
+      strncat(g_build_final, g_timestamp,strlen(g_timestamp));
+      // strncat(g_build_final, b64_ts, strlen(b64_ts));
+      
+      send_thru_lora(false, g_build_final);
+
+    } else {  //default
+      send_data(true, g_build_final);
+      g_build_final[0] = 0X00;
+      g_build[0] = 0X00;
+    }
+  }
+}
+
+
+void read_data_from_column(char* column_data, int sensor_version, int sensor_type) {
+
+  //start building current-voltage sms;
+  strncpy(g_build, g_mastername, strlen(g_mastername));
+  strcat(g_build, "*m*");
+  dtostrf(ina219.getCurrent_mA(), 0, 4, vc_container);
+  strncat(g_build, vc_container, strlen(vc_container));
+  strcat(g_build, "*");
+  dtostrf(ina219.getBusVoltage_V(), 0, 4, vc_container);
+  strncat(g_build, vc_container, strlen(vc_container));
+
+  // vdata_flag = true;
+  columnOn();
+  delay(g_turn_on_delay);
+
+  //continue building current-voltage sms after column has been turned on
+  strcat(g_build, "*");
+  dtostrf(ina219.getCurrent_mA(), 0, 4, vc_container);
+  strncat(g_build, vc_container, strlen(vc_container));
+  strcat(g_build, "*");
+  dtostrf(ina219.getBusVoltage_V(), 0, 4, vc_container);
+  strncat(g_build, vc_container, strlen(vc_container));
+
+
+  if (sensor_version == 2) {
+    Serial.println("Accel data");
+    get_data(32, 1, column_data);
+    get_data(33, 1, column_data);
+    if (sensor_type == 2) {
+    }
+  } else if (sensor_version == 3) {
+    Serial.println("Accel data");
+    get_data(11, 1, column_data);
+    get_data(12, 1, column_data);
+    Serial.println("Temperature data");  //temp daw ito [22,23,24] sabi ni kate
+    get_data(22, 1, column_data);
+    if (sensor_type == 2) {
+      Serial.println("Soil Moisture sensor data");
+      get_data(10, 1, column_data);
+      get_data(13, 1, column_data);
+    }
+  } else if (sensor_version == 4) {
+    Serial.println("Accel data");
+    get_data(41, 1, column_data);
+    get_data(42, 1, column_data);
+    Serial.println("Temperature data");
+    get_data(22, 1, column_data);
+
+  } else if (sensor_version == 5) {
+    Serial.println("Accel data");
+    get_data(51, 1, column_data);
+    get_data(52, 1, column_data);
+    Serial.println("Temperature data");
+    get_data(22, 1, column_data);
+    get_data(23, 1, column_data);
+    get_data(24, 1, column_data);
+
+  } else if (sensor_version == 1) {
+    get_data(256, 1, column_data);  //Added for polling of version 1
+  }
+
+  // vdata_flag = false;
+  columnOff();
+  delay(1000);
+
+  // last phase of building current-voltage sms after column has been turned off
+  strcat(g_build, "*");
+  dtostrf(ina219.getCurrent_mA(), 0, 4, vc_container);
+  strncat(g_build, vc_container, strlen(vc_container));
+  strcat(g_build, "*");
+  dtostrf(ina219.getBusVoltage_V(), 0, 4, vc_container);
+  strncat(g_build, vc_container, strlen(vc_container));
+  // strcat(g_build, "*");
+  Serial.println(g_build);
+  Serial2.println(g_build);
+}
+
+void read_current() {
+  columnOn();
+  delay(1000);
+  float current_mA = 0;
+  current_mA = ina219.getCurrent_mA();
+  Serial.print("Current:       ");
+  Serial.print(current_mA);
+  Serial.println(" mA");
+  delay(1000);
+  columnOff();
+}
+
+void read_voltage() {
+  float shuntvoltage = 0;
+  float busvoltage = 0;
+  float loadvoltage = 0;
+
+  shuntvoltage = ina219.getShuntVoltage_mV();
+  busvoltage = ina219.getBusVoltage_V();
+  loadvoltage = busvoltage + (shuntvoltage / 1000);
+
+  Serial.print("Bus Voltage:   ");
+  Serial.print(busvoltage);
+  Serial.println(" V");
+  Serial.print("Shunt Voltage: ");
+  Serial.print(shuntvoltage);
+  Serial.println(" mV");
+  Serial.print("Load Voltage:  ");
+  Serial.print(loadvoltage);
+  Serial.println(" V");
+}
+
+
+char* getTimestamp(char communication_mode[]) {
+ // char timestamp[20]; // Static to ensure the array is not deallocated when the function exits
+
+  if (communication_mode == 0) {  //internal rtc
+    return g_timestamp;
+  } else if (strcmp(comm_mode, "ARQ") == 0) {  // ARQ
+    return g_timestamp;
+  } else if (strcmp(comm_mode, "LORA") == 0) {
+    Serial.println(g_timestamp);
+    return g_timestamp;
+  } 
+  else {
+    return "0TIMESTAMP";
+  }
+}
+
+/* 
+  Function: set_rtc_time()
+
+    Set the time of the customDue internal rtc.
+  
+  Parameters:
+  
+    time_str - String  
+  
+  Returns:
+  
+    timestamp or String "0TIMESTAMP"
+  
+  See Also:
+  
+    <poll_data>
+*/
+// void set_rtc_time(String time_string) {
+//   int hours, minutes, seconds, day, month, year;
+
+//   year = time_string.substring(0, 2).toInt();
+//   month = time_string.substring(2, 4).toInt();
+//   day = time_string.substring(4, 6).toInt();
+//   hours = time_string.substring(6, 8).toInt();
+//   minutes = time_string.substring(8, 10).toInt();
+//   seconds = time_string.substring(10, 12).toInt();
+//   if (ENABLE_RTC) {
+//     RTCDue rtc(XTAL);
+//     rtc.setTime(hours, minutes, seconds);
+//     rtc.setDate(day, month, year);
+//   }
+// }
+
+int wait_arq_cmd() {
+  char c_serial_line[30];
+  while (!DATALOGGER.available())
+    ;
+  arq_start_time = millis();  // Global variable used by arqwait_delay
+  do {
+    DATALOGGER.readBytesUntil('\n', c_serial_line, 30);
+  } while (c_serial_line[0] == '\0');
+  Serial.println(c_serial_line);
+  return parse_cmd(c_serial_line);
+}
+
+void wait_lora_cmd(char* result){
+  char serial_line[30];
+  char end = '\n';
+  char rc;
+  int counter = 0;
+  bool newData = false;
+  while( (LORA.available() > 0) && (newData == false) ){
+      rc = LORA.read();
+      if (rc != end){
+          serial_line[counter] = rc;
+          counter++;      
+      } else{
+        serial_line[counter] = '\0';
+        newData = true;
+      }
+  }
+  Serial.println(serial_line);
+  strncpy(result,serial_line, 21); // ARQCMD6T/240216141600 = 21 chars + 1 terminating char
+}
+
+
+// gawing switch case yung if else dito para readable
+int parse_cmd(char* command_string) {
+  char command[30];
+  char temp_time[30];
+  char serial_line[30]; // Assuming a maximum length of 30 characters
+
+  char* pch;
+  char cmd[] = "CMD6";
+  int cmd_index;
+  
+  strcpy(command, command_string);
+  Serial.println(command);
+
+  if ((pch = strstr(command_string, cmd)) != NULL) {
+    char* slash_ptr;
+    int slash_index;
+
+    if (*(pch + strlen(cmd)) == 'S') {          // SOMS + TILT
+      cmd_index = strchr(command, 'S') - command;  // ARQCMD has 6 characters
+      strcpy(temp_time, command + cmd_index + 1);
+      slash_ptr = strchr(temp_time, '/');
+      if (slash_ptr != NULL) {
+        slash_index = slash_ptr - temp_time;
+        memmove(&temp_time[slash_index], &temp_time[slash_index + 1], strlen(&temp_time[slash_index + 1]) + 1);
+      }
+      strncpy(g_timestamp, temp_time,12);
+      // trim(g_timestamp);
+      Serial.print("g_timestamp: ");
+      Serial.println(g_timestamp);
+      return 2;
+    } else if (*(pch + strlen(cmd)) == 'T') {   // TILT Only
+      cmd_index = strchr(command, 'T') - command;  // ARQCMD has 6 characters
+      strcpy(temp_time, command + cmd_index + 1);
+      slash_ptr = strchr(temp_time, '/');
+      if (slash_ptr != NULL) {
+        slash_index = slash_ptr - temp_time;
+        memmove(&temp_time[slash_index], &temp_time[slash_index + 1], strlen(&temp_time[slash_index + 1]) + 1);
+      }
+      // strcpy(g_timestamp, temp_time);
+      strncpy(g_timestamp, temp_time,12);
+      // trim(g_timestamp);
+      Serial.print("g_timestamp: ");
+      Serial.println(g_timestamp);
+      return 1;
+    } else if (*(pch + strlen(cmd)) == 'G') {   // GSM
+      cmd_index = strchr(command, 'G') - command;  // ARQCMD6G ARQCMD has 6 characters
+      strcpy(temp_time, command + cmd_index + 1);
+      slash_ptr = strchr(temp_time, '/');
+      if (slash_ptr != NULL) {
+        slash_index = slash_ptr - temp_time;
+        memmove(&temp_time[slash_index], &temp_time[slash_index + 1], strlen(&temp_time[slash_index + 1]) + 1);
+      }
+      // strcpy(g_timestamp, temp_time);
+      strncpy(g_timestamp, temp_time,12);
+      // trim(g_timestamp);
+      Serial.print("g_timestamp: ");
+      Serial.println(g_timestamp);
+      return 3;
+    } else if (*(pch + strlen(cmd)) == 'V') {  // ARQCMD6V: Current and Voltage ONLY
+      cmd_index = strchr(command, 'V') - command;
+      strcpy(temp_time, command + cmd_index + 1);
+      slash_ptr = strchr(temp_time, '/');
+      if (slash_ptr != NULL) {
+        slash_index = slash_ptr - temp_time;
+        memmove(&temp_time[slash_index], &temp_time[slash_index + 1], strlen(&temp_time[slash_index + 1]) + 1);
+      }
+      // strcpy(g_timestamp, temp_time);
+      strncpy(g_timestamp, temp_time,12);
+      // trim(g_timestamp);
+      Serial.print("g_timestamp: ");
+      Serial.println(g_timestamp);
+      return 4;
+    } else if (*(pch + strlen(cmd)) == 'C') {  //ARQCMD6C: SD card config
+      return 5;
+    } else {
+      Serial.println("wait_arq_cmd returned 0");
+      return 0;
+    }
+  }
+}
+
+
+//Group: Auxilliary Control Functions
+
+//Function: shut_down()
+// Sends a shutdown command to the 328 PowerModule.
+void shut_down() {
+  powerM.println("PM+D");
+}
+
+void columnOn() {
+  digitalWrite(COLUMN_SWITCH_PIN, HIGH);
+  digitalWrite(LED1, HIGH);
+  delay(g_turn_on_delay);
+  // arqwait_delay(g_turn_on_delay);
+}
+
+void columnOff() {
+  digitalWrite(COLUMN_SWITCH_PIN, LOW);
+  digitalWrite(LED1, LOW);
+  delay(g_turn_on_delay);
+  // arqwait_delay(1000);
+}
+
+
+void send_data(bool isDebug, char* columnData) {
+  String new_unsent;
+  int timestart = millis();
+  int timenow = millis();
+  bool OKFlag = false;
+  uint8_t send_retry_limit = 0;
+  if (isDebug == true) {
+    do {
+      timestart = millis();
+      timenow = millis();
+      while (!Serial.available() > 0) {
+        while (timenow - timestart < 9000) {
+          timenow = millis();
+        }
+        Serial.println("Time out...");
+        break;
+      }
+      if (Serial.find((char*)"OK")) {
+        OKFlag = true;
+        Serial.println("moving on");
+      } else {
+        Serial.println(columnData);
+      }
+    } while (OKFlag == false);
+  } else {
+    do {
+      Serial.print("Sending:");
+      Serial.println(columnData);
+      DATALOGGER.println(columnData);
+      timestart = millis();
+      timenow = millis();
+
+      while (!DATALOGGER.available()) {
+        while (timenow - timestart < 9000) {
+          timenow = millis();
+        }
+        DATALOGGER.println("Time out...");
+        break;
+      }
+
+      if (DATALOGGER.find((char*)"OK")) {
+        OKFlag = true;
+      } else {
+        DATALOGGER.println(columnData);
+      }
+
+      send_retry_limit++;
+      if (send_retry_limit == 3) {
+        Serial.println(F("send_retry_limit reached."));
+        unsent_log = SD.open("unsent.txt", FILE_WRITE);
+        new_unsent = columnData;
+        new_unsent.remove(0, 10);
+        if (unsent_log) {
+          unsent_log.println(new_unsent);
+          unsent_log.close();
+          Serial.println("data logged!");
+          break;
+        }
+        OKFlag = true;
+      }
+    } while (OKFlag == false);
+  }
+
+  return;
+}
+
+void send_thru_lora(bool isDebug, char* columnData) {
+  int timestart = millis();
+  int timenow = millis();
+  bool OKFlag = false;
+  uint8_t send_retry_limit = 0;
+
+  timestart = millis();
+
+  do {
+    Serial.print("Sending: ");
+    Serial.println(columnData);
+    LORA.println(columnData);
+
+    if (LORA.find((char*)"OK")) {
+      Serial.println("Received by LoRa..");
+      OKFlag = true;
+    } else {
+      delay(1000);
+      LORA.println(columnData);
+    }
+
+    send_retry_limit++;
+    if (send_retry_limit == 3) {
+      Serial.println("send_retry_limit reached.");
+      OKFlag = true;
+    }
+    timenow = millis();
+  } while (OKFlag == false && (timenow - timestart < 9000));
+  return;
+}
+
+int unsent_count() {
+  File unsent_file;
+  int unsent_counter = 0;
+  char usent_char;
+  if (SD.exists("unsent.txt")) {    unsent_file = SD.open("unsent.txt");
+    if (unsent_file) {
+      while (unsent_file.available()) {
+        usent_char = (unsent_file.read());
+        if (usent_char == '\n') {
+          unsent_counter++;
+          //Serial.print("count");
+        }
+      }
+      unsent_file.close();
+    }
+  } else {
+    unsent_counter = -1;
+  }
+  return (unsent_counter);
+}
+
+
+void send_current_voltage_thru_arq()  //for arQ only
 {
-    char temp[3];
-    int cmd = 0;
-    if (newData == true)
-    {   
-        if (strstr(receivedChars,"name:"))
-        {
-            Serial.println(strlen(receivedChars));
-            // v1 - 4 chars tapos may \n na kinukuha ng recvWithEndMarker tapos 5 sa "name:"
-            if (strlen(receivedChars) == 10)  
-            {
-                strncpy(MASTERNAME,receivedChars+5,5);
-                // Serial.println(MASTERNAME);
-            } else if (strlen(receivedChars) == 11)
-            {
-                strncpy(MASTERNAME,receivedChars+5,6);
-                // Serial.println(MASTERNAME);
-            } else 
-            {
-                Serial.println("Invalid sensor name!");
-            }
-        } else if (strstr(receivedChars,"send:"))
-        {
-            Serial.print("send:");
-        }
-        // if (strcmp(receivedChars,"send")>= 0)
-        // {
-        //     Serial.print("CMD:");
-        //     temp[0] = receivedChars[4];
-        //     temp[1] = receivedChars[5];
-        //     temp[2] = '\0';
+  static char v_test[50] = { '\0' };
+  static char v_final[50] = { '\0' };
 
-        //     Serial.println(atoi(strchr(receivedChars,'d') + 1));
-        // } 
-        // else if(strcmp(receivedChars,""))
-        // {
+  Serial.println(F("Sending current and voltage for arQ with RAIN GUAGE only"));
 
-        // } 
+  sprintf(v_test, ">>1/1#%s*m*%2.4f*%2.4f*%2.4f*%2.4f<<", g_mastername, ina219.getCurrent_mA(), ina219.getBusVoltage_V(), ina219.getCurrent_mA(), ina219.getBusVoltage_V());
 
-        /*cmd = atoi(temp);
-        Serial.print("cmd = ");
-        Serial.println(cmd);*/
+  int v_data_length = String(v_test).length() + 3;  //lenth of string to be sent plus 3 char data length
 
-        // int num1 = int(firstNum - '0');
-        // int num2 = int(secondNum - '0');
+  sprintf(v_final, "%03d", v_data_length);
+  strcat(v_final, v_test);
+  Serial.print(v_final);
 
-        // Serial.println (num1);
-        // Serial.println (num2);
-        // Serial.println (receivedChars);
+  char* token1 = strtok(v_final, "~");
 
-        delay(1000);
-        newData = false;
+  while (token1 != NULL) {
+    Serial.print("Sending ::::");
+    Serial.println(token1);
+    if (strcmp(comm_mode, "ARQ") == 0) {
+      send_data(false, token1);
+    } else {  //default
+      send_data(true, token1);
     }
-}
-
-
-/**
- * Load lib_config for given subsurface sensor
- */
-bool loadConfig(char* mastername){
-    for (int i=0; i < LIB_LOGGER_COUNT; i++)
-    {
-        if ( strstr(config_container[i].lib_mastername, mastername) )
-        {
-            CONFIG = config_container[i];
-            // Serial.print(config_container[i].lib_mastername);
-            // Serial.println(" loaded to CONFIG!");
-            return true; 
-        }
-    }
-    Serial.print("No CONFIG for:");
-    Serial.println(mastername);
-    return false;
-}
-
-void printConfig(){
-    SENSORVERSION = CONFIG.lib_sensor_version;
-    if (SENSORVERSION >= 1)
-    {
-        strncpy(MASTERNAME,CONFIG.lib_mastername,5);
-    } 
-    else if (CONFIG.lib_sensor_version == 1) 
-    {
-        strncpy(MASTERNAME,CONFIG.lib_mastername,4);
-    }
-    // check MASTERNAME
-    if (MASTERNAME[3] == 'S' || MASTERNAME[3] == 'T' || MASTERNAME[3] == 'B')
-    {
-        Serial.println(MASTERNAME);
-    }  
-    parseGids();
-    displayGIDS();
-}
-
-void parseGids(){
-    char *p;
-    char tmp[250];
-    int a = 0, b=0;
-    strncpy(tmp,CONFIG.lib_column_ids,strlen(CONFIG.lib_column_ids) + 1);
-    p = strtok(tmp,",");
-    for (b=0; b<40; b++)
-    {
-        if (p==NULL)
-        {
-            break;
-        } 
-        GIDS[0][a] = atoi(p);
-        GIDS[1][a] = b+1;
-        if(strlen(p) > 0)
-        {
-            a++;
-        }
-        p = strtok(NULL, ",");
-    }
-    if ( b == CONFIG.lib_num_of_nodes) {
-       Serial.println("Same number of nodes listed on CONFIG and count of nodes.");
-    }
-}
-
-void displayGIDS(){
-    char display[40],temp[5], temp2[3];
-    display[0] = '\0';
-    Serial.println("===============================");
-    for (int a = 0; a < CONFIG.lib_num_of_nodes; a++){
-        strncat(display,"\t", 3);
-        snprintf(temp2,3,"%02d",GIDS[1][a]);
-        snprintf(temp,5,"%04d",GIDS[0][a]);
-        strncat(display,temp2,3);
-        strncat(display,"\t",2);
-        strncat(display,temp,5);
-        Serial.println(display);
-        display[0] = '\0';
-    }
+    token1 = strtok(NULL, g_delim);
+  }
 }
