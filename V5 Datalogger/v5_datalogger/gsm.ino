@@ -92,9 +92,11 @@
 
 void send_thru_gsm(const char* messageToSend, const char* serverNumber) {
   if (!send_SMS_instance(messageToSend, serverNumber)) {
+    if (debug_flag == 0) Watchdog.reset();
     delay_millis(random(5000,10000));
     resetGSM();
     Serial.println("Retrying..");
+    if (debug_flag == 0) Watchdog.reset();
     send_SMS_instance(messageToSend, serverNumber);
   } 
 }
