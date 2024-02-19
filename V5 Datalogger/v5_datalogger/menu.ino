@@ -517,7 +517,7 @@ void getAtcommand() {
 }
 
 void printMenu() {
-  Serial.println(F(" "));
+  // Serial.println(F(" "));
   Serial.print(F("Firmware Version: "));
   Serial.println(F(firmwareVersion));
   Serial.println(F("****************************************"));

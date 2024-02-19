@@ -127,7 +127,7 @@ volatile unsigned long ringPrev = 0;
 bool getSensorDataFlag = false;
 bool debug_flag_exit = false;
 
-char firmwareVersion[9] = "2402.16";  // year . monthdate
+char firmwareVersion[9] = "2402.20";  // year . monthdate
 char station_name[6] = "MADTA";
 char Ctimestamp[13] = "";
 char command[26];
@@ -146,6 +146,7 @@ uint16_t store_rtc = 00;  // store rtc alarm
 // GSM
 char default_serverNumber[] = "09175972526";
 bool gsmPwrStat = true;
+bool runGSMInit = true;
 String tempServer, regServer;
 char _csq[10];
 char response[150];
@@ -293,27 +294,27 @@ void setup() {
   delay_millis(3000);
   enable_watchdog();
   if (get_logger_mode() == 2) {
-    Serial.println("- - - - - - - - - - - - - - - -");
+    Serial.println(F("****************************************"));
     Serial.print("Logger Version: ");
     Serial.println(get_logger_mode());
     Serial.println("Default to LoRa communication.");
-    Serial.println("- - - - - - - - - - - - - - - -");
+    Serial.println(F("****************************************"));
     bootMsg = false; //skip sending logger powerup msg
       
   } else {
     // GSM power related
-    Serial.println("- - - - - - - - - -");
+    Serial.println(F("****************************************"));
     Serial.print("Logger Version: ");
     Serial.println(get_logger_mode());
     Serial.println("Default to GSM.");
-    Serial.println("- - - - - - - - - -");
+    Serial.println(F("****************************************"));
 
-    digitalWrite(GSMPWR, HIGH);
-    delay(2500);
-    Serial.println("Turning ON GSM ");
+    // digitalWrite(GSMPWR, HIGH);
+    // delay(2500);
+    // Serial.println("Turning ON GSM ");
     flashLed(LED_BUILTIN, 10, 100);
-    Watchdog.reset();
-    gsmNetworkAutoConnect();
+    // Watchdog.reset();
+    // gsmNetworkAutoConnect();
     Watchdog.reset();
   }
   /*Enter DEBUG mode within 10 seconds*/
@@ -323,8 +324,9 @@ void setup() {
   while (serial_flag == 0) {
     if (Serial) {
       debug_flag = 1;
-      Serial.println("Debug Mode!");
-      printMenu();
+      Serial.println(F("-------------- DEBUG MODE! -------------"));
+      Serial.println(F("****************************************"));
+      // printMenu();
       digitalWrite(LED_BUILTIN, LOW);
       serial_flag = 1;
       bootMsg = false; //skip sending logger powerup msg
@@ -344,7 +346,11 @@ void setup() {
 }
 
 void loop() {
-
+  if (runGSMInit){  // single instance run to initiate gsm module
+    runGSMInit = false;
+    resetGSM();
+    if (debug_flag == 1) printMenu();
+  }
   if (bootMsg) { //for testing only
     send_thru_gsm("LOGGER POWER UP", get_serverNum_from_flashMem());        
     // if (serverALT(get_serverNum_from_flashMem()) != "NANEEEE") {
@@ -353,7 +359,6 @@ void loop() {
     // }
     bootMsg = false;
   }
-  
 
   while (debug_flag == 1) {
     getAtcommand();
@@ -361,6 +366,7 @@ void loop() {
       Serial.println("* * * * * * * * * * * * *");
       Serial.println("Exiting from DEBUG MENU.");
       Serial.println("* * * * * * * * * * * * *");
+      resetGSM();
       turn_OFF_GSM(get_gsm_power_mode());
       debug_flag = 0;
     }

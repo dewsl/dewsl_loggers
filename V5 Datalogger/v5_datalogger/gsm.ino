@@ -117,20 +117,25 @@ bool send_SMS_instance(const char* messageToSend, const char* serverNumber) {
     } 
   }
 
-
-   if (serverNumber == "") {
-    sprintf(CMGSContainer, "AT+CMGS=\"%s\"\r",default_serverNumber);
-  } else {
+  Serial.print("Sending to ");
+  sprintf(CMGSContainer,"%s", serverNumber);
+  // Serial.print(strlen(CMGSContainer));
+  if (strlen(CMGSContainer) == 13 || strlen(CMGSContainer) == 11) {
     sprintf(CMGSContainer, "AT+CMGS=\"%s\"\r",serverNumber);
+    Serial.print("'");
+    Serial.print(serverNumber);
+  } else {
+    sprintf(CMGSContainer, "AT+CMGS=\"%s\"\r",default_serverNumber);
+    Serial.print("default server number '");
+    Serial.print(default_serverNumber);
   }
 
   messageContainer[strlen(messageContainer)+1] = 0x00;
   CMGSContainer[strlen(CMGSContainer)+1] = 0x00;
 
-  Serial.print("Sending to '");
-  Serial.print(serverNumber);
+  
   Serial.print("': ");
-  Serial.println(messageToSend);
+  Serial.println(messageContainer);
 
   GSMSerial.write("AT\r");                                                                     
   if (GSMWaitResponse("OK",1000, 0)) {                                                        // Checks if GSM serial is accessible
@@ -146,6 +151,7 @@ bool send_SMS_instance(const char* messageToSend, const char* serverNumber) {
     }
     if (GSMWaitResponse("+CMGS",5000, 1)) {
       Serial.println("Message sent!");
+      flashLed(LED_BUILTIN, 3, 50);
       sentFlag = true;
     } else {
       delay_millis(5000);
@@ -475,7 +481,7 @@ bool gsmReadOK() {
   for (int i = 0; i < 100; i++)  // 50 - 500ms
   {
     if (strstr(readGSMResponse(), "OK")) {
-      // Serial.println("Read OK from GSM");
+      // Serial.println("GSM OK");
       return true;
       break;
     }
@@ -560,38 +566,98 @@ void gsmDeleteReadSmsInbox() {
 }
 
 void gsmNetworkAutoConnect() {
-  // String response;
+  if (debug_flag == 0) Watchdog.reset();
   Serial.println("Connecting GSM to network...");
   delay_millis(3000);
   Watchdog.reset();
-  for (int i = 0; i < 10; i++) {
-    if (debug_flag == 0) {
+  unsigned long initStart = millis();
+  int initTimeout = 20000;
+  bool gsmSerial = false;
+  bool GSMconfig = false;
+  bool signalCOPS = false;
+
+  while (!gsmSerial || !GSMconfig || !signalCOPS ) { 
+    if (debug_flag == 0) Watchdog.reset();
+    if (!gsmSerial) {
+      GSMSerial.flush();
+      delay_millis(1000);
+      Serial.println(F("Checking serial comms.."));
+      GSMSerial.write("ATE0\r");
+      delay_millis(500);
+      if (gsmReadOK()) gsmSerial = true;
     }
-    gsmSerialFlush();
-    GSMSerial.write("ATE0\r");
-    delay_millis(500);
-    if (gsmReadOK()) {
-      GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0;+CNMI=0,0,0,0,0\r");
-      delay_millis(400);
-      if (gsmReadOK()) {
-        GSMSerial.write("ATE+COPS?;+CSQ\r");  
-        delay_millis(500);
-        if (gsmReadOK()) {
-          Serial.println("GSM is now ready!");
-          Serial.println(" ");
-          GSMSerial.write("ATE0\r");
-          break;
-        }
-      }
-    } else {
-      Serial.print(". ");
+    if (gsmSerial && !GSMconfig && !signalCOPS) {
+      delay_millis(1000);
+      GSMSerial.flush();
+      Serial.println(F("Checking GSM config.."));
+      GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0\r");
+      delay_millis(500);
+      GSMSerial.write("AT+CNMI=0,0,0,0,0\r");
+      delay_millis(500);
+      if (gsmReadOK()) GSMconfig = true;
+    } 
+    
+    if (gsmSerial && GSMconfig && !signalCOPS) {
+      delay_millis(4000);
+      gsmSerialFlush();
+      Serial.println(F("Checking network status.."));
+      Serial.println(readGSMResponse());
+      GSMSerial.write("AT+COPS?;+CSQ\r");  
+      delay_millis(1000);
+      if (strstr(readGSMResponse(), ",\"")) {
+        signalCOPS = true;
+      } else delay_millis(2000);
     }
-    if (i == 10) {
+    if (gsmSerial && GSMconfig && signalCOPS) {
+      GSMSerial.write("AT&W\r");
       Serial.println("");
-      Serial.println("GSM module error!");
+      Serial.println(F("GSM READY"));
+      Serial.println(F("****************************************"));
+      break;
     }
-    Watchdog.reset();
+    if (millis() - initStart > initTimeout) {
+      Serial.println("GSM module timeout/error");
+      if (!gsmSerial) {
+        Serial.println("GSM_HARDWARE_SERIAL_CONNECTION_ERROR");
+      } else if (!GSMconfig) {
+        Serial.println("GSM_MODULE_ERROR");
+      } else if (!signalCOPS) {
+        Serial.println("NETWORK_OR_SIM_ERROR");
+      }
+      break;
+    }
   }
+  if (debug_flag == 0) Watchdog.reset();
+
+
+  // for (int i = 0; i < 10; i++) {
+  //   if (debug_flag == 0) {
+  //   }
+  //   gsmSerialFlush();
+  //   GSMSerial.write("ATE0\r");
+  //   delay_millis(500);
+  //   if (gsmReadOK()) {
+  //     GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0;+CNMI=0,0,0,0,0\r");
+  //     delay_millis(400);
+  //     if (gsmReadOK()) {
+  //       GSMSerial.write("ATE+COPS?;+CSQ\r");  
+  //       delay_millis(500);
+  //       if (gsmReadOK()) {
+  //         Serial.println("GSM is now ready!");
+  //         Serial.println(" ");
+  //         GSMSerial.write("ATE0\r");
+  //         break;
+  //       }
+  //     }
+  //   } else {
+  //     Serial.print(". ");
+  //   }
+  //   if (i == 10) {
+  //     Serial.println("");
+  //     Serial.println("GSM module error!");
+  //   }
+  //   if (debug_flag == 0) Watchdog.reset();
+  // }
 }
 
 void sleepGSM() {
@@ -629,48 +695,17 @@ void wakeGSM() {
  * set GSM to text mode
 */
 void resetGSM() {
-  if (debug_flag == 0) {
-    Watchdog.reset();
-  }
+  if (debug_flag == 0) Watchdog.reset();
   detachInterrupt(digitalPinToInterrupt(GSMINT));
-  int overflow_counter = 0;
-  Serial.println("GSM resetting...");
-  digitalWrite(GSMRST, LOW);
-  delay_millis(500);  //reset timing sequence min duation 105ms
-  digitalWrite(GSMRST, HIGH);
-  delay_millis(2700);  //reset timing sequence indicate 2.7s before status becomes active
-
-  for (int i = 0; i < 4; i++) {
-    if (debug_flag == 0) {
-      Watchdog.reset();
-    }
-    Serial.println("Sending AT cmd to GSM");
-    GSMSerial.write("AT\r");  //gsm initialization
-    Serial.print(". ");
-    delay_millis(1000);
-    if (gsmReadOK() == true) {
-      delay_millis(5000);
-      Serial.println("GSM reset done");
-      break;
-    }
-    if (i == 2) {
-      Serial.println("2nd reset sequence");  // not working with rev.3 (violet) boards w/o IC switch
-      digitalWrite(GSMPWR, LOW);
-      delay_millis(1000);  //wait for at least 800ms before power on
-      digitalWrite(GSMPWR, HIGH);
-      delay_millis(1000);
-    }
-    if (i == 4) {
-      Serial.println("GSM reset failed!");
-    }
-  }
-  Serial.println(" ");
+  Serial.println("Initializing GSM...");
+  digitalWrite(GSMPWR, LOW);
+  delay_millis(2000);  //wait for at least 800ms before power on
+  digitalWrite(GSMPWR, HIGH);
   delay_millis(2000);
+  gsmNetworkAutoConnect();
   REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT2; //clear interrupt flag before enabling
   attachInterrupt(digitalPinToInterrupt(GSMINT), ringISR, FALLING);
-  if (debug_flag == 0) {
-    Watchdog.reset();
-  }
+  if (debug_flag == 0) Watchdog.reset();
 }
 
 void init_gsm() {
@@ -896,8 +931,8 @@ void changeServerNumber() {
       Serial.println("Server number set to: GLOBE1 - 09175972526");
       strcpy(flashServerNumber.inputNumber, "09175972526");
     } else if (inputIs(serverNumberBuffer,"GLOBE2")) {
-      Serial.println("Server number set to: GLOBE2 - 639175388301");
-      strcpy(flashServerNumber.inputNumber, "639175388301");
+      Serial.println("Server number set to: GLOBE2 - 09175388301");
+      strcpy(flashServerNumber.inputNumber, "09175388301");
     } else if (inputIs(serverNumberBuffer,"SMART1")) {
       Serial.println("Server number set to: SMART1 - 09088125642");
       strcpy(flashServerNumber.inputNumber, "09088125642");
