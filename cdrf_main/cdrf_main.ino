@@ -764,26 +764,38 @@ int wait_arq_cmd() {
   return parse_cmd(c_serial_line);
 }
 
+// void wait_lora_cmd(char* result){
+//   char serial_line[30];
+//   char end = '\n';
+//   char rc;
+//   int counter = 0;
+//   bool newData = false;
+//   while( (LORA.available() > 0) && (newData == false) ){
+//       rc = LORA.read();
+//       if (rc != end){
+//           serial_line[counter] = rc;
+//           counter++;      
+//       } else{
+//         serial_line[counter] = '\0';
+//         newData = true;
+//       }
+//   }
+//   Serial.println(serial_line);
+//   strncpy(result,serial_line, 21); // ARQCMD6T/240216141600 = 21 chars + 1 terminating char
+// }
 void wait_lora_cmd(char* result){
-  char serial_line[30];
-  char end = '\n';
-  char rc;
-  int counter = 0;
-  bool newData = false;
-  while( (LORA.available() > 0) && (newData == false) ){
-      rc = LORA.read();
-      if (rc != end){
-          serial_line[counter] = rc;
-          counter++;      
-      } else{
-        serial_line[counter] = '\0';
-        newData = true;
-      }
-  }
-  Serial.println(serial_line);
-  strncpy(result,serial_line, 21); // ARQCMD6T/240216141600 = 21 chars + 1 terminating char
+  char c_serial_line[30];
+  while (!LORA.available())
+    ;
+  // arq_start_time = millis();  // Global variable used by arqwait_delay
+  do {
+    LORA.readBytesUntil('\n', c_serial_line, 30);
+  } while (c_serial_line[0] == '\0');
+  Serial.println(c_serial_line);
+  strncpy(result,c_serial_line,21);
+  Serial.println(result);
+  // return parse_cmd(c_serial_line);
 }
-
 
 // gawing switch case yung if else dito para readable
 int parse_cmd(char* command_string) {
