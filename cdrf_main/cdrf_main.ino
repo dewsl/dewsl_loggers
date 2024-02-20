@@ -785,7 +785,7 @@ int wait_arq_cmd() {
 // }
 void wait_lora_cmd(char* result){
   char c_serial_line[30];
-  while (!DATALOGGER.available())
+  while (!LORA.available())
     ;
   // arq_start_time = millis();  // Global variable used by arqwait_delay
   do {
