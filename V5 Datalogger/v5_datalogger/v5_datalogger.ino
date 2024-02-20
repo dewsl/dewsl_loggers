@@ -346,11 +346,12 @@ void setup() {
 }
 
 void loop() {
-  if (runGSMInit){  // single instance run to initiate gsm module
+  if (runGSMInit && (get_logger_mode() != 2)){  // single instance run to initiate gsm module
     runGSMInit = false;
     resetGSM();
-    if (debug_flag == 1) printMenu();
   }
+  if (debug_flag == 1) printMenu();
+
   if (bootMsg) { //for testing only
     send_thru_gsm("LOGGER POWER UP", get_serverNum_from_flashMem());        
     // if (serverALT(get_serverNum_from_flashMem()) != "NANEEEE") {

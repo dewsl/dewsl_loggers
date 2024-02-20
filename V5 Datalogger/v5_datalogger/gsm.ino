@@ -235,6 +235,28 @@ void process_data(char *data) {
   bool valid_OTA_command = false;
   char messageToSend[100];
   messageToSend[0] = '\0';
+
+  // tokenize response to extract OTA sender mobile number
+  // overwrites preceeding sender mobile number with no valid OTA command
+  if (strstr(data, "+CMGL")) {
+    prev_gsm_line[0] = 0x00;
+    strcat(prev_gsm_line,data);
+    prev_gsm_line[strlen(prev_gsm_line)+1] = 0x00;
+    
+    char *_ota_sender_detail = strtok(prev_gsm_line, "+,\"");
+    int ota_detail_index = 0;
+    while (_ota_sender_detail != NULL) {
+      ota_detail_index++;
+      if (ota_detail_index==3) {
+        strcpy(ota_sender, "+");
+        strcat(ota_sender, _ota_sender_detail);
+        break;
+      }
+      _ota_sender_detail = strtok(NULL,"+,\"");
+    }
+
+    ota_sender[strlen(ota_sender)+1] = 0X00;
+  }
   //REGISTER:SENSLOPE:639954645704
   if (strncmp(data, "REGISTER:SENSLOPE:", 18) == 0) {
     send_thru_gsm("Registration is no longer needed; proceed with normal OTA commands", ota_sender);
@@ -290,6 +312,8 @@ void process_data(char *data) {
   else if (strncmp(data, "RESET:", 6) == 0) {
     Serial.println("Resetting microcontroller!");
     send_thru_gsm("Resetting datalogger...", ota_sender);
+    // delay_millis(1000);
+    // send_thru_gsm(data, ota_sender);
     NVIC_SystemReset();
   }
   //SETDATETIME:SENSLOPE:[YYYY,MM,DD,HH,MM,SS,dd[0-6/m-sun],] 2021,02,23,21,22,40,1,
@@ -402,25 +426,7 @@ void process_data(char *data) {
     send_thru_gsm(messageToSend, ota_sender);
     // }
   }
-  // tokenize response to extract OTA sender mobile number
-  // overwrites preceeding sender mobile number with no valid OTA command
-  if (strstr(data, "+CMGL")) {
-    prev_gsm_line[0] = 0x00;
-    strcat(prev_gsm_line,data);
-    prev_gsm_line[strlen(prev_gsm_line)+1] = 0x00;
-    
-    char *_ota_sender_detail = strtok(prev_gsm_line, "+,\"");
-    int ota_detail_index = 0;
-    while (_ota_sender_detail != NULL) {
-      ota_detail_index++;
-      if (ota_detail_index==3) {
-        strcpy(ota_sender, _ota_sender_detail);
-        break;
-      }
-      _ota_sender_detail = strtok(NULL,"+,\"");
-    }
-    ota_sender[strlen(ota_sender)+1] = 0X00;
-  }
+
 
   // ADD OPTION FOR POWER SAVING MODE
   // ~ TURN ON/OFF GSM DURING NIGHTTIME
