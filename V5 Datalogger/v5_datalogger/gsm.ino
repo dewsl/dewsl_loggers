@@ -573,14 +573,13 @@ void gsmDeleteReadSmsInbox() {
 
 void gsmNetworkAutoConnect() {
   if (debug_flag == 0) Watchdog.reset();
-  Serial.println("Connecting GSM to network...");
-  delay_millis(3000);
-  Watchdog.reset();
+  Serial.println("Checking GSM function");
   unsigned long initStart = millis();
   int initTimeout = 20000;
   bool gsmSerial = false;
   bool GSMconfig = false;
   bool signalCOPS = false;
+  int serialFaultCount = 0;
 
   while (!gsmSerial || !GSMconfig || !signalCOPS ) { 
     if (debug_flag == 0) Watchdog.reset();
@@ -590,7 +589,11 @@ void gsmNetworkAutoConnect() {
       Serial.println(F("Checking serial comms.."));
       GSMSerial.write("ATE0\r");
       delay_millis(500);
-      if (gsmReadOK()) gsmSerial = true;
+      if (gsmReadOK()) {
+        gsmSerial = true;
+      } else {
+        serialFaultCount++;
+      }
     }
     if (gsmSerial && !GSMconfig && !signalCOPS) {
       delay_millis(1000);
@@ -621,12 +624,16 @@ void gsmNetworkAutoConnect() {
       Serial.println(F("****************************************"));
       break;
     }
+    if (serialFaultCount == 3) {
+      Serial.println("CHECK_GSM_MODULE_POWER_OR_CONNECTION");
+      break;
+    }
     if (millis() - initStart > initTimeout) {
-      Serial.println("GSM module timeout/error");
+      Serial.print("GSM MODULE ERROR: ");
       if (!gsmSerial) {
-        Serial.println("GSM_HARDWARE_SERIAL_CONNECTION_ERROR");
+        Serial.println("POWER_OR_HARDWARE_SERIAL_CONNECTION_ERROR");
       } else if (!GSMconfig) {
-        Serial.println("GSM_MODULE_ERROR");
+        Serial.println("MODULE_ERROR_UNABLE_TO_SET_PARAMETERS");
       } else if (!signalCOPS) {
         Serial.println("NETWORK_OR_SIM_ERROR");
       }
@@ -634,36 +641,6 @@ void gsmNetworkAutoConnect() {
     }
   }
   if (debug_flag == 0) Watchdog.reset();
-
-
-  // for (int i = 0; i < 10; i++) {
-  //   if (debug_flag == 0) {
-  //   }
-  //   gsmSerialFlush();
-  //   GSMSerial.write("ATE0\r");
-  //   delay_millis(500);
-  //   if (gsmReadOK()) {
-  //     GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0;+CNMI=0,0,0,0,0\r");
-  //     delay_millis(400);
-  //     if (gsmReadOK()) {
-  //       GSMSerial.write("ATE+COPS?;+CSQ\r");  
-  //       delay_millis(500);
-  //       if (gsmReadOK()) {
-  //         Serial.println("GSM is now ready!");
-  //         Serial.println(" ");
-  //         GSMSerial.write("ATE0\r");
-  //         break;
-  //       }
-  //     }
-  //   } else {
-  //     Serial.print(". ");
-  //   }
-  //   if (i == 10) {
-  //     Serial.println("");
-  //     Serial.println("GSM module error!");
-  //   }
-  //   if (debug_flag == 0) Watchdog.reset();
-  // }
 }
 
 void sleepGSM() {
@@ -705,9 +682,9 @@ void resetGSM() {
   detachInterrupt(digitalPinToInterrupt(GSMINT));
   Serial.println("Initializing GSM...");
   digitalWrite(GSMPWR, LOW);
-  delay_millis(2000);  //wait for at least 800ms before power on
+  delay_millis(1000);  //wait for at least 800ms before power on
   digitalWrite(GSMPWR, HIGH);
-  delay_millis(2000);
+  delay_millis(3000);
   gsmNetworkAutoConnect();
   REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT2; //clear interrupt flag before enabling
   attachInterrupt(digitalPinToInterrupt(GSMINT), ringISR, FALLING);

@@ -127,7 +127,7 @@ volatile unsigned long ringPrev = 0;
 bool getSensorDataFlag = false;
 bool debug_flag_exit = false;
 
-char firmwareVersion[9] = "2402.20";  // year . monthdate
+char firmwareVersion[9] = "2402.22";  // year . monthdate
 char station_name[6] = "MADTA";
 char Ctimestamp[13] = "";
 char command[26];
@@ -308,18 +308,12 @@ void setup() {
     Serial.println(get_logger_mode());
     Serial.println("Default to GSM.");
     Serial.println(F("****************************************"));
-
-    // digitalWrite(GSMPWR, HIGH);
-    // delay(2500);
-    // Serial.println("Turning ON GSM ");
     flashLed(LED_BUILTIN, 10, 100);
-    // Watchdog.reset();
-    // gsmNetworkAutoConnect();
     Watchdog.reset();
   }
-  /*Enter DEBUG mode within 10 seconds*/
+
+  /*Automatically enters DEBUG mode when USB cable is connected to PC*/
   digitalWrite(LED_BUILTIN, HIGH);
-  // Serial.println("Press 'C' to go DEBUG mode!");
   unsigned long serStart = millis();
   while (serial_flag == 0) {
     if (Serial) {
@@ -346,10 +340,13 @@ void setup() {
 }
 
 void loop() {
+  
   if (runGSMInit && (get_logger_mode() != 2)){  // single instance run to initiate gsm module
     runGSMInit = false;
+    delay_millis(500);
     resetGSM();
   }
+
   if (debug_flag == 1) printMenu();
 
   if (bootMsg) { //for testing only
@@ -364,9 +361,9 @@ void loop() {
   while (debug_flag == 1) {
     getAtcommand();
     if (debug_flag_exit) {
-      Serial.println("* * * * * * * * * * * * *");
-      Serial.println("Exiting from DEBUG MENU.");
-      Serial.println("* * * * * * * * * * * * *");
+      Serial.println(F("****************************************"));
+      Serial.println(F("Exiting DEBUG MENU..."));
+      Serial.println(F("****************************************"));
       resetGSM();
       turn_OFF_GSM(get_gsm_power_mode());
       debug_flag = 0;
@@ -495,7 +492,7 @@ void loop() {
   attachInterrupt(digitalPinToInterrupt(RTCINTPIN), wakeISR, FALLING);
 
   if (alarmResetFlag) {
-    send_thru_gsm("Resetting data logger with alarm..", get_serverNum_from_flashMem());
+    if (get_logger_mode() != 2) send_thru_gsm("Resetting data logger with alarm..", get_serverNum_from_flashMem());
     delay_millis(2000);
     NVIC_SystemReset();
   }
@@ -1297,8 +1294,10 @@ void setResetFlag(uint8_t hourAlarm, uint8_t minuteAlarm) {
   DateTime checkTime = rtc.now();
   char sendNotif[100];
   if (checkTime.hour() == hourAlarm && checkTime.minute() == minuteAlarm) {
-    sprintf(sendNotif, "Current time [%d:%d] Datalogger will reset after data collection.",checkTime.hour(), checkTime.minute() );
-    send_thru_gsm(sendNotif, get_serverNum_from_flashMem());
+    if (get_logger_mode() != 2) {
+      sprintf(sendNotif, "Current time [%d:%d] Datalogger will reset after data collection.",checkTime.hour(), checkTime.minute() );
+      send_thru_gsm(sendNotif, get_serverNum_from_flashMem());
+    }
     alarmResetFlag = true;
     return;
   } else {

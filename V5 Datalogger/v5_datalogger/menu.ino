@@ -198,11 +198,6 @@ void getAtcommand() {
     Serial.readStringUntil('\n');
   } else if (command == "I") {
     resetGSM();
-    // gsm_network_connect();
-    // init_gsm();
-    gsmNetworkAutoConnect();
-    Serial.print("CSQ: ");
-    Serial.println(readCSQ());
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
   } else if (command == "J") {
     Serial.print("Rain collector type: ");
@@ -384,6 +379,7 @@ void getAtcommand() {
   } else if (command == "EXIT" || command == "X") {
 
     Serial.println("Exiting debug mode!");
+    resetGSM();
     resetRainTips();
     setNextAlarm(alarmFromFlashMem());
     delay_millis(75);
@@ -391,6 +387,7 @@ void getAtcommand() {
 
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
     debug_flag = 0;
+
   } else if (command == "GSM_RECEIVE_TEST") {
     Serial.println("GSM receive test!");
     flashLed(LED_BUILTIN, 3, 50);
@@ -517,7 +514,8 @@ void getAtcommand() {
 }
 
 void printMenu() {
-  // Serial.println(F(" "));
+  Serial.println(F(" "));
+  Serial.println(F("****************************************"));
   Serial.print(F("Firmware Version: "));
   Serial.println(F(firmwareVersion));
   Serial.println(F("****************************************"));
