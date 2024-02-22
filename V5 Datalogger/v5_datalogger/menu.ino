@@ -425,8 +425,8 @@ void getAtcommand() {
     char send_buffer[150];
     send_buffer[0] = '\0';
     strcat(send_buffer, ">>");
-    // strncat(send_buffer, get_logger_A_from_flashMem(), 5);
-    strcat(send_buffer, "LABBDUE");
+    strncat(send_buffer, get_logger_A_from_flashMem(), 5);
+    // strcat(send_buffer, "LABBDUE");
     strcat(send_buffer, "*SAMPLE_DATA_qwertyuiopasdfghjklzxcvbnm*");
     strncat(send_buffer, Ctimestamp, 12);
     send_buffer[strlen(send_buffer) + 1] = '\0';

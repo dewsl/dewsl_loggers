@@ -485,11 +485,12 @@ void loop() {
   Watchdog.reset();
   setNextAlarm(alarmFromFlashMem());
   delay_millis(75);
-  rtc.clearINTStatus();
 
   attachInterrupt(digitalPinToInterrupt(GSMINT), ringISR, FALLING);
   attachInterrupt(digitalPinToInterrupt(RAININT), rainISR, FALLING);
   attachInterrupt(digitalPinToInterrupt(RTCINTPIN), wakeISR, FALLING);
+  
+  rtc.clearINTStatus();
 
   if (alarmResetFlag) {
     if (get_logger_mode() != 2) send_thru_gsm("Resetting data logger with alarm..", get_serverNum_from_flashMem());
