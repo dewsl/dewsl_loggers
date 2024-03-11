@@ -29,38 +29,13 @@ float accu_msl = 0.0;           //msl accumulator
 float accu_accuracy_hor = 0.0;  //hacc acuumulator
 float accu_accuracy_ver = 0.0;  //vacc accumulator
 
+/*
 char tempstr[100];
 char volt[10];
 char temp[10];
+*/
 
 unsigned long start;
-
-// /* Pin 23-Rx ; 22-Tx (UBLOX serial) */
-// Uart Serial3(&sercom3, 23, 22, SERCOM_RX_PAD_0, UART_TX_PAD_2);
-// void SERCOM2_Handler() {
-//   Serial3.IrqHandler();
-// }
-
-// Define the pin numbers for MISO and MOSI
-// #define PIN_MISO        12 // MISO: SERCOM4/PAD[0]
-// #define PIN_MOSI        10 // MOSI: SERCOM4/PAD[2]
-
-// Create a new UART instance (e.g., Serial3) using SERCOM4 -- 12 for Rx, 10 for Tx -- 22 for MISO(TX), 23 for MOSI(RX)
-// Uart Serial3(&sercom4, PIN_SPI_MOSI, PIN_SPI_MISO, SERCOM_RX_PAD_2, UART_TX_PAD_0);
-// Uart Serial3(&sercom4, PIN_SPI_MOSI, PIN_SPI_MISO, SERCOM_RX_PAD_3, UART_TX_PAD_2);
-
-// // Interrupt handler for SERCOM4
-// void SERCOM4_Handler() {
-//   Serial3.IrqHandler();
-// }
-
-// void init_sercom3() {
-//   Serial3.begin(BAUDRATE);
-  
-//   // Assign pins 10 & 12 SERCOM_ALT functionality -- 22 & 23
-//   pinPeripheral(PIN_SPI_MOSI, PIO_SERCOM_ALT);
-//   pinPeripheral(PIN_SPI_MISO, PIO_SERCOM_ALT);
-// }
 
 void init_ublox() {
   DUESerial.begin(BAUDRATE);
@@ -74,18 +49,6 @@ void init_ublox() {
   myGNSS.setHighPrecisionMode(true);  
   myGNSS.powerSaveMode(true);
   initialize_sitecode();
-  // disableNMEAMessages();
-}
-
-void disableNMEAMessages() {
-  // Serial.println("disabling....");
-  // Disable specific NMEA messages
-  myGNSS.disableNMEAMessage(UBX_NMEA_GLL, PIO_SERCOM); //Several of these are on by default on ublox board so let's disable them
-  myGNSS.disableNMEAMessage(UBX_NMEA_GSA, PIO_SERCOM);
-  myGNSS.disableNMEAMessage(UBX_NMEA_GSV, PIO_SERCOM);
-  myGNSS.disableNMEAMessage(UBX_NMEA_RMC, PIO_SERCOM);
-  myGNSS.disableNMEAMessage(UBX_NMEA_GGA, PIO_SERCOM);
-  myGNSS.disableNMEAMessage(UBX_NMEA_VTG, PIO_SERCOM);
 }
 
 byte checkRTKFixType() {
@@ -153,13 +116,161 @@ void getRTCM() {
     buflen = (bufptr - buf);     //Total bytes received in all packets
     // Serial2.write(buf, buflen); //Send data to the GPS
     DUESerial.write(buf, buflen); //Send data to the GPS
-    // Serial3.write(buf, buflen); //Send data to the GPS
     digitalWrite(LED_BUILTIN, LOW);
   }
 }
 
+
+///
 void getGNSSData(char *dataToSend, unsigned int bufsize) {
+  if (debug_flag == 0) {
+    Watchdog.reset();
+  }
+
   init_ublox(); 
+  read_flag = false;
+  rx_lora_flag = 0;
+
+  start = millis();
+
+  do {
+    getRTCM();
+  } while (((checkRTKFixType() != 2) || checkSatelliteCount() < min_sat) && ((millis() - start) < rtcm_timeout)); 
+
+  if (checkRTKFixType() == 2 && checkSatelliteCount() >= min_sat) {
+    if (rx_lora_flag == 0) {
+      readUbloxData();
+      rx_lora_flag == 1;
+      read_flag = true;
+    }
+  } else if (((checkRTKFixType() != 2) || (checkSatelliteCount() < min_sat)) && ((millis() - start) >= rtcm_timeout)) {
+    Serial.println("Unable to obtain fix or no. of satellites reqd. not met");
+    noGNSSDataAcquired();     
+    rx_lora_flag == 1;
+    read_flag = true;
+  } 
+
+  if (read_flag = true) {
+    read_flag = false;
+    rx_lora_flag == 0;
+
+    readTimeStamp();
+    strncat(dataToSend, "*", 2);
+    strncat(dataToSend, Ctimestamp, 13);
+
+    if ((get_logger_mode() == 7) || (get_logger_mode() == 9)) {
+      /*
+      * Remove 1st and 2nd character data in string
+      * Not needed in GSM mode
+      */
+      for (byte i = 0; i < strlen(dataToSend); i++) {
+        dataToSend[i] = dataToSend[i + 2];
+      }
+    }
+
+  d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
+  accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
+  accu_count = 0;
+  }
+
+  DUESerial.end();
+}
+
+void readUbloxData() {
+  memset(dataToSend, '\0', sizeof(dataToSend));
+  memset(voltMessage, '\0', sizeof(voltMessage));
+
+  byte rtk_fixtype = checkRTKFixType();
+  int sat_num = checkSatelliteCount();
+
+  char tempstr[100];
+  char volt[10];
+  char temp[10];
+
+  snprintf(volt, sizeof volt, "%.2f", readBatteryVoltage(10));
+  snprintf(temp, sizeof temp, "%.2f", readTemp());
+
+  for (int i = 1; i <= ave_count; i++) {
+    if ((millis() - start) < rtcm_timeout) {
+      getRTCM();
+
+      // First, let's collect the position data
+      int32_t latitude = myGNSS.getHighResLatitude();
+      int8_t latitudeHp = myGNSS.getHighResLatitudeHp();
+      int32_t longitude = myGNSS.getHighResLongitude();
+      int8_t longitudeHp = myGNSS.getHighResLongitudeHp();
+      int32_t msl = myGNSS.getMeanSeaLevel();
+      int8_t mslHp = myGNSS.getMeanSeaLevelHp();
+      uint32_t hor_acc = myGNSS.getHorizontalAccuracy();
+      uint32_t ver_acc = myGNSS.getVerticalAccuracy();
+
+      // Assemble the high precision latitude and longitude
+      d_lat = ((double)latitude) / 10000000.0; // Convert latitude from degrees * 10^-7 to degrees
+      d_lat += ((double)latitudeHp) / 1000000000.0; // Now add the high resolution component (degrees * 10^-9 )
+      d_lon = ((double)longitude) / 10000000.0; // Convert longitude from degrees * 10^-7 to degrees
+      d_lon += ((double)longitudeHp) / 1000000000.0; // Now add the high resolution component (degrees * 10^-9 )
+
+      // Calculate the height above mean sea level in mm * 10^-1
+      f_msl = (msl * 10) + mslHp;  // Now convert to m
+      f_msl = f_msl / 10000.0; // Convert from mm * 10^-1 to m
+
+      // Convert the accuracy (mm * 10^-1) to a float
+      f_accuracy_hor = hor_acc / 10000.0; // Convert from mm * 10^-1 to m
+      f_accuracy_ver = ver_acc / 10000.0; // Convert from mm * 10^-1 to m
+
+      if ((checkHorizontalAccuracy() == 141 && checkVerticalAccuracy() <= 141)) {
+        // Accumulation
+        accu_lat += d_lat;
+        accu_lon += d_lon;
+        accu_msl += f_msl;
+        accu_accuracy_hor += f_accuracy_hor;
+        accu_accuracy_ver += f_accuracy_ver;
+        accu_count++;
+        Serial.print("accu_count: ");
+        Serial.println(accu_count);
+      } else {
+        i--; //loop until hacc&vacc conditions are satisfied or until timeout reached
+        Serial.print("iter_count: "); Serial.println(i);
+        getRTCM();
+      }
+    } else if ((millis() - start) >= rtcm_timeout) {
+      Serial.println("Timeout reached!");
+      break;
+    }
+  }
+
+  // Averaging
+  d_lat = accu_lat / accu_count; 
+  d_lon = accu_lon / accu_count;
+  f_msl = accu_msl / accu_count; 
+  f_accuracy_hor = accu_accuracy_hor / accu_count;
+  f_accuracy_ver = accu_accuracy_ver / accu_count;
+
+  if ((d_lat > 0) || (d_lon > 0)) {
+    sprintf(tempstr, ">>%s:%d,%.9f,%.9f,%.4f,%.4f,%.4f,%d", sitecode, rtk_fixtype, d_lat, d_lon, f_accuracy_hor, f_accuracy_ver, f_msl, sat_num);
+    strncpy(dataToSend, tempstr, strlen(tempstr) + 1);
+    strncat(dataToSend, ",", 2);
+    strncat(dataToSend, temp, sizeof(temp));
+    strncat(dataToSend, ",", 2);
+    strncat(dataToSend, volt, sizeof(volt)); 
+    Serial.print("data to send: "); 
+    Serial.println(dataToSend);
+  } else {
+    noGNSSDataAcquired();
+  }
+}
+///////////////////////////////////////////////
+
+/*
+void getGNSSData(char *dataToSend, unsigned int bufsize) {
+  if (debug_flag == 0) {
+    Watchdog.reset();
+  }
+
+  init_ublox(); 
+  read_flag = false;
+  rx_lora_flag = 0;
+
   start = millis();
 
   do {
@@ -167,79 +278,41 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
   } while (((checkRTKFixType() != 2) || checkSatelliteCount() < min_sat) && ((millis() - start) < rtcm_timeout));
 
   if (checkRTKFixType() == 2 && checkSatelliteCount() >= min_sat) {
-    if (!rx_lora_flag) {
+    if (rx_lora_flag == 0) {
       processGNSSData(dataToSend);
-      rx_lora_flag = true;
+      rx_lora_flag == 1;
       read_flag = true;
     }
   } else if (((checkRTKFixType() != 2) || (checkSatelliteCount() < min_sat)) && ((millis() - start) >= rtcm_timeout)) {
     Serial.println("Unable to obtain fix or number of satellites required not met");
     noGNSSDataAcquired();
-    prepareVoltMessage();
-    rx_lora_flag = true;
+    // prepareVoltMessage();
+    rx_lora_flag == 1;
     read_flag = true;
   }
 
   if (read_flag == true) {
     read_flag = false;
-    rx_lora_flag = false;
+    rx_lora_flag == 0;
 
     readTimeStamp();
     strncat(dataToSend, "*", 2);
     strncat(dataToSend, Ctimestamp, 13);
 
-    // if (get_logger_mode() == 7) { 
-    //   send_message_segments(dataToSend);
-    //   delay(500);
-    //   send_message_segments(voltMessage); // End-of-String
-    // } else if (get_logger_mode() == 8){
-    //   send_thru_lora(dataToSend);
-    //   delay(1000);
-    //   send_thru_lora(voltMessage); // End-of-String
-    // }
-
-    if (get_logger_mode() == 7) {
-    /**
-    * Remove 1st and 2nd character data in string
-    * Not needed in GSM mode
-    */
+    if ((get_logger_mode() == 7) || (get_logger_mode() == 9)) {
+      // Remove 1st and 2nd character data in string. Not needed in GSM mode
       for (byte i = 0; i < strlen(dataToSend); i++) {
         dataToSend[i] = dataToSend[i + 2];
       }
-
-      GSMSerial.begin(GSMBAUDRATE);
-      resetGSM();
-      gsmNetworkAutoConnect();
-
-      if (gsmRingFlag) {
-      // check sms commands
-      // flashLed(LED_BUILTIN, 2, 100);
-      // send_thru_gsm("OTA CALL RESET", get_serverNum_from_flashMem());        //for testing only
-        gsmRingFlag = false;
-        Watchdog.reset();
-        delay_millis(1000);
-        turn_ON_GSM(get_gsm_power_mode());
-        Watchdog.reset();
-        digitalWrite(LED_BUILTIN, HIGH);
-        GSMSerial.write("AT+CMGL=\"ALL\"\r");
-        delay_millis(300);
-        while (GSMSerial.available() > 0) {
-          processIncomingByte(GSMSerial.read(), 0);
-        }
-        Watchdog.reset();
-        turn_OFF_GSM(get_gsm_power_mode());
-        Watchdog.reset();
-        gsmDeleteReadSmsInbox();
-        Watchdog.reset();
-        attachInterrupt(digitalPinToInterrupt(GSMINT), ringISR, FALLING);
-        digitalWrite(LED_BUILTIN, LOW);
-        Watchdog.reset();
     }
 
-      turn_ON_GSM(get_gsm_power_mode());
-    }
+    d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
+    accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
+    accu_count = 0;
   }
+  DUESerial.end();
 }
+
 
 void processGNSSData(char *dataToSend) {
   memset(dataToSend, '\0', sizeof(dataToSend));
@@ -248,8 +321,8 @@ void processGNSSData(char *dataToSend) {
   snprintf(volt, sizeof volt, "%.2f", readBatteryVoltage(10));
   snprintf(temp, sizeof temp, "%.2f", readTemp());
 
-  if ((millis() - start) < rtcm_timeout) {
-    for (int i = 1; i <= ave_count; i++) {
+  for (int i = 1; i <= ave_count; i++) {
+    if ((millis() - start) < rtcm_timeout) {
       getRTCM();
       getPositionData();
 
@@ -258,11 +331,12 @@ void processGNSSData(char *dataToSend) {
       } else {
         i--;
         getRTCM();
-      }
+      } 
+    } else if ((millis() - start) >= rtcm_timeout) {
+      Serial.println("Timeout reached!");
+      break;
     }
-  } else {
-    Serial.println("Timeout reached!");
-  }
+  } 
   
   averagePositionData();
 
@@ -272,7 +346,7 @@ void processGNSSData(char *dataToSend) {
     noGNSSDataAcquired();
   }
 
-  prepareVoltMessage();
+  // prepareVoltMessage();
 }
 
 void getPositionData() {
@@ -340,6 +414,7 @@ void prepareVoltMessage() {
   Serial.print("voltage data message: "); 
   Serial.println(voltMessage);
 }
+*/
 
 void noGNSSDataAcquired() {
   memset(dataToSend, '\0', sizeof(dataToSend));
