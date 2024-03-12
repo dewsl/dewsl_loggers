@@ -12,22 +12,24 @@ int ave_count = 12;
 bool read_flag = false;
 uint8_t rx_lora_flag = 0;
 
+/*
 // Defines storage for the lat and lon as double
-double d_lat; // latitude
-double d_lon; // longitude
+double d_lat = 0.0; // latitude
+double d_lon = 0.0; // longitude
 
 double accu_lat = 0.0; // latitude accumulator
 double accu_lon = 0.0; // longitude accumulator
 int accu_count = 0;
 
 // Now define float storage for the heights and accuracy
-float f_msl;
-float f_accuracy_hor;
-float f_accuracy_ver;
+float f_msl = 0.0;
+float f_accuracy_hor = 0.0;
+float f_accuracy_ver = 0.0;
 
 float accu_msl = 0.0;           //msl accumulator
 float accu_accuracy_hor = 0.0;  //hacc acuumulator
 float accu_accuracy_ver = 0.0;  //vacc accumulator
+*/
 
 /*
 char tempstr[100];
@@ -40,6 +42,7 @@ unsigned long start;
 void init_ublox() {
   DUESerial.begin(BAUDRATE);
   Wire.begin();
+  Watchdog.reset();
   if (myGNSS.begin(Wire) == false) {
     Serial.println(F("u-blox GNSS not detected at default I2C address. Please check wiring. Freezing."));
     while (1);
@@ -49,6 +52,7 @@ void init_ublox() {
   myGNSS.setHighPrecisionMode(true);  
   myGNSS.powerSaveMode(true);
   initialize_sitecode();
+  Watchdog.reset();
 }
 
 byte checkRTKFixType() {
@@ -134,17 +138,21 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
   start = millis();
 
   do {
+    Watchdog.reset();
     getRTCM();
   } while (((checkRTKFixType() != 2) || checkSatelliteCount() < min_sat) && ((millis() - start) < rtcm_timeout)); 
 
   if (checkRTKFixType() == 2 && checkSatelliteCount() >= min_sat) {
     if (rx_lora_flag == 0) {
+      Watchdog.reset();
       readUbloxData();
+      Watchdog.reset();
       rx_lora_flag == 1;
       read_flag = true;
     }
   } else if (((checkRTKFixType() != 2) || (checkSatelliteCount() < min_sat)) && ((millis() - start) >= rtcm_timeout)) {
     Serial.println("Unable to obtain fix or no. of satellites reqd. not met");
+    Watchdog.reset();
     noGNSSDataAcquired();     
     rx_lora_flag == 1;
     read_flag = true;
@@ -157,6 +165,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     readTimeStamp();
     strncat(dataToSend, "*", 2);
     strncat(dataToSend, Ctimestamp, 13);
+    Watchdog.reset();
 
     if ((get_logger_mode() == 7) || (get_logger_mode() == 9)) {
       /*
@@ -168,20 +177,38 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
       }
     }
 
-  d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
-  accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
-  accu_count = 0;
+  // Watchdog.reset();
+  // d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
+  // accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
+  // accu_count = 0;
+  // Watchdog.reset();
   }
-
-  DUESerial.end();
 }
 
 void readUbloxData() {
   memset(dataToSend, '\0', sizeof(dataToSend));
   memset(voltMessage, '\0', sizeof(voltMessage));
+  Watchdog.reset();
 
   byte rtk_fixtype = checkRTKFixType();
   int sat_num = checkSatelliteCount();
+
+  // Defines storage for the lat and lon as double
+  double d_lat = 0.0; // latitude
+  double d_lon = 0.0; // longitude
+
+  double accu_lat = 0.0; // latitude accumulator
+  double accu_lon = 0.0; // longitude accumulator
+  int accu_count = 0;
+
+  // Now define float storage for the heights and accuracy
+  float f_msl = 0.0;
+  float f_accuracy_hor = 0.0;
+  float f_accuracy_ver = 0.0;
+
+  float accu_msl = 0.0;           //msl accumulator
+  float accu_accuracy_hor = 0.0;  //hacc acuumulator
+  float accu_accuracy_ver = 0.0;  //vacc accumulator
 
   char tempstr[100];
   char volt[10];
@@ -189,9 +216,11 @@ void readUbloxData() {
 
   snprintf(volt, sizeof volt, "%.2f", readBatteryVoltage(10));
   snprintf(temp, sizeof temp, "%.2f", readTemp());
+  Watchdog.reset();
 
   for (int i = 1; i <= ave_count; i++) {
     if ((millis() - start) < rtcm_timeout) {
+      Watchdog.reset();
       getRTCM();
 
       // First, let's collect the position data
@@ -220,6 +249,7 @@ void readUbloxData() {
 
       if ((checkHorizontalAccuracy() == 141 && checkVerticalAccuracy() <= 141)) {
         // Accumulation
+        Watchdog.reset();
         accu_lat += d_lat;
         accu_lon += d_lon;
         accu_msl += f_msl;
@@ -228,36 +258,51 @@ void readUbloxData() {
         accu_count++;
         Serial.print("accu_count: ");
         Serial.println(accu_count);
+        Watchdog.reset();
       } else {
+        Watchdog.reset();
         i--; //loop until hacc&vacc conditions are satisfied or until timeout reached
         Serial.print("iter_count: "); Serial.println(i);
+        Watchdog.reset();
         getRTCM();
       }
     } else if ((millis() - start) >= rtcm_timeout) {
+      Watchdog.reset();
       Serial.println("Timeout reached!");
       break;
     }
   }
 
   // Averaging
+  Watchdog.reset();
   d_lat = accu_lat / accu_count; 
   d_lon = accu_lon / accu_count;
   f_msl = accu_msl / accu_count; 
   f_accuracy_hor = accu_accuracy_hor / accu_count;
   f_accuracy_ver = accu_accuracy_ver / accu_count;
+  Watchdog.reset();
 
   if ((d_lat > 0) || (d_lon > 0)) {
+    Watchdog.reset();
     sprintf(tempstr, ">>%s:%d,%.9f,%.9f,%.4f,%.4f,%.4f,%d", sitecode, rtk_fixtype, d_lat, d_lon, f_accuracy_hor, f_accuracy_ver, f_msl, sat_num);
     strncpy(dataToSend, tempstr, strlen(tempstr) + 1);
     strncat(dataToSend, ",", 2);
     strncat(dataToSend, temp, sizeof(temp));
     strncat(dataToSend, ",", 2);
     strncat(dataToSend, volt, sizeof(volt)); 
+    Watchdog.reset();
     Serial.print("data to send: "); 
     Serial.println(dataToSend);
   } else {
+    Watchdog.reset();
     noGNSSDataAcquired();
   }
+  
+  Watchdog.reset();
+  d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
+  accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
+  accu_count = 0;
+  Watchdog.reset();
 }
 ///////////////////////////////////////////////
 
