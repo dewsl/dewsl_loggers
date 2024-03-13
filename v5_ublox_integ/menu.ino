@@ -1012,6 +1012,43 @@ void inputLoggerNames() {
       // inputLoggerD.toCharArray(loggerName.sensorD, 6);
       flashLoggerName.write(loggerName);
     }
+  } else if (get_logger_mode() == 9) {
+    Serial.print("Input name of GATEWAY: ");
+    while (!Serial.available()) {
+      if (timeOutExit(startHere, DEBUGTIMEOUT)) {
+        debug_flag_exit = true;
+        break;
+      }
+    }
+    if (Serial.available()) {
+      String inputLoggerA = Serial.readStringUntil('\n');
+      Serial.println(inputLoggerA);
+      Serial.print("Input name of SENSOR (GNSS): ");
+      String inputLoggerB = Serial.readStringUntil('\n');
+      Serial.println(inputLoggerB);
+
+      inputLoggerA.trim();
+      inputLoggerB.trim();
+
+      if (inputLoggerA.length() == 4) {
+        inputLoggerA.toCharArray(loggerName.sensorA, 6);
+        loggerName.sensorA[5] = '\0';
+      } else {
+        inputLoggerA.toCharArray(loggerName.sensorA, 6);
+        loggerName.sensorA[6] = '\0';
+      }
+      if (inputLoggerB.length() == 4) {
+        inputLoggerB.toCharArray(loggerName.sensorB, 6);
+        loggerName.sensorB[5] = '\0';
+      } else {
+        inputLoggerB.toCharArray(loggerName.sensorB, 6);
+        loggerName.sensorB[6] = '\0';
+      }
+
+      // inputLoggerA.toCharArray(loggerName.sensorA, 6);
+      // inputLoggerB.toCharArray(loggerName.sensorB, 6);
+      flashLoggerName.write(loggerName);
+    }
   } else if (get_logger_mode() == 13) {
     Serial.print("Input name of GATEWAY: ");
     while (!Serial.available()) {
