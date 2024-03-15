@@ -11,32 +11,6 @@ int ave_count = 12;
 
 bool read_flag = false;
 uint8_t rx_lora_flag = 0;
-
-/*
-// Defines storage for the lat and lon as double
-double d_lat = 0.0; // latitude
-double d_lon = 0.0; // longitude
-
-double accu_lat = 0.0; // latitude accumulator
-double accu_lon = 0.0; // longitude accumulator
-int accu_count = 0;
-
-// Now define float storage for the heights and accuracy
-float f_msl = 0.0;
-float f_accuracy_hor = 0.0;
-float f_accuracy_ver = 0.0;
-
-float accu_msl = 0.0;           //msl accumulator
-float accu_accuracy_hor = 0.0;  //hacc acuumulator
-float accu_accuracy_ver = 0.0;  //vacc accumulator
-*/
-
-/*
-char tempstr[100];
-char volt[10];
-char temp[10];
-*/
-
 unsigned long start;
 
 void init_ublox() {
@@ -118,14 +92,11 @@ void getRTCM() {
       Serial.println("Receive failed");
     }
     buflen = (bufptr - buf);     //Total bytes received in all packets
-    // Serial2.write(buf, buflen); //Send data to the GPS
     DUESerial.write(buf, buflen); //Send data to the GPS
     digitalWrite(LED_BUILTIN, LOW);
   }
 }
 
-
-///
 void getGNSSData(char *dataToSend, unsigned int bufsize) {
   if (debug_flag == 0) {
     Watchdog.reset();
@@ -134,6 +105,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
   init_ublox(); 
   read_flag = false;
   rx_lora_flag = 0;
+  Watchdog.reset();
 
   start = millis();
 
@@ -156,9 +128,11 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     noGNSSDataAcquired();     
     rx_lora_flag == 1;
     read_flag = true;
+    Watchdog.reset();
   } 
 
   if (read_flag = true) {
+    Watchdog.reset();
     read_flag = false;
     rx_lora_flag == 0;
 
@@ -168,26 +142,25 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     Watchdog.reset();
 
     if ((get_logger_mode() == 7) || (get_logger_mode() == 9)) {
-      /*
-      * Remove 1st and 2nd character data in string
-      * Not needed in GSM mode
-      */
+      //Remove 1st and 2nd character data in string. Not needed in GSM mode
       for (byte i = 0; i < strlen(dataToSend); i++) {
         dataToSend[i] = dataToSend[i + 2];
       }
     }
-
-  // Watchdog.reset();
-  // d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
-  // accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
-  // accu_count = 0;
-  // Watchdog.reset();
+    Watchdog.reset();
   }
 }
 
 void readUbloxData() {
-  memset(dataToSend, '\0', sizeof(dataToSend));
-  memset(voltMessage, '\0', sizeof(voltMessage));
+  Watchdog.reset();
+  int j = 0;
+  for (j = 0; j < 200; j++) {
+    dataToSend[j] = (uint8_t)'0';
+  }
+  dataToSend[j] = (uint8_t)'\0';
+
+  // memset(dataToSend, '\0', sizeof(dataToSend));
+  // memset(voltMessage, '\0', sizeof(voltMessage));
   Watchdog.reset();
 
   byte rtk_fixtype = checkRTKFixType();
@@ -246,6 +219,7 @@ void readUbloxData() {
       // Convert the accuracy (mm * 10^-1) to a float
       f_accuracy_hor = hor_acc / 10000.0; // Convert from mm * 10^-1 to m
       f_accuracy_ver = ver_acc / 10000.0; // Convert from mm * 10^-1 to m
+      Watchdog.reset();
 
       if ((checkHorizontalAccuracy() == 141 && checkVerticalAccuracy() <= 141)) {
         // Accumulation
@@ -262,7 +236,8 @@ void readUbloxData() {
       } else {
         Watchdog.reset();
         i--; //loop until hacc&vacc conditions are satisfied or until timeout reached
-        Serial.print("iter_count: "); Serial.println(i);
+        Serial.print("iter_count: "); 
+        Serial.println(i);
         Watchdog.reset();
         getRTCM();
       }
@@ -304,162 +279,6 @@ void readUbloxData() {
   accu_count = 0;
   Watchdog.reset();
 }
-///////////////////////////////////////////////
-
-/*
-void getGNSSData(char *dataToSend, unsigned int bufsize) {
-  if (debug_flag == 0) {
-    Watchdog.reset();
-  }
-
-  init_ublox(); 
-  read_flag = false;
-  rx_lora_flag = 0;
-
-  start = millis();
-
-  do {
-    getRTCM();
-  } while (((checkRTKFixType() != 2) || checkSatelliteCount() < min_sat) && ((millis() - start) < rtcm_timeout));
-
-  if (checkRTKFixType() == 2 && checkSatelliteCount() >= min_sat) {
-    if (rx_lora_flag == 0) {
-      processGNSSData(dataToSend);
-      rx_lora_flag == 1;
-      read_flag = true;
-    }
-  } else if (((checkRTKFixType() != 2) || (checkSatelliteCount() < min_sat)) && ((millis() - start) >= rtcm_timeout)) {
-    Serial.println("Unable to obtain fix or number of satellites required not met");
-    noGNSSDataAcquired();
-    // prepareVoltMessage();
-    rx_lora_flag == 1;
-    read_flag = true;
-  }
-
-  if (read_flag == true) {
-    read_flag = false;
-    rx_lora_flag == 0;
-
-    readTimeStamp();
-    strncat(dataToSend, "*", 2);
-    strncat(dataToSend, Ctimestamp, 13);
-
-    if ((get_logger_mode() == 7) || (get_logger_mode() == 9)) {
-      // Remove 1st and 2nd character data in string. Not needed in GSM mode
-      for (byte i = 0; i < strlen(dataToSend); i++) {
-        dataToSend[i] = dataToSend[i + 2];
-      }
-    }
-
-    d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
-    accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
-    accu_count = 0;
-  }
-  DUESerial.end();
-}
-
-
-void processGNSSData(char *dataToSend) {
-  memset(dataToSend, '\0', sizeof(dataToSend));
-  memset(voltMessage, '\0', sizeof(voltMessage));
-
-  snprintf(volt, sizeof volt, "%.2f", readBatteryVoltage(10));
-  snprintf(temp, sizeof temp, "%.2f", readTemp());
-
-  for (int i = 1; i <= ave_count; i++) {
-    if ((millis() - start) < rtcm_timeout) {
-      getRTCM();
-      getPositionData();
-
-      if ((checkHorizontalAccuracy() == 141 && checkVerticalAccuracy() <= 141)) {
-        accumulatePositionData();
-      } else {
-        i--;
-        getRTCM();
-      } 
-    } else if ((millis() - start) >= rtcm_timeout) {
-      Serial.println("Timeout reached!");
-      break;
-    }
-  } 
-  
-  averagePositionData();
-
-  if ((d_lat > 0) || (d_lon > 0)){
-    prepareGNSSDataString();
-  } else {
-    noGNSSDataAcquired();
-  }
-
-  // prepareVoltMessage();
-}
-
-void getPositionData() {
-  int32_t latitude = myGNSS.getHighResLatitude();
-  int8_t latitudeHp = myGNSS.getHighResLatitudeHp();
-  int32_t longitude = myGNSS.getHighResLongitude();
-  int8_t longitudeHp = myGNSS.getHighResLongitudeHp();
-  int32_t msl = myGNSS.getMeanSeaLevel();
-  int8_t mslHp = myGNSS.getMeanSeaLevelHp();
-  uint32_t hor_acc = myGNSS.getHorizontalAccuracy();
-  uint32_t ver_acc = myGNSS.getVerticalAccuracy();
-
-  // Assemble the high precision latitude and longitude
-  d_lat = ((double)latitude) / 10000000.0 + ((double)latitudeHp) / 1000000000.0;
-  d_lon = ((double)longitude) / 10000000.0 + ((double)longitudeHp) / 1000000000.0;
-
-  // Calculate the height above mean sea level in meters
-  f_msl = (msl * 10 + mslHp) / 10000.0;
-
-  // Convert the accuracy (mm * 10^-1) to a float
-  f_accuracy_hor = hor_acc / 10000.0;
-  f_accuracy_ver = ver_acc / 10000.0;
-}
-
-void accumulatePositionData() {
-  accu_lat += d_lat;
-  accu_lon += d_lon;
-  accu_msl += f_msl;
-  accu_accuracy_hor += f_accuracy_hor;
-  accu_accuracy_ver += f_accuracy_ver;
-  accu_count++;
-
-  Serial.print("accu_count: ");
-  Serial.println(accu_count);
-}
-
-void averagePositionData() {
-  d_lat = accu_lat / accu_count; 
-  d_lon = accu_lon / accu_count;
-  f_msl = accu_msl / accu_count; 
-  f_accuracy_hor = accu_accuracy_hor / accu_count;
-  f_accuracy_ver = accu_accuracy_ver / accu_count;
-}
-
-void prepareGNSSDataString() {
-  byte rtk_fixtype = checkRTKFixType();
-  int sat_num = checkSatelliteCount();
-
-  sprintf(tempstr, ">>%s:%d,%.9f,%.9f,%.4f,%.4f,%.4f,%d", sitecode, rtk_fixtype, d_lat, d_lon, f_accuracy_hor, f_accuracy_ver, f_msl, sat_num);
-  strncpy(dataToSend, tempstr, strlen(tempstr) + 1);
-  strncat(dataToSend, ",", 2);
-  strncat(dataToSend, temp, sizeof(temp));
-  strncat(dataToSend, ",", 2);
-  strncat(dataToSend, volt, sizeof(volt)); 
-  Serial.print("data to send: "); 
-  Serial.println(dataToSend);
-}
-
-void prepareVoltMessage() {
-  memset(voltMessage, '\0', sizeof(voltMessage));
-
-  snprintf(volt, sizeof(volt), "%.2f", readBatteryVoltage(10));
-  sprintf(voltMessage, "%s*VOLT:", sitecode);
-  strncat(voltMessage, volt, sizeof(volt));
-  Serial.print("voltage data message: "); 
-  Serial.println(voltMessage);
-}
-*/
 
 void noGNSSDataAcquired() {
   memset(dataToSend, '\0', sizeof(dataToSend));

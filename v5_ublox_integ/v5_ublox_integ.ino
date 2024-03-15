@@ -185,12 +185,6 @@ void SERCOM1_Handler() {
   Serial2.IrqHandler();
 }
 
-// // Pin 22 for MISO(TX), 23 for MOSI(RX)
-// Uart Serial3(&sercom4, PIN_SPI_MOSI, PIN_SPI_MISO, SERCOM_RX_PAD_2, UART_TX_PAD_0);
-// void SERCOM4_Handler() {
-//   Serial3.IrqHandler();
-// }
-
 typedef struct
 {
   boolean valid;
@@ -262,15 +256,10 @@ void setup() {
   Serial.begin(BAUDRATE);
   DUESerial.begin(DUEBAUD);
   GSMSerial.begin(GSMBAUDRATE);
-  // Serial3.begin(BAUDRATE);
 
   /* Assign pins 10 & 11 UART SERCOM functionality */
   pinPeripheral(10, PIO_SERCOM);
   pinPeripheral(11, PIO_SERCOM);
-
-  // // Assign pins 22 & 23 SERCOM_ALT functionality
-  // pinPeripheral(PIN_SPI_MOSI, PIO_SERCOM_ALT);
-  // pinPeripheral(PIN_SPI_MISO, PIO_SERCOM_ALT);
 
   Wire.begin();
   rtc.begin();
