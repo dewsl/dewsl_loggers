@@ -52,51 +52,66 @@ void getAtcommand() {
 
     if (get_logger_mode() == 0) {
       // default arQ like sending
+      turn_ON_due(get_logger_mode());
+      get_Due_Data(1, get_serverNum_from_flashMem());
+      turn_OFF_due(get_logger_mode());
       turn_ON_GSM(get_gsm_power_mode());
       send_rain_data(0);
-      get_Due_Data(1, get_serverNum_from_flashMem());
+      send_message_segments(sending_stack);
       turn_OFF_GSM(get_gsm_power_mode());
+      
     } else if (get_logger_mode() == 1) {
       // arQ + 1 LoRa receiver
       receive_lora_data(1);
-      if (gsmPwrStat) {
-        turn_ON_GSM(get_gsm_power_mode());
-      }
+      turn_ON_due(get_logger_mode());
       get_Due_Data(1, get_serverNum_from_flashMem());
+      turn_OFF_due(get_logger_mode());
+      turn_ON_GSM(get_gsm_power_mode());
+      send_message_segments(sending_stack);
       send_rain_data(0);
-      if (gsmPwrStat) {
-        turn_OFF_GSM(get_gsm_power_mode());
-      }
-
+      turn_OFF_GSM(get_gsm_power_mode());
+      
     } else if (get_logger_mode() == 2) {
       // LoRa transmitter of version 5 datalogger
+      turn_ON_due(get_logger_mode());
       get_Due_Data(2, get_serverNum_from_flashMem());
+      turn_OFF_due(get_logger_mode());
+      send_message_segments(sending_stack);
+      send_thru_lora(read_batt_vol(get_calib_param()));
+
     } else if (get_logger_mode() == 3) {
       // only one trasmitter
+      
+      receive_lora_data(3);
       turn_ON_GSM(get_gsm_power_mode());
       send_rain_data(0);
-      receive_lora_data(3);
+      send_message_segments(sending_stack);
       turn_OFF_GSM(get_gsm_power_mode());
 
     } else if (get_logger_mode() == 4) {
       // Two transmitter
+      receive_lora_data(4);
       turn_ON_GSM(get_gsm_power_mode());
       send_rain_data(0);
-      receive_lora_data(4);
+      send_message_segments(sending_stack);
       turn_OFF_GSM(get_gsm_power_mode());
+
     } else if (get_logger_mode() == 5) {
       // Three transmitter
+      receive_lora_data(5);
       turn_ON_GSM(get_gsm_power_mode());
       send_rain_data(0);
-      receive_lora_data(5);
+      send_message_segments(sending_stack);
       turn_OFF_GSM(get_gsm_power_mode());
+
     } else if (get_logger_mode() == 6) {
       // Sends rain gauge data ONLY
       turn_ON_GSM(get_gsm_power_mode());
       send_rain_data(0);
-      delay_millis(1000);
+      // delay_millis(500);
       turn_OFF_GSM(get_gsm_power_mode());
     }
+    
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
   } else if (command == "B") {
     Serial.print("Rain tips: ");
@@ -113,6 +128,7 @@ void getAtcommand() {
     Serial.println(" mm");
     resetRainTips();
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
+
   } else if (command == "C") {
     printMenu();
   } else if (command == "D") {
@@ -243,7 +259,11 @@ void getAtcommand() {
       gsmCmd.toCharArray(specialMsg, sizeof(specialMsg));
       GSMSerial.write("AT\r");
       delay_millis(300);
-      send_thru_gsm(specialMsg, get_serverNum_from_flashMem());
+      if (get_logger_mode() == 2) {
+        send_thru_lora(specialMsg);
+      } else {
+        send_thru_gsm(specialMsg, get_serverNum_from_flashMem());
+      }
       // if (serverALT(get_serverNum_from_flashMem()) != "NANEEEE") {
       //   Serial.print("Sending to alternate number: ");
       //   send_thru_gsm(specialMsg, serverALT(get_serverNum_from_flashMem()));
@@ -379,7 +399,7 @@ void getAtcommand() {
   } else if (command == "EXIT" || command == "X") {
 
     Serial.println("Exiting debug mode!");
-    resetGSM();
+    if (get_logger_mode() != 2 && get_gsm_power_mode() == 0) resetGSM();
     resetRainTips();
     setNextAlarm(alarmFromFlashMem());
     delay_millis(75);
@@ -566,7 +586,7 @@ void print_rtcInterval() {
   Serial.println("[2] 10-minute interval from 0th minute (0,10,20,30...)");
   Serial.println("[3] 5-minute interval from 0th minute (0,5,10,15...)");
   Serial.println("[4] 3-minute interval from 0th minute (0,3,6,9,12...)");
-  // Serial.println("[5] Alarm for every 5,15,25. . .  minutes interval");
+  Serial.println("[5] 30-minute interval from 15th minute (15,45)");
   // Serial.println("------------------------------------------------");
 }
 

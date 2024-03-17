@@ -112,6 +112,10 @@ uint16_t nextAlarm(int currentMinute, int intervalSaved) {
     intervalEquivalent = 5;
   } else if (intervalSaved == 4) {
     intervalEquivalent = 3;
+  } else if (intervalSaved == 5) {      // special case
+    if (currentMinute < 15 || currentMinute >= 45) next_alarm = 15;
+    else next_alarm = 45;
+    return next_alarm;
   } else {
     intervalEquivalent = 30;
   }

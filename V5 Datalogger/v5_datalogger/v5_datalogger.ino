@@ -64,7 +64,7 @@ By : DRM
 #define LORATIMEOUT 500000         // 8.33 minutes delay  (temporarily unused)
 #define LORATIMEOUTMODE2 900000    // 15.0 mnutes  (temporarily unused)
 #define LORATIMEOUTMODE3 1200000   // 20.0 mnutes  (temporarily unused)
-#define DUETIMEOUT 300000           // 180 second delay
+#define DUETIMEOUT 300000          // 5 minute wait time
 #define DUEDELAY 60000             // 1.0 minute delay
 #define RAININT A4                 // rainfall interrupt pin A4
 #define DEBUGTIMEOUT 300000        // debug timeout in case no data recieved; 60K~1minute
@@ -127,7 +127,7 @@ volatile unsigned long ringPrev = 0;
 bool getSensorDataFlag = false;
 bool debug_flag_exit = false;
 
-char firmwareVersion[9] = "2402.22";  // year . monthdate
+char firmwareVersion[9] = "2403.17";  // year . monthdate
 char station_name[6] = "MADTA";
 char Ctimestamp[13] = "";
 char command[26];
@@ -145,7 +145,6 @@ uint16_t store_rtc = 00;  // store rtc alarm
 
 // GSM
 char default_serverNumber[] = "09175972526";
-bool gsmPwrStat = true;
 bool runGSMInit = true;
 String tempServer, regServer;
 char _csq[10];
@@ -295,7 +294,7 @@ void setup() {
   enable_watchdog();
   if (get_logger_mode() == 2) {
     Serial.println(F("****************************************"));
-    Serial.print("Logger Version: ");
+    Serial.print("Logger Mode: ");
     Serial.println(get_logger_mode());
     Serial.println("Default to LoRa communication.");
     Serial.println(F("****************************************"));
@@ -304,7 +303,7 @@ void setup() {
   } else {
     // GSM power related
     Serial.println(F("****************************************"));
-    Serial.print("Logger Version: ");
+    Serial.print("Logger Mode: ");
     Serial.println(get_logger_mode());
     Serial.println("Default to GSM.");
     Serial.println(F("****************************************"));
@@ -312,7 +311,7 @@ void setup() {
     Watchdog.reset();
   }
 
-  /*Automatically enters DEBUG mode when USB cable is connected to PC*/
+  /*Automatically enters DEBUG mode when USB cable is connected to PC and Serial Monitor is open*/
   digitalWrite(LED_BUILTIN, HIGH);
   unsigned long serStart = millis();
   while (serial_flag == 0) {
@@ -341,22 +340,15 @@ void setup() {
 
 void loop() {
   
-  if (runGSMInit && (get_logger_mode() != 2)){  // single instance run to initiate gsm module
+  if (runGSMInit && get_logger_mode() != 2){  // single instance run to initiate gsm module
     runGSMInit = false;
     delay_millis(500);
     resetGSM();
+    if (debug_flag != 1) send_thru_gsm("LOGGER POWER UP", get_serverNum_from_flashMem());
+    turn_OFF_GSM(get_gsm_power_mode());
   }
 
   if (debug_flag == 1) printMenu();
-
-  if (bootMsg) { //for testing only
-    send_thru_gsm("LOGGER POWER UP", get_serverNum_from_flashMem());        
-    // if (serverALT(get_serverNum_from_flashMem()) != "NANEEEE") {
-    //   Serial.print("Sending to alternate number: ");
-    //   send_thru_gsm("LOGGER POWER UP", serverALT(get_serverNum_from_flashMem()));
-    // }
-    bootMsg = false;
-  }
 
   while (debug_flag == 1) {
     getAtcommand();
@@ -364,35 +356,16 @@ void loop() {
       Serial.println(F("****************************************"));
       Serial.println(F("Exiting DEBUG MENU..."));
       Serial.println(F("****************************************"));
-      resetGSM();
+      if (get_logger_mode() != 2 && get_gsm_power_mode() == 0) resetGSM();
       turn_OFF_GSM(get_gsm_power_mode());
       debug_flag = 0;
     }
   }
-  
+
+  // Checks of OTA command
   if (gsmRingFlag) {
-    // check sms commands
-    // flashLed(LED_BUILTIN, 2, 100);
-    // send_thru_gsm("OTA CALL RESET", get_serverNum_from_flashMem());        //for testing only
     gsmRingFlag = false;
-    Watchdog.reset();
-    delay_millis(1000);
-    turn_ON_GSM(get_gsm_power_mode());
-    Watchdog.reset();
-    digitalWrite(LED_BUILTIN, HIGH);
-    GSMSerial.write("AT+CMGL=\"ALL\"\r");
-    delay_millis(300);
-    while (GSMSerial.available() > 0) {
-      processIncomingByte(GSMSerial.read(), 0);
-    }
-    Watchdog.reset();
-    turn_OFF_GSM(get_gsm_power_mode());
-    Watchdog.reset();
-    gsmDeleteReadSmsInbox();
-    Watchdog.reset();
-    attachInterrupt(digitalPinToInterrupt(GSMINT), ringISR, FALLING);
-    digitalWrite(LED_BUILTIN, LOW);
-    Watchdog.reset();
+    if (get_gsm_power_mode() == 0) checkOTACommand();  
   }
 
   if (OperationFlag) {    // main operation
@@ -400,79 +373,124 @@ void loop() {
     flashLed(LED_BUILTIN, 5, 100);
     detachInterrupt(digitalPinToInterrupt(RTCINTPIN));
 
-    // set RESET 'ALARM TIME' here.
+    // Configure RESET 'ALARM TIME' here.
     // Use 24hr format; but '0' insetead of '00')
     // 23,30 by default
     setResetFlag(23,30);
 
-    sending_stack[0] = '\0';
+    for (int i=0;i<sizeof(sending_stack);i++) sending_stack[i] = 0x00;
+
     if (get_logger_mode() == 1) {
-      // Gateway with sensor with 1 LoRa transmitter
+
+      Watchdog.reset();
       receive_lora_data(1);
       Watchdog.reset();
-      turn_ON_GSM(get_gsm_power_mode());
+      turn_ON_due(get_logger_mode());
+      Watchdog.reset();
       get_Due_Data(1, get_serverNum_from_flashMem());
       Watchdog.reset();
-      // Watchdog.reset();
+      turn_OFF_due(get_logger_mode());
+      Watchdog.reset();
+      turn_ON_GSM(get_gsm_power_mode());
+      Watchdog.reset();
+      send_message_segments(sending_stack);
+      Watchdog.reset();
       send_rain_data(0);
       Watchdog.reset();
-      turn_OFF_GSM(get_gsm_power_mode());
-      Watchdog.reset();
+      // turn_OFF_GSM(get_gsm_power_mode());
+      // Watchdog.reset();
+
     } else if (get_logger_mode() == 2) {
-      // LoRa transmitter of version 5 datalogger
+
+      Watchdog.reset();
+      turn_ON_due(get_logger_mode());
+      Watchdog.reset();
       get_Due_Data(2, get_serverNum_from_flashMem());
       Watchdog.reset();
+      turn_OFF_due(get_logger_mode());
+      Watchdog.reset();
+      send_message_segments(sending_stack);
+      Watchdog.reset();
+      delay_millis(500);
+      send_thru_lora(read_batt_vol(get_calib_param()));
+      Watchdog.reset();
+
     } else if (get_logger_mode() == 3) {
       // Gateway only with 1 LoRa transmitter
+      receive_lora_data(3);
       turn_ON_GSM(get_gsm_power_mode());
       Watchdog.reset();
       send_rain_data(0);
       Watchdog.reset();
-      receive_lora_data(3);
+      send_message_segments(sending_stack);
       Watchdog.reset();
-      turn_OFF_GSM(get_gsm_power_mode());
-      Watchdog.reset();
+
     } else if (get_logger_mode() == 4) {
       // Gateway only with 2 LoRa transmitter
-      turn_ON_GSM(get_gsm_power_mode());
-      Watchdog.reset();
-      send_rain_data(0);
+
       Watchdog.reset();
       receive_lora_data(4);
       Watchdog.reset();
-      turn_OFF_GSM(get_gsm_power_mode());
-      Watchdog.reset();
-    } else if (get_logger_mode() == 5) {
-      // Gateway only with 3 LoRa transmitter
       turn_ON_GSM(get_gsm_power_mode());
       Watchdog.reset();
       send_rain_data(0);
+      Watchdog.reset();
+      send_message_segments(sending_stack);
+      Watchdog.reset();
+      // turn_OFF_GSM(get_gsm_power_mode());
+      // Watchdog.reset();
+    
+    } else if (get_logger_mode() == 5) {
+      // Gateway only with 3 LoRa transmitter
+
       Watchdog.reset();
       receive_lora_data(5);
       Watchdog.reset();
-      turn_OFF_GSM(get_gsm_power_mode());
+      turn_ON_GSM(get_gsm_power_mode());
       Watchdog.reset();
+      send_rain_data(0);
+      Watchdog.reset();
+      send_message_segments(sending_stack);
+      Watchdog.reset();
+      // turn_OFF_GSM(get_gsm_power_mode());
+      // Watchdog.reset();
+
     } else if (get_logger_mode() == 6) {
       // Rain gauge ONLY datalogger - GSM
-      debug_println("Begin: logger mode 6");
       turn_ON_GSM(get_gsm_power_mode());
       Watchdog.reset();
       send_rain_data(0);
       Watchdog.reset();
-      turn_OFF_GSM(get_gsm_power_mode());
-      Watchdog.reset();
+      // turn_OFF_GSM(get_gsm_power_mode());
+      // Watchdog.reset();
+
     } else {
       // default arQ like sending
-      turn_ON_GSM(get_gsm_power_mode());
+      // turn_ON_GSM(get_gsm_power_mode());
+      // Watchdog.reset();
+      // send_rain_data(0);
+      // Watchdog.reset();
+      // get_Due_Data(1, get_serverNum_from_flashMem());
+      // Watchdog.reset();
+      // turn_OFF_GSM(get_gsm_power_mode());
+      // Watchdog.reset();
+
       Watchdog.reset();
-      send_rain_data(0);
+      turn_ON_due(get_logger_mode());
       Watchdog.reset();
       get_Due_Data(1, get_serverNum_from_flashMem());
       Watchdog.reset();
-      // send_rain_data(0);
-      // Watchdog.reset();
+      turn_OFF_due(get_logger_mode());
+      Watchdog.reset();
+      turn_ON_GSM(get_gsm_power_mode());
+      Watchdog.reset();
+      send_rain_data(0);
+      Watchdog.reset();
+      send_message_segments(sending_stack);
+      Watchdog.reset();
       turn_OFF_GSM(get_gsm_power_mode());
       Watchdog.reset();
+
     }
     // attachInterrupt(digitalPinToInterrupt(RTCINTPIN), wakeISR, FALLING);
     rf95.sleep();
@@ -481,7 +499,7 @@ void loop() {
     // sending_stack[0] = '\0';
     flashLed(LED_BUILTIN, 5, 100);
   }
-
+  // gsmDeleteReadSmsInbox(); 
   Watchdog.reset();
   setNextAlarm(alarmFromFlashMem());
   delay_millis(75);
@@ -502,7 +520,6 @@ void loop() {
   }
 }
 
-
 void enable_watchdog() {
   Serial.println("Watchdog Enabled!");
   int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
@@ -516,12 +533,17 @@ void disable_watchdog() {
 /*Enable sleep-standby*/
 void sleepNow() {
   
-  if (get_logger_mode() == 2) {
+  if (get_logger_mode() != 2) {
+    if (get_gsm_power_mode() == 2) turn_ON_GSM(get_gsm_power_mode());
+    delay_millis(1000);
     Watchdog.reset();
-  } else {
     gsmDeleteReadSmsInbox();
+    Watchdog.reset();
+    turn_OFF_GSM(get_gsm_power_mode());
+  } else {
+    Watchdog.reset();
   }
-  // Watchdog.reset();
+  Watchdog.reset();
   delay_millis(1000);
   Serial.println("MCU is going to sleep . . .");
   Serial.println("");
@@ -534,10 +556,6 @@ void sleepNow() {
   // __DSB();
   // __WFI();
   SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // Enable systick interrupt
-  // WDTsleepDuration = Watchdog.sleep();                  
-  // delay(500); 
-  // digitalWrite(LED_BUILTIN, LOW);
-  // delay(2000);
 }
 
 /**RTC Pin interrupt
@@ -550,16 +568,8 @@ void wakeISR() {
     enable_watchdog();
     // Watchdog.reset();
   }
-  
   OperationFlag = true;
-  //insert function here to set reset flag for daialy reset
-  // compute daily hh mm to match desired reset time
-  
-
-
-  // detach the interrupt in the ISR so that multiple ISRs are not called
   Serial.println("RTC interrupt");
-  
 }
 
 void ringISR() {
@@ -567,12 +577,6 @@ void ringISR() {
     enable_watchdog();
   }
   gsmRingFlag = true;
-  
-  // ringNow = millis();
-  // if ((ringNow - ringPrev > 5000) && (ringNow - ringPrev < 10000))  {
-    // NVIC_SystemReset();     // immediate reset
-  // }
-  // ringPrev = ringNow;
 }
 
 /**GATEWAY*RSSI,MAD,MADTA,rssi,voltage,MADTB,,,*200212141406
@@ -927,9 +931,7 @@ void get_Due_Data(uint8_t mode, String serverNum) {
 
   DUESerial.begin(DUEBAUD);
   unsigned long start = millis();
-
   readTimeStamp();
-  turn_ON_due(get_logger_mode());
   delay_millis(500);
 
   command[0] = '\0';
@@ -983,9 +985,6 @@ void get_Due_Data(uint8_t mode, String serverNum) {
           for (byte i = 0; i < strlen(streamBuffer); i++) {
             streamBuffer[i] = streamBuffer[i + 2];
           }
-
-          // send_thru_gsm(streamBuffer, get_serverNum_from_flashMem());
-          // send_thru_gsm(streamBuffer, serverNum);
           aggregate_received_data(streamBuffer);
           if (debug_flag == 0) { //reset watchdog before resuming
             Watchdog.reset();
@@ -1007,7 +1006,6 @@ void get_Due_Data(uint8_t mode, String serverNum) {
           // flashLed(LED_BUILTIN, 2, 100);
           // DUESerial.write("OK");
         } else {
-
           aggregate_received_data(streamBuffer);
           // send_thru_lora(streamBuffer);
           flashLed(LED_BUILTIN, 2, 100);
@@ -1038,20 +1036,11 @@ void get_Due_Data(uint8_t mode, String serverNum) {
       customDueFlag = 1;
     }
   }
-  turn_OFF_due(get_logger_mode());
+  // turn_OFF_due(get_logger_mode());
   DUESerial.end();
   if (debug_flag == 0) {
         Watchdog.reset();
   }
-  send_message_segments(sending_stack);
-  if (debug_flag == 0) {
-        Watchdog.reset();
-  }
-
-  if (mode == 2 || mode == 7) {
-    delay_millis(2000);
-    send_thru_lora(read_batt_vol(get_calib_param()));
-  } 
 
   flashLed(LED_BUILTIN, 4, 90);
   customDueFlag = 0;
