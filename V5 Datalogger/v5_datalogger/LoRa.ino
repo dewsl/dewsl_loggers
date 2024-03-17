@@ -33,6 +33,14 @@ void init_lora() {
 }
 
 void send_thru_lora(char *radiopacket) {
+  if(strstr(get_logger_A_from_flashMem(),"LAB")) {
+    rf95.setModemConfig(RH_RF95::Bw500Cr45Sf128);
+    Serial.println("lora setmodemconfig to BW500");
+  } else {
+    rf95.setModemConfig(RH_RF95::Bw125Cr45Sf128);
+    Serial.println("lora setmodemconfig default");
+  }
+  
   char ack_from_gateway[13];
   ack_from_gateway[0]=0x00;
   if (debug_flag == 0) { //reset watchdog before resuming
@@ -172,7 +180,7 @@ void key_gen(char *_reference_string) {
   strcat(ack_msg, ack_key);
   ack_msg[13] = '\0';
   // Serial.print("generated key: ");
-  // Serial.println(ack_msg);                    
+  Serial.println(ack_msg);                    
 }
 
 // bool check_loRa_ack(char *_received) {
@@ -186,6 +194,14 @@ void key_gen(char *_reference_string) {
 // }
 
 void receive_lora_data(uint8_t mode) {
+  if(strstr(get_logger_A_from_flashMem(),"LAB")) {
+    rf95.setModemConfig(RH_RF95::Bw500Cr45Sf128);
+    Serial.println("lora setmodemconfig to BW500");
+  } else {
+    rf95.setModemConfig(RH_RF95::Bw125Cr45Sf128);
+    Serial.println("lora setmodemconfig default");
+  }
+
   lora_TX_end = 0;
   rcv_LoRa_flag = 0;
 
@@ -492,6 +508,7 @@ void receive_lora_data(uint8_t mode) {
   }
 }
 
+/*
 bool if_receive_valid(char *_received) {
 
   // Check if received payload is from valid transmitter
@@ -601,10 +618,94 @@ bool if_receive_valid(char *_received) {
 
   return valid_LoRa_tx;
 }
+*/
+
+bool if_receive_valid(char *_received) {
+
+  // Check if received payload is from valid transmitter
+  // if transmission is valid, an acknowledgement is broadcasted
+  bool valid_LoRa_tx = false;
+  uint8_t _tx_name = 0;
+  char _Blog[6];
+  char _Clog[6];
+  char _Dlog[6];
+
+  // _Blog[0] = 0x00;
+  // _Clog[0] = 0x00;
+  // _Dlog[0] = 0x00;
+
+  // strncat(ack_msg, get_logger_B_from_flashMem(), strlen(get_logger_B_from_flashMem()));
+  // strncat(ack_msg, get_logger_C_from_flashMem(), strlen(get_logger_C_from_flashMem()));
+  // strncat(ack_msg, get_logger_D_from_flashMem(), strlen(get_logger_D_from_flashMem()));
+  
+  // _Blog[strlen(_Blog)+1] = 0x00;
+  // _Clog[strlen(_Clog)+1] = 0x00;
+  // _Dlog[strlen(_Dlog)+1] = 0x00;
+
+  char print_buffer[250];
+  print_buffer[0] = '\0';
+
+  // key_gen(_received);
+
+  if (strstr(_received, get_logger_B_from_flashMem())) {
+
+    valid_LoRa_tx = true;
+    // sprintf(print_buffer, "Received from %s: %s", _Blog, _received);
+    Serial.print("Received from ");
+    Serial.print(get_logger_B_from_flashMem());
+    Serial.print(" : ");
+    Serial.println(_received);
+    key_gen(_received);
+    // Serial.println(print_buffer);
+    // print_buffer[0] = '\0';
+    if (logger_ack_filter_enabled()) {
+      rf95.send((uint8_t *)ack_msg, strlen(ack_msg));
+      rf95.waitPacketSent();
+      Serial.println("acknowledgement sent!");
+    }
+
+  } else if (strstr(_received, get_logger_C_from_flashMem())) {
+
+    valid_LoRa_tx = true;
+    // sprintf(print_buffer, "Received from %s: %s", _Blog, _received);
+    Serial.print("Received from ");
+    Serial.print(get_logger_C_from_flashMem());
+    Serial.print(" : ");
+    Serial.println(_received);
+    key_gen(_received);
+    // Serial.println(print_buffer);
+    // print_buffer[0] = '\0';
+    if (logger_ack_filter_enabled()) {
+      rf95.send((uint8_t *)ack_msg, strlen(ack_msg));
+      rf95.waitPacketSent();
+    }
+
+  } else if (strstr(_received, get_logger_D_from_flashMem())) {
+
+    valid_LoRa_tx = true;
+    // sprintf(print_buffer, "Received from %s: %s", _Clog, _received);
+    Serial.print("Received from ");
+    Serial.print(get_logger_D_from_flashMem());
+    Serial.print(" : ");
+    Serial.println(_received);
+    key_gen(_received);
+    // Serial.println(print_buffer);
+    // print_buffer[0] = '\0';
+    if (logger_ack_filter_enabled()) {
+      rf95.send((uint8_t *)ack_msg, strlen(ack_msg));
+      rf95.waitPacketSent();
+    }
+
+  } else {
+    valid_LoRa_tx = false;
+    Serial.println("Unlisted transmitter");
+  }
+
+  return valid_LoRa_tx;
+}
 
 
 void receive_lora_data_UBLOX(uint8_t mode) {
-
   if (debug_flag == 0) {
     Watchdog.reset();
   }
