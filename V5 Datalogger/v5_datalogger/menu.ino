@@ -312,6 +312,8 @@ void getAtcommand() {
       Serial.println("5 minutes (hh:00, hh:05, hh:10, hh:15, ... )");
     } else if (alarmFromFlashMem() == 4) {
       Serial.println("3 minutes (hh:00, hh:03, hh:06, hh:09, ... )");
+    } else if (alarmFromFlashMem() == 5) {
+      Serial.println("30 minutes (hh:15 & hh:45)");
     } else {
       Serial.println("Default 30 minutes (hh:00 & hh:30)");
     }
