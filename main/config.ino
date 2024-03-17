@@ -27,7 +27,7 @@ void flash_fetch() {
   if (override_check == 99) {  //check whether a override value has been set
     //insert SD override function here
     Serial.println("SD CARD CONFIG IN USE");
-    openfig();
+    open_config();
   } else {
     if (flash_check != 99) {
       Serial.println("NO SENSOR NAME SET FOR CONFIG!");

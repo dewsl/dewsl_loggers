@@ -334,13 +334,13 @@ void setup() {
   pinMode(RELAYPIN, OUTPUT);
   pinMode(LED1, OUTPUT);
   init_can();
-  // init_char_arrays();
-  // init_gids();
-  // init_sd();
+  init_char_arrays();
+  init_gids();
+  init_sd();
 
-  // Serial.println(F("======================================"));
-  // Serial.println(F("Firmware version: 23.03.13"));
-  // flash_fetch();
+  Serial.println(F("======================================"));
+  Serial.println(F("Firmware version: 23.03.13"));
+  flash_fetch();
   // print_due_command2();
 }
 
@@ -367,29 +367,29 @@ void setup() {
     <operation> <getATCommand> 
 */
 void loop() {
-  turn_on_column();
-  send_command(51,1);
-  can_sniff2(3000);
-  send_command(52,1);
-  can_sniff2(3000);
-  turn_off_column();
-  delay(1000);
-  // int timestart = millis();
-  // while ((millis() - timestart < 30000) && (datalogger_flag == 0)) {
-  //   if (Serial.available() > 0) {
-  //     getATCommand();
-  //   } else if ((strcmp(comm_mode, "ARQ") == 0) && (DATALOGGER.available())) {  // sira ito
-  //     operation(wait_arq_cmd(), comm_mode);
-  //     shut_down();
-  //     datalogger_flag = 1;
-  //   } else if ((strcmp(comm_mode, "LORA") == 0) && (LORA.available())) {
-  //     operation(wait_lora_cmd(), comm_mode);
-  //     delay(500);
-  //     LORA.println("STOPLORA");
-  //     datalogger_flag = 1;
-  //   }
-  // }
-  // delay(100);
+  // turn_on_column();
+  // send_command(51,1);
+  // can_sniff2(3000);
+  // send_command(52,1);
+  // can_sniff2(3000);
+  // turn_off_column();
+  // delay(1000);
+  int timestart = millis();
+  while ((millis() - timestart < 30000) && (datalogger_flag == 0)) {
+    if (Serial.available() > 0) {
+      getATCommand();
+    } else if ((strcmp(comm_mode, "ARQ") == 0) && (DATALOGGER.available())) {  // sira ito
+      operation(wait_arq_cmd(), comm_mode);
+      shut_down();
+      datalogger_flag = 1;
+    } else if ((strcmp(comm_mode, "LORA") == 0) && (LORA.available())) {
+      operation(wait_lora_cmd(), comm_mode);
+      delay(500);
+      LORA.println("STOPLORA");
+      datalogger_flag = 1;
+    }
+  }
+  delay(100);
 }
 
 //Function: getATCommand
@@ -431,6 +431,7 @@ void getATCommand() {
         break;
       case 'A':
         {  //ATGETSENSORDATA
+        // operation()
           if (g_mastername[3] == 'S') {
               g_sensor_type = 2;
             } else {
@@ -438,12 +439,12 @@ void getATCommand() {
             }
           read_data_from_column(g_final_dump, g_sensor_version, g_sensor_type);
           int g_volt_size = sizeof(g_volt) / sizeof(g_volt[0]);
-          //sample_send();
-          /*
-          for (int x=0; x < g_volt_size; x++) {
-            Serial.println(g_volt[x]);
-          }
-          */
+          // //sample_send();
+          // /*
+          // for (int x=0; x < g_volt_size; x++) {
+          //   Serial.println(g_volt[x]);
+          // }
+          // */
           Serial.println(OKSTR);
         }
         break;

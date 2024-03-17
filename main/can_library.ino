@@ -224,10 +224,28 @@ void get_data(int cmd, int transmit_id, char* final_dump) {
 
   } else if (cmd == 256) {
     turn_on_column();
+    int v1_timeout;
+    v1_timeout = broad_timeout / g_sampling_max_retry;
+    Serial.println("CAN Polling: timeout divided over the number of max retry");
+    Serial.print("v1_timeout = ");
+    Serial.println(v1_timeout);
+
+// kuha ng current while sampling
+    // ina219.setCalibration_32V_2A();
+    g_current = ina219.getCurrent_mA();
+    g_voltage = ina219.getBusVoltage_V();
+    dtostrf(g_current, 0, 4, g_test);
+    strncat(g_build, g_test, strlen(g_test));
+    dtostrf(g_voltage, 0, 4, g_test);
+    strncat(g_build, "*", 1);
+    strncat(g_build, g_test, strlen(g_test));
+    strncat(g_build, "*", 1);
+    strncat(g_build, '\0', 1);
+// dulo dito     
     for (int i = 0; i < g_num_of_nodes; i++) {
       uid = g_gids[i][0];
       version_1(uid);
-      get_all_frames(broad_timeout, g_can_buffer, g_num_of_nodes);
+      get_all_frames(v1_timeout, g_can_buffer, g_num_of_nodes);
       count = count_frames(g_can_buffer);
       // write frames to String or char array
       for (int i = 0; i < count; i++) {
