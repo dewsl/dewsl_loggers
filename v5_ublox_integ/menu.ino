@@ -112,10 +112,10 @@ void getAtcommand() {
     } else if (get_logger_mode() == 9) {
       // Gateway with rain rain gauge and GNSS Sensor
       turn_ON_GSM(get_gsm_power_mode());
+      send_rain_data(0);
+      delay_millis(1000);
       getGNSSData(dataToSend, sizeof(dataToSend)); //read gnss data
       send_thru_gsm(dataToSend, get_serverNum_from_flashMem());
-      delay_millis(1000);
-      send_rain_data(0);
       delay_millis(1000);
       turn_OFF_GSM(get_gsm_power_mode());
     } else if (get_logger_mode() == 10) {

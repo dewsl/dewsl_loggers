@@ -3,24 +3,33 @@ SFE_UBLOX_GNSS myGNSS;
 
 #define BUFLEN (5*RH_RF95_MAX_MESSAGE_LEN) //max size of data burst we can handle - (5 full RF buffers) - just arbitrarily large
 #define RFWAITTIME 500 //maximum milliseconds to wait for next LoRa packet - used to be 600 - may have been too long
-#define rtcm_timeout 180000 //3 minutes
+#define RTCM_TIMEOUT 180000 //3 minutes
 
 char sitecode[6]; //logger name - sensor site code
-int min_sat = 30;
-int ave_count = 12;
+int MIN_SAT = 30;
+int AVE_COUNT = 12;
 
-bool read_flag = false;
-uint8_t rx_lora_flag = 0;
+bool UBX_INIT_FLAG = false;
+bool READ_FLAG = false;
+uint8_t RX_LORA_FLAG = 0;
 unsigned long start;
 
 void init_ublox() {
   DUESerial.begin(BAUDRATE);
   Wire.begin();
   Watchdog.reset();
-  if (myGNSS.begin(Wire) == false) {
-    Serial.println(F("u-blox GNSS not detected at default I2C address. Please check wiring. Freezing."));
-    while (1);
+
+  for (int x = 0; x < 10; x++) {        //10 retries to not exceed watchdog limit=16sec
+    if (myGNSS.begin(Wire) == false) {
+      Serial.println(F("u-blox GNSS not detected at default I2C address. Please check wiring. Freezing."));
+      delay(1000);
+    } else {
+      UBX_INIT_FLAG = true;
+      Serial.println("u-blox GNSS begin");
+      break;
+    }
   }
+
   myGNSS.setI2COutput(COM_TYPE_UBX); //Set the I2C port to output UBX only (turn off NMEA noise)
   myGNSS.setNavigationFrequency(5); //Set output to 20 times a second
   myGNSS.setHighPrecisionMode(true);  
@@ -98,57 +107,62 @@ void getRTCM() {
 }
 
 void getGNSSData(char *dataToSend, unsigned int bufsize) {
-  if (debug_flag == 0) {
-    Watchdog.reset();
-  }
+  Watchdog.reset();
+  READ_FLAG = false;
+  RX_LORA_FLAG = 0;
 
-  init_ublox(); 
-  read_flag = false;
-  rx_lora_flag = 0;
+  init_ublox();
+  if (UBX_INIT_FLAG = false) {
+    READ_FLAG = true;
+  } 
   Watchdog.reset();
 
   start = millis();
-
   do {
     Watchdog.reset();
     getRTCM();
-  } while (((checkRTKFixType() != 2) || checkSatelliteCount() < min_sat) && ((millis() - start) < rtcm_timeout)); 
+  } while (((checkRTKFixType() != 2) || checkSatelliteCount() < MIN_SAT) && ((millis() - start) < RTCM_TIMEOUT)); 
 
-  if (checkRTKFixType() == 2 && checkSatelliteCount() >= min_sat) {
-    if (rx_lora_flag == 0) {
+  if (checkRTKFixType() == 2 && checkSatelliteCount() >= MIN_SAT) {
+    if (RX_LORA_FLAG == 0) {
       Watchdog.reset();
       readUbloxData();
       Watchdog.reset();
-      rx_lora_flag == 1;
-      read_flag = true;
+      RX_LORA_FLAG == 1;
+      READ_FLAG = true;
     }
-  } else if (((checkRTKFixType() != 2) || (checkSatelliteCount() < min_sat)) && ((millis() - start) >= rtcm_timeout)) {
+  } else if (((checkRTKFixType() != 2) || (checkSatelliteCount() < MIN_SAT)) && ((millis() - start) >= RTCM_TIMEOUT)) {
     Serial.println("Unable to obtain fix or no. of satellites reqd. not met");
     Watchdog.reset();
     noGNSSDataAcquired();     
-    rx_lora_flag == 1;
-    read_flag = true;
+    RX_LORA_FLAG == 1;
+    READ_FLAG = true;
     Watchdog.reset();
   } 
 
-  if (read_flag = true) {
+  if (READ_FLAG = true) {
     Watchdog.reset();
-    read_flag = false;
-    rx_lora_flag == 0;
+    READ_FLAG = false;
+    RX_LORA_FLAG == 0;
 
-    readTimeStamp();
-    strncat(dataToSend, "*", 2);
-    strncat(dataToSend, Ctimestamp, 13);
-    Watchdog.reset();
+    if (UBX_INIT_FLAG = false) {
+      Serial.println("ubx failed to init");
+      ubloxFailedInit();
+    } else {
+      readTimeStamp();
+      strncat(dataToSend, "*", 2);
+      strncat(dataToSend, Ctimestamp, 13);
+      Watchdog.reset();
 
-    if ((get_logger_mode() == 7) || (get_logger_mode() == 9) || ((get_logger_mode() == 10))) {
-      //Remove 1st and 2nd character data in string. 
-      //Not needed in GSM mode
-      for (byte i = 0; i < strlen(dataToSend); i++) {
-        dataToSend[i] = dataToSend[i + 2];
+      if ((get_logger_mode() == 7) || (get_logger_mode() == 9) || ((get_logger_mode() == 10))) {
+        //Remove 1st and 2nd character data in string. 
+        //Not needed in GSM mode
+        for (byte i = 0; i < strlen(dataToSend); i++) {
+          dataToSend[i] = dataToSend[i + 2];
+        }
       }
+      Watchdog.reset();
     }
-    Watchdog.reset();
   }
 }
 
@@ -192,8 +206,8 @@ void readUbloxData() {
   snprintf(temp, sizeof temp, "%.2f", readTemp());
   Watchdog.reset();
 
-  for (int i = 1; i <= ave_count; i++) {
-    if ((millis() - start) < rtcm_timeout) {
+  for (int i = 1; i <= AVE_COUNT; i++) {
+    if ((millis() - start) < RTCM_TIMEOUT) {
       Watchdog.reset();
       getRTCM();
 
@@ -242,7 +256,7 @@ void readUbloxData() {
         Watchdog.reset();
         getRTCM();
       }
-    } else if ((millis() - start) >= rtcm_timeout) {
+    } else if ((millis() - start) >= RTCM_TIMEOUT) {
       Watchdog.reset();
       Serial.println("Timeout reached!");
       break;
@@ -282,10 +296,31 @@ void readUbloxData() {
 }
 
 void noGNSSDataAcquired() {
-  memset(dataToSend, '\0', sizeof(dataToSend));
+  int i = 0;
+  for (i = 0; i < 200; i++) {
+    dataToSend[i] = (uint8_t)'0';
+  }
+  dataToSend[i] = (uint8_t)'\0';
+  // memset(dataToSend, '\0', sizeof(dataToSend));
 
   char ndstr[50]; 
   snprintf(ndstr, sizeof(ndstr), ">>%s:No Ublox data", sitecode);
+  strncat(dataToSend, ndstr, sizeof(ndstr));
+
+  Serial.print("data to send: "); 
+  Serial.println(dataToSend);
+}
+
+void ubloxFailedInit() {
+  int i = 0;
+  for (i = 0; i < 200; i++) {
+    dataToSend[i] = (uint8_t)'0';
+  }
+  dataToSend[i] = (uint8_t)'\0';
+  // memset(dataToSend, '\0', sizeof(dataToSend));
+
+  char ndstr[50]; 
+  snprintf(ndstr, sizeof(ndstr), "%s's ublox initialization failed", sitecode);
   strncat(dataToSend, ndstr, sizeof(ndstr));
 
   Serial.print("data to send: "); 

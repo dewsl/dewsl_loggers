@@ -484,10 +484,10 @@ void loop() {
       debug_println("Begin: logger mode 9");
       turn_ON_GSM(get_gsm_power_mode());
       Watchdog.reset();
-      getGNSSData(dataToSend, sizeof(dataToSend));  //read gnss data
-      send_thru_gsm(dataToSend, get_serverNum_from_flashMem());
-      Watchdog.reset();
       send_rain_data(0); //send rain
+      Watchdog.reset();
+      getGNSSData(dataToSend, sizeof(dataToSend));  //read gnss data
+      send_thru_gsm(dataToSend, get_serverNum_from_flashMem()); 
       Watchdog.reset();
       turn_OFF_GSM(get_gsm_power_mode());
       Watchdog.reset();
