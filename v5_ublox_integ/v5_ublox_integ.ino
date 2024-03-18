@@ -491,6 +491,16 @@ void loop() {
       Watchdog.reset();
       turn_OFF_GSM(get_gsm_power_mode());
       Watchdog.reset();
+    } else if (get_logger_mode() == 10) {
+      // Gateway with Subsurface sensor and GNSS Sensor
+      debug_println("Begin: logger mode 10");
+      turn_ON_GSM(get_gsm_power_mode());
+      getGNSSData(dataToSend, sizeof(dataToSend));  //read gnss data
+      send_thru_gsm(dataToSend, get_serverNum_from_flashMem());
+      get_Due_Data(1, get_serverNum_from_flashMem());
+      Watchdog.reset();
+      turn_OFF_GSM(get_gsm_power_mode());
+      Watchdog.reset();
     } else {
       // default arQ like sending
       turn_ON_GSM(get_gsm_power_mode());
@@ -953,7 +963,9 @@ void get_Due_Data(uint8_t mode, String serverNum) {
     Watchdog.reset();
   }
 
+  Serial.println(">>> changing baud rate to duebaud");
   DUESerial.begin(DUEBAUD);
+  Serial.println(">>> duebaud changed");
   unsigned long start = millis();
 
   readTimeStamp();
