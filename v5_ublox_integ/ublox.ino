@@ -9,7 +9,6 @@ char sitecode[6]; //logger name - sensor site code
 int MIN_SAT = 30;
 int AVE_COUNT = 12;
 
-bool UBX_INIT_FLAG = false;
 bool READ_FLAG = false;
 uint8_t RX_LORA_FLAG = 0;
 unsigned long start;
@@ -24,7 +23,6 @@ void init_ublox() {
       Serial.println(F("u-blox GNSS not detected at default I2C address. Please check wiring. Freezing."));
       delay(1000);
     } else {
-      UBX_INIT_FLAG = true;
       Serial.println("u-blox GNSS begin");
       break;
     }
@@ -112,11 +110,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
   RX_LORA_FLAG = 0;
 
   init_ublox();
-  if (UBX_INIT_FLAG = false) {
-    READ_FLAG = true;
-  } 
   Watchdog.reset();
-
   start = millis();
   do {
     Watchdog.reset();
@@ -145,34 +139,27 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     READ_FLAG = false;
     RX_LORA_FLAG == 0;
 
-    if (UBX_INIT_FLAG = false) {
-      Serial.println("ubx failed to init");
-      ubloxFailedInit();
-    } else {
-      readTimeStamp();
-      strncat(dataToSend, "*", 2);
-      strncat(dataToSend, Ctimestamp, 13);
-      Watchdog.reset();
+    readTimeStamp();
+    strncat(dataToSend, "*", 2);
+    strncat(dataToSend, Ctimestamp, 13);
+    Watchdog.reset();
 
-      if ((get_logger_mode() == 7) || (get_logger_mode() == 9) || ((get_logger_mode() == 10))) {
-        //Remove 1st and 2nd character data in string. 
-        //Not needed in GSM mode
-        for (byte i = 0; i < strlen(dataToSend); i++) {
-          dataToSend[i] = dataToSend[i + 2];
-        }
+    if ((get_logger_mode() == 7) || (get_logger_mode() == 9) || ((get_logger_mode() == 10))) {
+      //Remove 1st and 2nd character data in string. 
+      //Not needed in GSM mode
+      for (byte i = 0; i < strlen(dataToSend); i++) {
+        dataToSend[i] = dataToSend[i + 2];
       }
-      Watchdog.reset();
     }
+    Watchdog.reset();
   }
 }
 
 void readUbloxData() {
   Watchdog.reset();
-  int j = 0;
-  for (j = 0; j < 200; j++) {
-    dataToSend[j] = (uint8_t)'0';
+  for (int i = 0; i < 200; i++) {
+    dataToSend[i] = (uint8_t)'\0';
   }
-  dataToSend[j] = (uint8_t)'\0';
 
   // memset(dataToSend, '\0', sizeof(dataToSend));
   // memset(voltMessage, '\0', sizeof(voltMessage));
@@ -296,33 +283,15 @@ void readUbloxData() {
 }
 
 void noGNSSDataAcquired() {
-  int i = 0;
-  for (i = 0; i < 200; i++) {
-    dataToSend[i] = (uint8_t)'0';
+  for (int i = 0; i < 200; i++) {
+    dataToSend[i] = (uint8_t)'\0';
   }
-  dataToSend[i] = (uint8_t)'\0';
+  // dataToSend[i] = (uint8_t)'\0';
   // memset(dataToSend, '\0', sizeof(dataToSend));
 
-  char ndstr[50]; 
-  snprintf(ndstr, sizeof(ndstr), ">>%s:No Ublox data", sitecode);
-  strncat(dataToSend, ndstr, sizeof(ndstr));
-
-  Serial.print("data to send: "); 
-  Serial.println(dataToSend);
-}
-
-void ubloxFailedInit() {
-  int i = 0;
-  for (i = 0; i < 200; i++) {
-    dataToSend[i] = (uint8_t)'0';
-  }
-  dataToSend[i] = (uint8_t)'\0';
-  // memset(dataToSend, '\0', sizeof(dataToSend));
-
-  char ndstr[50]; 
-  snprintf(ndstr, sizeof(ndstr), "%s's ublox initialization failed", sitecode);
-  strncat(dataToSend, ndstr, sizeof(ndstr));
-
+  strncat(dataToSend,">>", 3); 
+  strncpy(dataToSend,sitecode,sizeof(sitecode));
+  strncat(dataToSend,":No Ublox data.", 16); 
   Serial.print("data to send: "); 
   Serial.println(dataToSend);
 }
