@@ -236,10 +236,7 @@ void readUbloxData() {
         Serial.println(accu_count);
         Watchdog.reset();
       } else {
-        Watchdog.reset();
         i--; //loop until hacc&vacc conditions are satisfied or until timeout reached
-        Serial.print("iter_count: "); 
-        Serial.println(i);
         Watchdog.reset();
         getRTCM();
       }

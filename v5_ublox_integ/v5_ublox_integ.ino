@@ -1334,7 +1334,7 @@ void rtcTicker() {
 void setResetFlag(uint8_t hourAlarm, uint8_t minuteAlarm) {
   DateTime checkTime = rtc.now();
   char sendNotif[100];
-  if (checkTime.hour() == hourAlarm && checkTime.minute() == minuteAlarm) {
+  if (((checkTime.hour() == hourAlarm) || (checkTime.hour() == hourAlarm-6) || (checkTime.hour() == hourAlarm-12) || (checkTime.hour() == hourAlarm-18)) && (checkTime.minute() == minuteAlarm)) {
     if (get_logger_mode() != 2) {
       sprintf(sendNotif, "Current time [%d:%d] Datalogger will reset after data collection.", checkTime.hour(), checkTime.minute());
       send_thru_gsm(sendNotif, get_serverNum_from_flashMem());
