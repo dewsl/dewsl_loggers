@@ -18,7 +18,7 @@ void init_ublox() {
   Wire.begin();
   Watchdog.reset();
 
-  for (int x = 0; x < 10; x++) {        //10 retries to not exceed watchdog limit=16sec
+  for (int x = 0; x < 10; x++) {        //10 retries to not exceed watchdog limit(16sec)
     if (myGNSS.begin(Wire) == false) {
       Serial.println(F("u-blox GNSS not detected at default I2C address. Please check wiring. Freezing."));
       delay(1000);
@@ -112,6 +112,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
   init_ublox();
   Watchdog.reset();
   start = millis();
+
   do {
     Watchdog.reset();
     getRTCM();
@@ -121,9 +122,9 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     if (RX_LORA_FLAG == 0) {
       Watchdog.reset();
       readUbloxData();
-      Watchdog.reset();
       RX_LORA_FLAG == 1;
       READ_FLAG = true;
+      Watchdog.reset();
     }
   } else if (((checkRTKFixType() != 2) || (checkSatelliteCount() < MIN_SAT)) && ((millis() - start) >= RTCM_TIMEOUT)) {
     Serial.println("Unable to obtain fix or no. of satellites reqd. not met");
@@ -144,11 +145,12 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     strncat(dataToSend, Ctimestamp, 13);
     Watchdog.reset();
 
-    if ((get_logger_mode() == 7) || (get_logger_mode() == 9) || ((get_logger_mode() == 10))) {
-      //Remove 1st and 2nd character data in string. 
-      //Not needed in GSM mode
-      for (byte i = 0; i < strlen(dataToSend); i++) {
+    if ((get_logger_mode() == 7) || (get_logger_mode() == 9) || ((get_logger_mode() == 10))) { //GSM Modes
+      //If string start '>>', remove 1st and 2nd character data in string. Not needed in GSM mode
+      if (strstr(dataToSend, ">>")) {
+        for (byte i = 0; i < strlen(dataToSend); i++) {
         dataToSend[i] = dataToSend[i + 2];
+        }
       }
     }
     Watchdog.reset();
@@ -160,10 +162,6 @@ void readUbloxData() {
   for (int i = 0; i < 200; i++) {
     dataToSend[i] = (uint8_t)'\0';
   }
-
-  // memset(dataToSend, '\0', sizeof(dataToSend));
-  // memset(voltMessage, '\0', sizeof(voltMessage));
-  Watchdog.reset();
 
   byte rtk_fixtype = checkRTKFixType();
   int sat_num = checkSatelliteCount();
@@ -283,11 +281,9 @@ void noGNSSDataAcquired() {
   for (int i = 0; i < 200; i++) {
     dataToSend[i] = (uint8_t)'\0';
   }
-  // dataToSend[i] = (uint8_t)'\0';
-  // memset(dataToSend, '\0', sizeof(dataToSend));
 
-  strncat(dataToSend,">>", 3); 
-  strncpy(dataToSend,sitecode,sizeof(sitecode));
+  strncpy(dataToSend, ">>", 3); 
+  strncat(dataToSend, sitecode, sizeof(sitecode));
   strncat(dataToSend,":No Ublox data.", 16); 
   Serial.print("data to send: "); 
   Serial.println(dataToSend);
