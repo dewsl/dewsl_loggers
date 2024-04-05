@@ -480,24 +480,17 @@ void loop() {
       send_thru_lora(read_batt_vol(get_calib_param()));
       Watchdog.reset();
     } else if (get_logger_mode() == 9) {
-      // Gateway Rain Gauge with GNSS Sensor
+      // Gateway with Subsurface Sensor, Rain Gauge and GNSS Sensor
       debug_println("Begin: logger mode 9");
       turn_ON_GSM(get_gsm_power_mode());
       Watchdog.reset();
       send_rain_data(0); //send rain
       Watchdog.reset();
       getGNSSData(dataToSend, sizeof(dataToSend));  //read gnss data
-      send_thru_gsm(dataToSend, get_serverNum_from_flashMem()); 
       Watchdog.reset();
-      turn_OFF_GSM(get_gsm_power_mode());
-      Watchdog.reset();
-    } else if (get_logger_mode() == 10) {
-      // Gateway with Subsurface sensor and GNSS Sensor
-      debug_println("Begin: logger mode 10");
-      turn_ON_GSM(get_gsm_power_mode());
-      getGNSSData(dataToSend, sizeof(dataToSend));  //read gnss data
-      send_thru_gsm(dataToSend, get_serverNum_from_flashMem());
       get_Due_Data(1, get_serverNum_from_flashMem());
+      Watchdog.reset();
+      send_thru_gsm(dataToSend, get_serverNum_from_flashMem()); 
       Watchdog.reset();
       turn_OFF_GSM(get_gsm_power_mode());
       Watchdog.reset();

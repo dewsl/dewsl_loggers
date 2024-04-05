@@ -145,13 +145,14 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     strncat(dataToSend, Ctimestamp, 13);
     Watchdog.reset();
 
-    if ((get_logger_mode() == 7) || (get_logger_mode() == 9) || ((get_logger_mode() == 10))) { //GSM Modes
+    if ((get_logger_mode() == 7) || (get_logger_mode() == 9)) { //GSM Modes
       //If string start '>>', remove 1st and 2nd character data in string. Not needed in GSM mode
       if (strstr(dataToSend, ">>")) {
         for (byte i = 0; i < strlen(dataToSend); i++) {
         dataToSend[i] = dataToSend[i + 2];
         }
       }
+      aggregate_received_data(dataToSend);
     }
     Watchdog.reset();
   }
@@ -290,7 +291,7 @@ void noGNSSDataAcquired() {
 }
 
 void initialize_sitecode() {
-  if ((get_logger_mode() == 1) || (get_logger_mode() == 9) || ((get_logger_mode() == 10))) { //Gateway with sensor and 1 lora tx (if gnss) ; Gateway rain gauge with gnss
+  if ((get_logger_mode() == 1) || (get_logger_mode() == 9)) { //Gateway with sensor and 1 lora tx (if gnss) ; Gateway rain gauge with gnss
     char *logger_B_data = get_logger_B_from_flashMem();
     strncpy(sitecode, logger_B_data, 5); // Copy up to 5 characters to avoid buffer overflow
     sitecode[5] = '\0'; // Null-terminate the string
