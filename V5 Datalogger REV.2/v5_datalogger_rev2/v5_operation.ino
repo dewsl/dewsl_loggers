@@ -111,8 +111,7 @@ void initSleepCycle() {
   REG_GCLK_CLKCTRL |= GCLK_CLKCTRL_ID(GCM_EIC) |  // generic clock multiplexer id for the external interrupt controller
                       GCLK_CLKCTRL_GEN_GCLK1 |    // generic clock 1 which is xosc32k
                       GCLK_CLKCTRL_CLKEN;         // enable it
-  while (GCLK->STATUS.bit.SYNCBUSY)
-    ;  // write protected, wait for sync
+  while (GCLK->STATUS.bit.SYNCBUSY);  // write protected, wait for sync
 
   EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN4;  // Set External Interrupt Controller to use channel 4 (pin 6)
   EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN5;  // Set External Interrupt Controller to use channel 5 (pin A4)

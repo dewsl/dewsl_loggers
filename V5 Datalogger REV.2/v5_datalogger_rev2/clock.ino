@@ -141,3 +141,13 @@ void setResetFlag(uint8_t hourAlarm, uint8_t minuteAlarm) {
   if (!hhAlarm.read() == 0 && !mmAlarm.read() == 0) if ((checkTime.hour() == hhAlarm.read()) && (checkTime.minute() == mmAlarm.read())) alarmResetFlag = true;
   else if ((checkTime.hour() == hourAlarm) && (checkTime.minute() == minuteAlarm)) alarmResetFlag = true;
 }
+
+void printDateTime() {
+  char timestring[100] = "INVALID";
+  // getTimeStamp(_timestamp, sizeof(_timestamp));
+  const char * monthsEq[12] = {"Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"};
+  DateTime now = rtc.now();
+  if (now.month()-1 <= 12) sprintf(timestring, "%s %d,%d %d:%d:%d",monthsEq[now.month()-1],now.date(),now.year(),now.hour(),now.minute(),now.second());
+  debugPrintln(timestring);
+}
+

@@ -16,9 +16,10 @@ void GSMInit() {
   unsigned long initStart = millis();
   int initTimeout = 20000;
   uint8_t errorCount = 0;
-  detachInterrupt(digitalPinToInterrupt(GSMINT));
 
-  // bool serial
+  debugPrintln("Connecting GSM to network...");
+
+  detachInterrupt(digitalPinToInterrupt(GSMINT));
   GSMSerial.begin(GSMBAUDRATE);
   delayMillis(1000);
     /* Assign pins 10 & 11 UART SERCOM functionality */
@@ -38,7 +39,6 @@ void GSMInit() {
     delayMillis(300);
   } while (millis() - gsmPowerOn < 5000);
    
-  debugPrintln("Connecting GSM to network...");
   while (!gsmSerial || !GSMconfig || !signalCOPS ) {  //include timeout later
     GSMSerial.write("AT\r");
     if (GSMWaitResponse("OK", 1000, 1) && !gsmSerial) { 
@@ -77,6 +77,9 @@ void GSMInit() {
       REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT2;    // clears interrupt flag
       attachInterrupt(digitalPinToInterrupt(GSMINT), GSMISR, FALLING);
       break;
+    }
+    if (errorCount == 5) {
+      debugPrintln("GSM_HARDWARE_SERIAL_CONNECTION_ERROR");
     }
     if (millis() - initStart > initTimeout) {
       debugPrint("GSM_INIT: ");
@@ -533,7 +536,7 @@ void generateInfoMessage(char* infoContainer) {
     else if (savedRainCollectorType.read()==1)rainMultiplier = 0.2;   
   }
   sprintf(infoContainer,"%sW,%0.2f,%0.2f,%0.2f,%u,%s",
-    flashLoggerName.sensorA,
+    flashLoggerName.sensorNameList[0],
     readRTCTemp(),
     _rainTips*rainMultiplier,
     readBatteryVoltage(savedBatteryType.read()),
@@ -697,13 +700,13 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
 
   flashLoggerName = savedLoggerName.read();
   sprintf(otaString, "%s", OTALineCheck);
-  sprintf(LoRaKey, "%s%s", flashLoggerName.sensorA, ackKey);
+  sprintf(LoRaKey, "%s%s", flashLoggerName.sensorNameList[0], ackKey);
 
   // tokenize response to extract OTA sender mobile number
   // overwrites preceeding sender mobile number with no valid OTA command
   //REGISTER:SENSLOPE:639954645704
   if (strncmp(otaString, "REGISTER:SENSLOPE:", 18) == 0) {
-    sprintf(OTAReply,"%s: Registration is no longer needed; proceed with normal OTA commands.",flashLoggerName.sensorA);
+    sprintf(OTAReply,"%s: Registration is no longer needed; proceed with normal OTA commands.",flashLoggerName.sensorNameList[0]);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -738,7 +741,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     //save to flash memory
 
     // compose OTA command reply
-    sprintf(OTAReply,"%s updated server number in flash: %s",flashLoggerName.sensorA, flashServerNumber.dataServer);
+    sprintf(OTAReply,"%s updated server number in flash: %s",flashLoggerName.sensorNameList[0], flashServerNumber.dataServer);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -746,7 +749,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
   //?SERVERNUMBER:SENSLOPE:
   else if (strncmp(otaString, "?SERVERNUMBER:", 14) == 0) {
 
-    sprintf(OTAReply, "%s current server number: %s",flashLoggerName.sensorA, flashServerNumber.dataServer);
+    sprintf(OTAReply, "%s current server number: %s",flashLoggerName.sensorNameList[0], flashServerNumber.dataServer);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -754,7 +757,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
   //RESET:SENSLOPE:
   else if (strncmp(otaString, "RESET:SENSLOPE:", 15) == 0 ) {
     // debugPrintln("Resetting microcontroller!");
-    sprintf(OTAReply, "Resetting datalogger %s...", flashLoggerName.sensorA);
+    sprintf(OTAReply, "Resetting datalogger %s...", flashLoggerName.sensorNameList[0]);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     deleteMessageInbox();
@@ -784,7 +787,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     setRTCDateTime(_YY, _MM, _DD, _hh, _mm, _ss, _dd);
     getTimeStamp(_timestamp, sizeof(_timestamp));
 
-    sprintf(OTAReply, "%s updated timestamp: %s",flashLoggerName.sensorA, _timestamp);
+    sprintf(OTAReply, "%s updated timestamp: %s",flashLoggerName.sensorNameList[0], _timestamp);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -794,7 +797,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
   else if (strncmp(otaString, "FETCHGPRSTIME", 13) == 0) {
     updateTimeWithGPRS(); //success depends the network connection quality
     getTimeStamp(_timestamp, sizeof(_timestamp));
-    sprintf(OTAReply, "%s current timestamp: %s",flashLoggerName.sensorA, _timestamp);
+    sprintf(OTAReply, "%s current timestamp: %s",flashLoggerName.sensorNameList[0], _timestamp);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -804,7 +807,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
   else if (strncmp(otaString, "CHECKTIMESTAMP:", 15) == 0) {
     
     getTimeStamp(_timestamp, sizeof(_timestamp));
-    sprintf(OTAReply, "%s current timestamp: %s",flashLoggerName.sensorA, _timestamp);
+    sprintf(OTAReply, "%s current timestamp: %s",flashLoggerName.sensorNameList[0], _timestamp);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -826,7 +829,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     savedAlarmInterval.write(_inputSending);
     delayMillis(100);
     
-    sprintf(OTAReply, "%s updated send interval setting: %d",flashLoggerName.sensorA, savedAlarmInterval.read());
+    sprintf(OTAReply, "%s updated send interval setting: %d",flashLoggerName.sensorNameList[0], savedAlarmInterval.read());
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -837,7 +840,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     //read DUE command
   
     flashCommands = savedCommands.read();
-    sprintf(OTAReply,"%s current sensor command: %s",flashLoggerName.sensorA, flashCommands.sensorCommand);
+    sprintf(OTAReply,"%s current sensor command: %s",flashLoggerName.sensorNameList[0], flashCommands.sensorCommand);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -854,7 +857,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     savedCommands.write(flashCommands);  //save to flash memory
 
     flashCommands = savedCommands.read();
-    sprintf(OTAReply,"%s current sensor command: %s",flashLoggerName.sensorA, flashCommands.sensorCommand);
+    sprintf(OTAReply,"%s current sensor command: %s",flashLoggerName.sensorNameList[0], flashCommands.sensorCommand);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;

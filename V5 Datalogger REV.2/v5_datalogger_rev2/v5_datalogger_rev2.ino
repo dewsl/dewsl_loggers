@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2405.03
+#define FIRMWAREVERSION 2405.10
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 60000
@@ -49,6 +49,9 @@
 #define VBATPIN A7
 #define VBATEXT A5
 
+// misc macro
+// arrayCount(arr) = number of rows  arrayCount(arr[0]) = number of columns
+#define arrayCount(x) (sizeof(x) / sizeof(x[0]))      
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 const char ackKey[] = "^REC'D_";
@@ -73,6 +76,7 @@ typedef struct
   char sensorB[6];
   char sensorC[6];
   char sensorD[6];
+  char sensorNameList[20][20];      // currently limited to 10 
   // char sensorE[6];
   // char sensorF[6];
 } SensorNameStruct;
@@ -119,6 +123,9 @@ FlashStorage(hhAlarm,int);
 FlashStorage(mmAlarm,int);
 FlashStorage(savedAlarmInterval, int);
 FlashStorage(savedDataLoggerMode, int);
+FlashStorage(hasSubsurfaceSensorFlag, int);
+FlashStorage(hasUbloxRouterFlag, int);
+FlashStorage(savedRouterCount, int);
 FlashStorage(savedGSMPowerMode, int);
 FlashStorage(savedRainCollectorType, int);
 FlashStorage(savedRainSendType, int);
@@ -197,10 +204,11 @@ void setup() {
     if (Serial) {
       LEDOff();
       delayMillis(2000);
+      if (loggerParamSetFlag.read() == 0) introMSG();
       Serial.println(F(""));
-      Serial.println(F("----------------------------------------------"));
-      Serial.println(F("-                 DEBUG MODE                 -"));
-      Serial.println(F("----------------------------------------------"));
+      Serial.println(F("------------------------------------------------------"));
+      Serial.println(F("-                     DEBUG MODE                     -"));
+      Serial.println(F("------------------------------------------------------"));
       debugMode = true;
       break;
     }
@@ -212,9 +220,12 @@ void loop() {
   
   // Run once datalogger parameters are set
   while (loggerParamSetFlag.read() == 0) {  
-    updateLoggerMode();   // Set datalogger mode, ddefaults to 0 if invalid or timed-out 
-    updateSensorNames();
+    updateLoggerMode();   // Set datalogger mode, ddefaults to 0 if invalid or timed-out
+    Serial.println(F("------------------------------------------------------"));
+    scalableUpdateSensorNames();
     loggerParamSetFlag.write(99);
+    debugPrintln("");
+    Serial.println(F("------------------------------------------------------"));
   }
 
   if (runGSMInit && loggerWithGSM(savedDataLoggerMode.read())) {
