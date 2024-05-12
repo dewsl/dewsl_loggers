@@ -183,11 +183,24 @@ void debugFunction() {
       Serial.println(F("----------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "X")) {
+      Serial.println(savedParameters());
+      Serial.println("Backup SD card data");
+      Serial.println("Put stickers");
+      Serial.println(F("----------------------------------------------"));
+      Serial.println("Are all parameters saved correct and complete?");
+      if (inputIs(serialInput, "Yes")){
       Serial.println("Exit debug mode");
       debugProcess = false;
       debugMode = false;
       deleteMessageInbox();
       Serial.println(F("----------------------------------------------"));
+      }
+      else {
+        Serial.println("Parameters to change:")
+        // lagay dito yung mga babaguhin
+      }
+
+
 
     } else if (inputIs(serialLineInput, "LORA_SEND_TEST")) {
       char payloadContainer[200];
