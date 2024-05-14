@@ -70,6 +70,18 @@ void flash_fetch() {
   }
 }
 
+// Checks if something is stored in flash memory
+int flash_LED(){
+  byte* b2 = dueFlashStorage.readAddress(4);
+  int flash_check, override_check;
+  f_config fetch_config;
+  memcpy(&fetch_config, b2, sizeof(f_config));
+  flash_check = fetch_config.check;
+  return flash_check;
+}
+
+
+
 char* trim(char* str) {
     // Trim leading whitespace
     while (isspace(*str)) {
