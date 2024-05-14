@@ -107,15 +107,26 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "H")) {
-      char currentServer[20];
-      strcpy(currentServer, flashServerNumber.dataServer);
-      if (strlen(currentServer) != 11 || strlen(currentServer) != 12) {
-        Serial.println("## Default server in use ## ");  
-        strcpy(currentServer, defaultServerNumber);
-        currentServer[strlen(currentServer)+1];
-      } 
+      char serverBuffer[20];                                                  // container for server number, might be modified
+      sprintf(serverBuffer, flashServerNumber.dataServer);
       Serial.print("Saved Server Number: ");
-      Serial.println(currentServer);
+      if (strlen(serverBuffer) == 0) {                                        //  check for first boot if server number is not yet set
+        Serial.println("[NOT SET]");                                          //   and prints a notice
+        Serial.println("## Default server GLOBE2 will be used ## ");
+      } else {
+        if (strlen(serverBuffer) == 11 || strlen(serverBuffer) == 13) {       // crude check for 09xx and +639xx based sa length, pwede pa ito palitan ng mas specific approach
+          checkServerNumber(serverBuffer);                                    // replaces number in buffer with name if found
+          Serial.println(serverBuffer);
+        // do nothing yet.. pwede i-convert
+        } else Serial.println("## Default server GLOBE2 will be used ## ");   // prints out a notice
+      }
+
+  
+      Serial.println("");
+      Serial.println("Default server numbers:");
+      Serial.println("GLOBE1 - 09175972526 ; GLOBE2 - 09175388301");
+      Serial.println("SMART1 - 09088125642 ; SMART2 - 09088125639");
+      
       if (changeParameter()) {
         updateServerNumber();
       }
@@ -152,8 +163,19 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "L")) {
-      Serial.println("Run debug menu L");
+      // converted to battery voltage input either 12v or 4.2v
+      Serial.print("Battery voltage reference: ");
+      Serial.println(readBatteryVoltage(savedBatteryType.read()));
+      Serial.println("[0] 12 Lead Acid battery");
+      Serial.println("[1] 4.2 Li-Ion battery");
+      if (changeParameter()) {
+      setBatteryType();
+      }
 
+
+
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
     } else if (inputIs(serialLineInput, "M")) {
       flashServerNumber = savedServerNumber.read();
       Serial.print("Send custom SMS to server: ");
@@ -163,7 +185,19 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "N")) {
-      Serial.println("Run debug menu N");
+      Serial.print("Saved GSM power mode: ");
+      Serial.println(savedGSMPowerMode.read());
+      Serial.println("[0] Always ON");
+      Serial.println("[1] Low-power Mode (Always ON, but GSM SLEEPS when inactive)");
+      Serial.println("[2] Power Saving Mode");
+      if (changeParameter()) {
+      setGSMPowerMode();
+      }
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+
+
+
     } else if (inputIs(serialLineInput, "O")) {
       Serial.println("Input manual GSM Commands");
       unsigned long manualStart = millis();
@@ -198,19 +232,17 @@ void debugFunction() {
 
 
     } else if (inputIs(serialLineInput, "Q")) {
-      Serial.println("Run debug menu Q");
       GSMSerial.flush();
-      if (changeParameter()) {
-        Serial.println("Text mode in use:");
-        Serial.println("To send a message, use the format:\t09123456789>>Message_to_send");
-        Serial.println("use 09XXXXXXXXX or +639XXXXXXXXX number format");
-        Serial.println("IMPORTANT: Use \"EXIT\" to quit text mode.");
-        textMode();
-      } 
+      Serial.println("TEXT MODE IN USE:");
+      Serial.println("To send a message, follow the format below:");
+      Serial.println("09123456789>>Message to send");
+      Serial.println("Accepted number formats: 09XXXXXXXXX or +639XXXXXXXXX");
+      Serial.println("IMPORTANT: Input \"EXIT\" to quit text mode.");
+      textMode();
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
-    } else if (inputIs(serialLineInput, "X")) {
+    } else if (inputIs(serialLineInput, "X" ) || inputIs(serialLineInput, "EXIT" ) ) {
       Serial.println("Exit debug mode");
       debugProcess = false;
       debugMode = false;
@@ -394,15 +426,15 @@ void updateLoggerMode() {
   }
 
   if (loggerModeBuffer == 3) {    // gateways and routers
-    Serial.print("\tGateway with subsurface sensor? [Y/N] ");
+    Serial.print("   Gateway with subsurface sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasSubsurfaceSensorFlag.write(99);
-    Serial.print("Gateway with UBLOX rover? [Y/N] ");
+    Serial.print("   Gateway with UBLOX rover? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasUbloxRouterFlag.write(99);
-    Serial.print("Input router count: ");
+    Serial.print("   Input router count: ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     uint8_t rcount = atoi(addOnBuffer);
     if (rcount == 0) rcount = 1;  // should not accept ZERO as router count
@@ -411,11 +443,11 @@ void updateLoggerMode() {
     Serial.println(rcount);
   
   } else if (loggerModeBuffer == 2) {
-    Serial.print("Router with Subsurface Sensor? [Y/N] ");
+    Serial.print("   Router with Subsurface Sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasSubsurfaceSensorFlag.write(99);
-    Serial.print("Router with UBLOX Rover? [Y/N] ");
+    Serial.print("   Router with UBLOX Rover? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasUbloxRouterFlag.write(99);
@@ -502,13 +534,13 @@ void savedParameters() {
     Serial.print("Timestamp:\t ");
     Serial.println(_timestamp);
     Serial.println("");
-
+    Serial.print(">>>> ");
     getLoggerModeAndName();
     Serial.print("Sensor command:\t ");
     if (strlen(flashCommands.sensorCommand) == 0) Serial.println("[NOT SET] Default - ARQCM6T");
     else Serial.println(flashCommands.sensorCommand);
 
-    Serial.print("Sleep/Wake interval:\t ");
+    Serial.print("Wake interval:\t ");
     int alarmInterval = savedAlarmInterval.read();
     if (alarmInterval == 0)       Serial.println("30 minutes (hh:00 & hh:30)");
     else if (alarmInterval == 1)  Serial.println("15 minutes (hh:00, hh:15, hh:30, hh:45)");
@@ -526,12 +558,13 @@ void savedParameters() {
     if (savedRainSendType.read()==0)  Serial.println("Converted \"mm\" equivalent");
     else                              Serial.println("RAW TIP COUNT");
 
-    Serial.print("Input Voltage:\t ");
-    Serial.print(readBatteryVoltage(savedBatteryType.read()));
-    Serial.println("v");
     Serial.print("Battery type:\t ");
     if (savedBatteryType.read() == 1) Serial.println("Li-ion");
     else  Serial.println("Lead acid");
+    Serial.print("Input Voltage:\t ");
+    Serial.print(readBatteryVoltage(savedBatteryType.read()));
+    Serial.println("V");
+
 
     if (_timestamp[0] == '2') {  // temporay check for timestamp validity
       Serial.print("RTC temperature: ");
@@ -548,8 +581,8 @@ void savedParameters() {
       
       Serial.print("Server number:\t ");
       if (strlen(flashServerNumber.dataServer) == 0) {
-        Serial.print("[Default] ");
-        Serial.println(defaultServerNumber);
+        Serial.print(defaultServerNumber);
+        Serial.println(" [Default]");
       } else Serial.println(flashServerNumber.dataServer); 
   
       GSMSerial.write("AT+CSQ;+COPS?\r");
@@ -650,13 +683,7 @@ void scalableUpdateSensorNames() {
     if (strlen(nameBuffer) == 0) sprintf(nameBuffer,"TESG");
     Serial.println(nameBuffer);
     strncpy(flashLoggerName.sensorNameList[0], nameBuffer, strlen(nameBuffer));
-    Serial.print("Input expected ROUTER COUNT: ");
-    getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
-    expectedRouter = atoi(nameBuffer); 
-    if(expectedRouter == 0) expectedRouter = 1; // does not allow ZERO as router count
-    Serial.println(expectedRouter);
-    savedRouterCount.write(expectedRouter);
-    for (byte rCount = 1; rCount <= expectedRouter; rCount++) {   // router name positining starts at index 1, 0 is self
+    for (byte rCount = 1; rCount <= savedRouterCount.read(); rCount++) {   // router name positining starts at index 1, 0 is self
       Serial.print("Input name of ROUTER ");
       Serial.print(rCount);
       Serial.print(": ");
@@ -759,21 +786,45 @@ float readBatteryVoltage(uint8_t ver) {
   return measuredVBat;
 }
 
+void setBatteryType() {
+  int intervalBuffer = 0;
+  unsigned long intervalWait = millis();
+  Serial.print("Enter battery type: ");
+  while (millis() - intervalWait < 60000) {
+    if (Serial.available() > 0) {
+    intervalBuffer = Serial.parseInt();
+    if (intervalBuffer > 1) {
+      Serial.println("Invalid value, battery type unchanged.");
+      return;
+    }
+    savedAlarmInterval.write(intervalBuffer);
+    Serial.print("Updated battery type: ");
+    Serial.println(savedAlarmInterval.read());
+    break;
+    }
+  }
+}
+
+
+
+/// Why? Why not?
+/// Masyado lang mahaba kung buong "Dynaslope" name ang ilalagay.. pero pwede naman.. someday.
 void introMSG() {
 Serial.println("");  
-Serial.println(" ██████████   █████ █████ ██████   █████   █████████  ");
+Serial.println(F(" ██████████   █████ █████ ██████   █████   █████████  "));
 delayMillis(350);
-Serial.println("░░███░░░░███ ░░███ ░░███ ░░██████ ░░███   ███░░░░░███ ");
+Serial.println(F("░░███░░░░███ ░░███ ░░███ ░░██████ ░░███   ███░░░░░███ "));
 delayMillis(200);
-Serial.println(" ░███   ░░███ ░░███ ███   ░███░███ ░███  ░███    ░███ ");
+Serial.println(F(" ░███   ░░███ ░░███ ███   ░███░███ ░███  ░███    ░███ "));
+delayMillis(150);
+Serial.println(F(" ░███    ░███  ░░█████    ░███░░███░███  ░███████████ "));
 delayMillis(100);
-Serial.println(" ░███    ░███  ░░█████    ░███░░███░███  ░███████████ ");
-delayMillis(40);
-Serial.println(" ░███    ░███   ░░███     ░███ ░░██████  ░███░░░░░███ ");
+Serial.println(F(" ░███    ░███   ░░███     ░███ ░░██████  ░███░░░░░███ "));
+delayMillis(50);
+Serial.println(F(" ░███    ███     ░███     ░███  ░░█████  ░███    ░███ "));
 delayMillis(10);
-Serial.println(" ░███    ███     ░███     ░███  ░░█████  ░███    ░███ ");
-Serial.println(" ██████████      █████    █████  ░░█████ █████   █████");
-Serial.println("░░░░░░░░░░      ░░░░░    ░░░░░    ░░░░░ ░░░░░   ░░░░░ ");
+Serial.println(F(" ██████████      █████    █████  ░░█████ █████   █████"));
+Serial.println(F("░░░░░░░░░░      ░░░░░    ░░░░░    ░░░░░ ░░░░░   ░░░░░ "));
                                                       
                                                       
                                                       

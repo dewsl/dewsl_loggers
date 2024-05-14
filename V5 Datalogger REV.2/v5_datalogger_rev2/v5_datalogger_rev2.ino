@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2405.10
+#define FIRMWAREVERSION 2405.14
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 60000

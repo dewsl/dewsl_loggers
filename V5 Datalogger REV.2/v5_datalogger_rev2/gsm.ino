@@ -40,26 +40,34 @@ void GSMInit() {
   } while (millis() - gsmPowerOn < 5000);
    
   while (!gsmSerial || !GSMconfig || !signalCOPS ) {  //include timeout later
-    GSMSerial.write("AT\r");
+    if (!gsmSerial) GSMSerial.write("AT\r");
     if (GSMWaitResponse("OK", 1000, 1) && !gsmSerial) { 
       debugPrintln("Serial comm ready!");
       GSMSerial.write("ATE0\r");
       // GSMSerial.write("AT&W_SAVE\r");
       gsmSerial = true;
     } else errorCount++;
-    GSMSerial.flush();
-    delayMillis(500);
-    GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0");
-    GSMSerial.write("\r");
-    if (!GSMconfig && GSMWaitResponse("OK", 5000, 1)) {
+    if (gsmSerial) {
+      GSMSerial.flush();
+      delayMillis(500);
+      GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0");
+      GSMSerial.write("\r");
+    }
+    if (gsmSerial && !GSMconfig && GSMWaitResponse("OK", 5000, 1)) {
+      GSMSerial.flush();
+      delayMillis(500);
+      GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0");
+      GSMSerial.write("\r");
       GSMSerial.write("AT+CNMI=0,0,0,0,0\r");
       debugPrintln("GSM module config OK!");
       GSMconfig = true;
     }
+    if (GSMconfig) {
     GSMSerial.flush();
     GSMSerial.write("AT+CSQ\r");
     delayMillis(1000);
-    if (!signalCOPS && GSMGetResponse(gsmInitResponse, sizeof(gsmInitResponse), "+CSQ", 4000)) {
+    }
+    if (GSMconfig && !signalCOPS && GSMGetResponse(gsmInitResponse, sizeof(gsmInitResponse), "+CSQ", 4000)) {
       // int CSQval = parseCSQ(gsmInitResponse);
       // debugPrintln(gsmInitResponse);
       int CSQval = parseCSQ(gsmInitResponse);
@@ -79,14 +87,13 @@ void GSMInit() {
       break;
     }
     if (errorCount == 5) {
-      debugPrintln("GSM_HARDWARE_SERIAL_CONNECTION_ERROR");
+      debugPrintln("CHECK_GSM_SERIAL_OR_POWER");
+      break;
     }
     if (millis() - initStart > initTimeout) {
       debugPrint("GSM_INIT: ");
-      if (!gsmSerial) {
-        debugPrintln("GSM_HARDWARE_SERIAL_CONNECTION_ERROR");
-      } else if (!GSMconfig) {
-        debugPrintln("GSM_MODULE_ERROR");
+      if (!GSMconfig) {
+        debugPrintln("GSM_MODULE_CONFIG_ERROR");
       } else if (!signalCOPS) {
         debugPrintln("NETWORK_OR_SIM_ERROR");
       }
@@ -326,11 +333,14 @@ void textMode() {   // experimental
     }
     if (strlen(receiveLine) > 0) {
       if (strstr(receiveLine,"+CMT: ")){
+          char senderBuf[20];
           char *cmtBuf;
           cmtBuf = strtok(receiveLine, ": ");
           cmtBuf = strtok(NULL, ",");
-          debugPrint("From");
-          debugPrint(cmtBuf);
+          debugPrint("From ");
+          sprintf(senderBuf, cmtBuf);
+          checkSender(senderBuf);
+          debugPrint(senderBuf);
           debugPrint(" : ");
       } else debugPrintln(receiveLine);    // execute parsing here
       
@@ -589,11 +599,15 @@ void checkServerNumber(char * serverNumber) {
   else if (inputIs(numberBuffer,"GLOBE2")) sprintf(serverNumber,"%s","09175388301");
   else if (inputIs(numberBuffer,"KATE")) sprintf(serverNumber,"%s","09476873967");
   else if (inputIs(numberBuffer,"JAY")) sprintf(serverNumber,"%s","09451136212");
+  else if (inputIs(numberBuffer,"JJ")) sprintf(serverNumber,"%s","09287706189");
   else if (inputIs(numberBuffer,"KENNEX")) sprintf(serverNumber,"%s","09293175812");
+  else if (inputIs(numberBuffer,"KIM")) sprintf(serverNumber,"%s","09458057992");
   else if (inputIs(numberBuffer,"REYN")) sprintf(serverNumber,"%s","09669622726");
+  else if (inputIs(numberBuffer,"SAM")) sprintf(serverNumber,"%s","09770452845");
   else if (inputIs(numberBuffer,"SMART1")) sprintf(serverNumber,"%s","09088125642");
   else if (inputIs(numberBuffer,"SMART2")) sprintf(serverNumber,"%s","09088125639");
   else if (inputIs(numberBuffer,"WEB")) sprintf(serverNumber,"%s","09053648335");
+  else if (inputIs(numberBuffer,"CHI")) sprintf(serverNumber,"%s","09179995183");
   else {
     sprintf(serverNumber,"%s","09175972526");
     debugPrintln("Defaulted to GLOBE1");
@@ -609,11 +623,15 @@ void checkServerNumber(char * serverNumber) {
   else if(strstr(senderNumBuffer,"9175388301")) sprintf(senderNum,"%s","GLOBE2");
   else if(strstr(senderNumBuffer,"9476873967")) sprintf(senderNum,"%s","KATE");
   else if(strstr(senderNumBuffer,"9451136212")) sprintf(senderNum,"%s","JAY");
+  else if(strstr(senderNumBuffer,"9287706189")) sprintf(senderNum,"%s","JJ");
   else if(strstr(senderNumBuffer,"9293175812")) sprintf(senderNum,"%s","KENNEX");
+  else if(strstr(senderNumBuffer,"9458057992")) sprintf(senderNum,"%s","KIM");
+  else if(strstr(senderNumBuffer,"9770452845")) sprintf(senderNum,"%s","SAM");
   else if(strstr(senderNumBuffer,"9088125642")) sprintf(senderNum,"%s","SMART1");
   else if(strstr(senderNumBuffer,"9088125639")) sprintf(senderNum,"%s","SMART2");
   else if(strstr(senderNumBuffer,"9669622726")) sprintf(senderNum,"%s","REYN");
   else if(strstr(senderNumBuffer,"9053648335")) sprintf(senderNum,"%s","WEB");
+  else if(strstr(senderNumBuffer,"9179995183")) sprintf(senderNum,"%s","CHI");
 
 }
 
@@ -946,4 +964,23 @@ void updateTimeWithGPRS() {
   }
   REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT2; //clear interrupt flag before enabling
   attachInterrupt(digitalPinToInterrupt(GSMINT), GSMISR, FALLING);
+}
+
+void setGSMPowerMode() {
+  int intervalBuffer = 0;
+  unsigned long intervalWait = millis();
+  Serial.print("Enter GSM power mode: ");
+  while (millis() - intervalWait < 60000) {
+    if (Serial.available() > 0) {
+    intervalBuffer = Serial.parseInt();
+    if (intervalBuffer > 2) {
+      Serial.println("Invalid value, mode unchanged.");
+      return;
+    }
+    savedAlarmInterval.write(intervalBuffer);
+    Serial.print("Updated GSM power mode: ");
+    Serial.println(savedAlarmInterval.read());
+    break;
+    }
+  }
 }

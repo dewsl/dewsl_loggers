@@ -147,7 +147,7 @@ void printDateTime() {
   // getTimeStamp(_timestamp, sizeof(_timestamp));
   const char * monthsEq[12] = {"Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"};
   DateTime now = rtc.now();
-  if (now.month()-1 <= 12) sprintf(timestring, "%s %d,%d %d:%d:%d",monthsEq[now.month()-1],now.date(),now.year(),now.hour(),now.minute(),now.second());
+  if (now.month()-1 <= 12) sprintf(timestring, "%s %d,%d %02d:%02d:%02d",monthsEq[now.month()-1],now.date(),now.year(),now.hour(),now.minute(),now.second());
   debugPrintln(timestring);
 }
 
