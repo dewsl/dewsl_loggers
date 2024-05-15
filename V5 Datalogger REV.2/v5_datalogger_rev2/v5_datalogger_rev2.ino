@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2405.14
+#define FIRMWAREVERSION 2405.15
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 60000
@@ -262,7 +262,9 @@ void loop() {
   }
 
   setNextAlarm(savedAlarmInterval.read());
+
   disableWatchdog();
+
   if (alarmResetFlag) {
     alarmResetFlag = false; // precaution only; pwede naman kahit wala ito
     NVIC_SystemReset();

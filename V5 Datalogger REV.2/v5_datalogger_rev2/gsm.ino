@@ -42,7 +42,7 @@ void GSMInit() {
   while (!gsmSerial || !GSMconfig || !signalCOPS ) {  //include timeout later
     if (!gsmSerial) GSMSerial.write("AT\r");
     if (GSMWaitResponse("OK", 1000, 1) && !gsmSerial) { 
-      debugPrintln("Serial comm ready!");
+      if (Serial) Serial.println("Serial comm ready!");
       GSMSerial.write("ATE0\r");
       // GSMSerial.write("AT&W_SAVE\r");
       gsmSerial = true;
@@ -59,7 +59,7 @@ void GSMInit() {
       GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0");
       GSMSerial.write("\r");
       GSMSerial.write("AT+CNMI=0,0,0,0,0\r");
-      debugPrintln("GSM module config OK!");
+      if (Serial) Serial.println("GSM module config OK!");
       GSMconfig = true;
     }
     if (GSMconfig) {
@@ -73,15 +73,15 @@ void GSMInit() {
       int CSQval = parseCSQ(gsmInitResponse);
       if (CSQval > 0) {
         debugPrintln("Checked network signal quality..");
-        debugPrint("CSQ: ");
-        debugPrintln(CSQval);
+        if (Serial) Serial.print("CSQ: ");
+        if (Serial) Serial.println(CSQval);
         signalCOPS = true;
       }
     }
     if (gsmSerial && GSMconfig && signalCOPS) {
       GSMSerial.write("AT&W\r");
       debugPrintln("");
-      debugPrintln("GSM READY");
+      if (Serial) Serial.println("GSM READY");
       REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT2;    // clears interrupt flag
       attachInterrupt(digitalPinToInterrupt(GSMINT), GSMISR, FALLING);
       break;
@@ -236,7 +236,7 @@ bool GSMWaitResponse(const char* targetResponse, int waitDuration, int showRespo
         }
       }
 
-      if (strlen(responseBuffer) > 0 && responseBuffer != "/n") {
+      if (strlen(responseBuffer) > 0 && responseBuffer != "\n") {
         if (showResponse > 0) debugPrintln(responseBuffer);
         if (strstr(responseBuffer, toCheck)) {
           responseValid = true;
@@ -638,8 +638,9 @@ void checkServerNumber(char * serverNumber) {
 void deleteMessageInbox() {
   GSMSerial.flush();
   GSMSerial.write("AT+CMGDA=\"DEL ALL\"\r");
-  if (GSMWaitResponse("OK", 15000, 1)) debugPrintln("deleted all SMS from SIM");
-  else {debugPrintln("Delete SMS failed");}
+  delayMillis(500);
+  if (GSMWaitResponse("OK", 15000, 1)) if (Serial) Serial.println("Deleted all SMS from SIM");
+  else {if (Serial) Serial.println("Delete SMS failed");}
 }
 
 void checkOTACommand() {
@@ -891,7 +892,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
 }
 
 void clearGlobalSMSDump() {
-  for (byte d = 0; d < sizeof(_globalSMSDump);d++) _globalSMSDump[d]=0x00; 
+  for (int d = 0; d < sizeof(_globalSMSDump);d++) _globalSMSDump[d]=0x00; 
 }
 
 void updateTimeWithGPRS() {

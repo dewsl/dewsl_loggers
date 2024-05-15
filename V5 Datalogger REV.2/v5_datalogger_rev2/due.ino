@@ -5,10 +5,11 @@ void dueInit (uint8_t dueTrigPin) {
 
 void dueDataCollection(int samplingTimeout) {
   bool readDueData = true;
-  int lineBufferLength = 500;
-  char lineBuffer[lineBufferLength];
+  // int lineBufferLength = 500;
+  char lineBuffer[500];
   char commandContainer[100];
-  int lineBufferIndex;
+  char dueChar;
+  int dueCharIndex;
   unsigned long samplingStart;
   samplingStart = millis();
 
@@ -27,19 +28,29 @@ void dueDataCollection(int samplingTimeout) {
   DUESerial.write(commandContainer);
   while (readDueData) {
     
-    lineBufferIndex = 0;
+    dueCharIndex = 0;
     
     if (millis() - samplingStart > samplingTimeout) {
       Serial.printf("Sampling timed out!");
       readDueData = false;
       break;
     }
-    for (int i=0; i < lineBufferLength; i++) { 
-      lineBuffer[i] = 0x00;
+
+    for (int i=0; i < sizeof(lineBuffer); i++)  lineBuffer[i] = 0x00;
+
+    DUESerial.readBytesUntil('\n', lineBuffer, sizeof(lineBuffer));
+    // while (DUESerial.available() > 0) {
+    //   dueChar = DUESerial.read();
+    //   if (dueChar != '\n') {
+    //     lineBuffer[dueCharIndex];
+    //     dueCharIndex++;
+    //   }
+    // }
+    for (int n = 0; n < sizeof(lineBuffer); n++) {
+      if (lineBuffer[n] == '\n' || lineBuffer[n] == '\r') lineBuffer[n]=0x00; // Overwrite extra '\n' character from readBytesUntil
     }
 
-    DUESerial.readBytesUntil('\n', lineBuffer, lineBufferLength);
-    lineBuffer[strlen(lineBuffer)] = 0x00;
+    lineBuffer[strlen(lineBuffer)+1] = 0x00;
     
     // Keeps updating timeout start as long as there is input from dueSerial
     if (strlen(lineBuffer) > 0 ) {

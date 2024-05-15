@@ -137,9 +137,7 @@ int dayOfWeek(uint16_t YYYY, uint8_t MM, uint8_t DD)
 
 void setResetFlag(uint8_t hourAlarm, uint8_t minuteAlarm) {
   DateTime checkTime = rtc.now();
-  char sendNotif[100];
-  if (!hhAlarm.read() == 0 && !mmAlarm.read() == 0) if ((checkTime.hour() == hhAlarm.read()) && (checkTime.minute() == mmAlarm.read())) alarmResetFlag = true;
-  else if ((checkTime.hour() == hourAlarm) && (checkTime.minute() == minuteAlarm)) alarmResetFlag = true;
+  if ((checkTime.hour() == hourAlarm) && (checkTime.minute() == minuteAlarm)) alarmResetFlag = true;
 }
 
 void printDateTime() {

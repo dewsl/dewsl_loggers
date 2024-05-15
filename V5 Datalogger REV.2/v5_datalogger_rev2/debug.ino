@@ -42,7 +42,6 @@ void debugFunction() {
 
     //  processes serial input accordingly
     if (inputIs(serialLineInput, "A")) {
-      Serial.println("Run debug menu A");
       // dueDataCollection(dataDump, 2000, SAMPLINGTIMEOUT);
       Operation(flashServerNumber.dataServer);
       debugModeStart = millis(); //update start of timeout counter
@@ -76,7 +75,6 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "E")) {
-      Serial.println("Run debug menu E");
       Serial.print("Current timestamp: ");
       getTimeStamp(_timestamp, sizeof(_timestamp));
       Serial.println(_timestamp);
@@ -152,8 +150,7 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "K")) {
-      Serial.println("Run debug menu K");
-      Serial.print("Saved alarm interval: ");
+      Serial.print("Saved SLEEP/WAKE interval: ");
       Serial.println(savedAlarmInterval.read());
       printRTCIntervalEquivalent();
       if (changeParameter()) {
@@ -217,7 +214,6 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "P")) {
-        Serial.println("Run debug menu P");
         flashCommands = savedCommands.read();
         Serial.print("Current sensor command: ");
         if (strlen(flashCommands.sensorCommand)==0) Serial.println("[NOT SET]");
@@ -243,11 +239,11 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "X" ) || inputIs(serialLineInput, "EXIT" ) ) {
-      Serial.println("Exit debug mode");
+      Serial.println("Quitting debug mode...");
       debugProcess = false;
       debugMode = false;
       deleteMessageInbox();
-      Serial.println(F("------------------------------------------------------"));
+      // Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "LORA_SEND_TEST")) {
       char payloadContainer[200];
@@ -334,10 +330,10 @@ void debugFunction() {
   
   if (!debugProcess) {
       debugMode = false;
-      Serial.println(F("------------------------------------------------------"));
+      // Serial.println(F("------------------------------------------------------"));
       Serial.println(F("Exiting from DEBUG MENU"));
       Serial.println(F("------------------------------------------------------"));
-      setNextAlarm(savedAlarmInterval.read());
+      // setNextAlarm(savedAlarmInterval.read());
       delayMillis(75);
       rtc.clearINTStatus();
       GSMInit();
@@ -583,7 +579,17 @@ void savedParameters() {
       if (strlen(flashServerNumber.dataServer) == 0) {
         Serial.print(defaultServerNumber);
         Serial.println(" [Default]");
-      } else Serial.println(flashServerNumber.dataServer); 
+      } else {
+        char serverNameBuf[20];
+        sprintf(serverNameBuf, flashServerNumber.dataServer);
+        Serial.print(serverNameBuf);
+        checkSender(serverNameBuf);
+        if (strlen(serverNameBuf) != strlen(flashServerNumber.dataServer)){
+          Serial.print(" [");
+          Serial.print(serverNameBuf);
+          Serial.println("]");
+        }
+      } 
   
       GSMSerial.write("AT+CSQ;+COPS?\r");
       delayMillis(1000);

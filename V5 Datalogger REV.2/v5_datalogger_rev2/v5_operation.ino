@@ -1,99 +1,78 @@
 void Operation(char * operationServerNumber) {
-  char smsSegmentContainer[2000];
+  char smsSegmentContainer[500];
   char infoSMS[100];
   uint8_t dataloggerMode = savedDataLoggerMode.read();
   // LEDOn();
   
-  for (int s=0;s<sizeof(_globalSMSDump);s++) _globalSMSDump[s] = 0x00;
-
+  clearGlobalSMSDump();
   getTimeStamp(_timestamp, sizeof(_timestamp));
   
-  if (dataloggerMode == 1) {
-      Watchdog.reset();
-      debugPrintln("GATEWAY with subsurface sensor + [1] ROUTER");
-      debugPrintln("Waiting for router data..");
-      waitForLoRaRouterData(MAX_GATWAY_WAIT, 1, savedLoraReceiveMode.read()); //  waits for router to send sensor info and adds it so sms sending stack
-      debugPrintln("Collecting sensor column data..");                        //  collects sensor after router terminates with volt string or time-out
-      dueDataCollection(SAMPLINGTIMEOUT);                                     //  adds collected sensors data to SMS stack
-      generateInfoMessage(infoSMS);                                           //  generates datalogger info & rain sms(e.g.,TESTAW,32.00,0.00,0.82,99,200415171303)
-      addToSMSStack(infoSMS);                                                 //  adds datalogger info & rain to SMS stack
+  if (dataloggerMode == 0 || dataloggerMode == 1){
+    debugPrint("ARQ MODE");
+    if (hasUbloxRouterFlag.read() == 99) debugPrint("+ UBLOX");
+    debugPrintln("");
 
-  } else if (dataloggerMode == 2) {
-    debugPrintln("ROUTER MODE");
-    // LoRa transmitter of version 5 datalogger
-    // get_Due_Data(2, get_serverNum_from_flashMem());
-    Watchdog.reset();
-  } else if (dataloggerMode == 3) {
-  //   // Gateway only with 1 LoRa transmitter
-  //   turn_ON_GSM(get_gsm_power_mode());
-  //   Watchdog.reset();
-  //   send_rain_data(0);
-  //   Watchdog.reset();
-  //   receive_lora_data(3);
-  //   Watchdog.reset();
-  //   turn_OFF_GSM(get_gsm_power_mode());
-  //   Watchdog.reset();
-  } else if (dataloggerMode == 4) {
-  //   // Gateway only with 2 LoRa transmitter
-  //   turn_ON_GSM(get_gsm_power_mode());
-  //   Watchdog.reset();
-  //   send_rain_data(0);
-  //   Watchdog.reset();
-  //   receive_lora_data(4);
-  //   Watchdog.reset();
-  //   turn_OFF_GSM(get_gsm_power_mode());
-  //   Watchdog.reset();
-  } else if (dataloggerMode == 5) {
-  //   // Gateway only with 3 LoRa transmitter
-  //   turn_ON_GSM(get_gsm_power_mode());
-  //   Watchdog.reset();
-  //   send_rain_data(0);
-  //   Watchdog.reset();
-  //   receive_lora_data(5);
-  //   Watchdog.reset();
-  //   turn_OFF_GSM(get_gsm_power_mode());
-  //   Watchdog.reset();
-  } else if (dataloggerMode == 6) {
-  //   // Rain gauge ONLY datalogger - GSM
-  //   debug_println("Begin: logger mode 6");
-  //   turn_ON_GSM(get_gsm_power_mode());
-  //   Watchdog.reset();
-  //   send_rain_data(0);
-  //   Watchdog.reset();
-  //   turn_OFF_GSM(get_gsm_power_mode());
-  //   Watchdog.reset();
-
-  } else if (dataloggerMode == 7) {
-
-  } else if (dataloggerMode == 8) {
-  
-  } else if (dataloggerMode == 9) {
-    // debug_println("Begin: logger mode 9");
-    // turn_ON_GSM(get_gsm_power_mode());
-    // Watchdog.reset();
-    // send_rain_data(0); //send rain
-    // Watchdog.reset();
-    // getGNSSData(dataToSend, sizeof(dataToSend));  //read gnss data
-    // Watchdog.reset();
-    // get_Due_Data(1, get_serverNum_from_flashMem());
-    // Watchdog.reset();
-    // send_thru_gsm(dataToSend, get_serverNum_from_flashMem()); 
-    // Watchdog.reset();
-    // turn_OFF_GSM(get_gsm_power_mode());
-    // Watchdog.reset();
-  
-  } else {
-    dueDataCollection(SAMPLINGTIMEOUT); // adds received data to smsStack
-    generateInfoMessage(infoSMS);   // send_rain_data()    
-    addToSMSStack(infoSMS);
+    if (hasUbloxRouterFlag.read() == 99) {                                //  process for UBLOX additional 
+      getGNSSData(smsSegmentContainer, sizeof(smsSegmentContainer));      //  get UBLOX data..
+      addToSMSStack(smsSegmentContainer);                                 //  add UBLOX data to global sms stack..
+    }
+    dueDataCollection(SAMPLINGTIMEOUT);                                   //  get data from sensor column and adds received data to smsStack
+    generateInfoMessage(infoSMS);                                         //  similar to old send_rain_data(); holds rain info and some diagnostics    
+    addToSMSStack(infoSMS);                                               //  adds info sms to global sms stack
   }
+ else if (dataloggerMode == 2) {                                          // routine is almost the same as above, pwede pa ito (lahat ng modes) ma-consilidate sa mas simple na process
+    debugPrintln("ROUTER MODE:");
+    if (hasSubsurfaceSensorFlag.read() == 99) debugPrint("SUBSURFACE SENSOR ");
+    if (hasUbloxRouterFlag.read() == 99) debugPrint("+ UBLOX");
+    debugPrintln("");
+    
+    if (hasUbloxRouterFlag.read() == 99) {
+      getGNSSData(smsSegmentContainer, sizeof(smsSegmentContainer));
+      addToSMSStack(smsSegmentContainer);
+    }
+    if (hasSubsurfaceSensorFlag.read() == 99) {
+      debugPrintln("Collecting sensor column data..");
+      dueDataCollection(SAMPLINGTIMEOUT); 
+    } 
+    generateInfoMessage(infoSMS);
+    addToSMSStack(infoSMS);
 
-  if (alarmResetFlag) addToSMSStack("Datalogger will reset after data collection.");  // notif for interval based reset
+  } else if (dataloggerMode == 3) {
+  //   GATEWAY MODE
 
-  if (loggerWithGSM(savedDataLoggerMode.read())) GSMPowerModeReset();                                                    //  disable power saving (if any) BEFORE sending data
+  debugPrintln("Waiting for router data..");
+  waitForLoRaRouterData(MAX_GATWAY_WAIT, savedRouterCount.read(), savedLoraReceiveMode.read());
+
+  if (hasUbloxRouterFlag.read() == 99) {
+    getGNSSData(smsSegmentContainer, sizeof(smsSegmentContainer));
+    addToSMSStack(smsSegmentContainer);
+  }
+  if (hasSubsurfaceSensorFlag.read() == 99) {
+    debugPrintln("Collecting sensor column data..");
+    dueDataCollection(SAMPLINGTIMEOUT); 
+  } 
+
+  } else if (dataloggerMode == 4) {
+  //   RAIN GAUGE ONLY - GSM
+    generateInfoMessage(infoSMS);
+    addToSMSStack(infoSMS);
+
+  } else if (dataloggerMode == 5) {
+  //   RAIN GAUGE ONLY - LoRA
+  //   Pwede din ito maacheive kung gagawa ka ng router na walang ubox and subsurface sensor
+  //   pero ganito na lang setup para mas madali makita
+      generateInfoMessage(infoSMS);
+      addToSMSStack(infoSMS);
+  
+  } 
+
+  if (alarmResetFlag && !debugMode)
+  addToSMSStack("Datalogger will reset after data collection");  // notif for interval based reset
+
+  if (loggerWithGSM(savedDataLoggerMode.read())) GSMPowerModeReset();                       //  disable power saving (if any) BEFORE sending data
   debugPrintln("Sending SMS dump");
   debugPrintln(_globalSMSDump);
-  sendSMSDump(dumpDelimiter, operationServerNumber);                            //  sends entire sms stack
+  sendSMSDump(dumpDelimiter, operationServerNumber);                                        //  sends entire sms stack depending on communication of mode
   clearGlobalSMSDump();                                                                     //  as the name suggests...
   if (savedGSMPowerMode.read() == 2 && loggerWithGSM(savedDataLoggerMode.read())) {   //  Mode 2: GSM module is inactive except when sending data
     delayMillis(10000);                                                                     //  allow some wait time for OTA SMS to arrive (if any)
@@ -101,6 +80,7 @@ void Operation(char * operationServerNumber) {
     deleteMessageInbox();                                                                   //  deletes ALL messages in SIM                                                              
   }
   if (loggerWithGSM(savedDataLoggerMode.read()))  GSMPowerModeSet();                                                      //  Enable/sets power saving mode AFTER sending data
+  // debugPrintln("End of operation");
 }
 
 void initSleepCycle() {
