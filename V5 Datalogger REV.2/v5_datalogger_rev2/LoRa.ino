@@ -59,7 +59,7 @@ bool sendThruLoRaWithAck(char* payloadToSend, uint32_t responseWaitTime, uint8_t
   char ackResponseBuffer[300];
   char validResponse[30];
   bool noResponse = true;
-  sprintf(validResponse, "%s%s",flashLoggerName.sensorA,ackKey);
+  sprintf(validResponse, "%s%s",flashLoggerName.sensorNameList[0],ackKey);
   validResponse[strlen(validResponse)+1]=0x00;
   
   for (int retryIndex = 0; retryIndex <= retryCount; retryIndex++) {
@@ -132,29 +132,18 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
   int RSSIContainer[routerCount];
   float voltContainer[routerCount];  
 
-  //insert function here to populate routerData
-  if (routerCount == 1) {
-    sprintf(routerNames[0], "%s", flashLoggerName.sensorB);
-  } else if (routerCount == 2) {
-    sprintf(routerNames[0], "%s", flashLoggerName.sensorB);
-    sprintf(routerNames[1], "%s", flashLoggerName.sensorC);
-  } else if (routerCount == 3) {
-    sprintf(routerNames[0], "%s", flashLoggerName.sensorB);
-    sprintf(routerNames[1], "%s", flashLoggerName.sensorC);
-    sprintf(routerNames[2], "%s", flashLoggerName.sensorD);
-  }
   debugPrintln("Waiting for LoRa transmission from listed router(s): ");
   while (millis() - waitStart < receiverWaitDuration) {
     receiveLoRaData(loRaBuffer, sizeof(loRaBuffer), 30000);        //receive instances of lora data here
     debugPrint(".");
     //filters data depending on saved datalogger names
     if (receiveMode == 0 || receiveMode == 1) receiveType = loRaFilterPass(loRaBuffer, sizeof(loRaBuffer));
-    if (receiveType >= 0 && receiveType < 99 ) {  // receive type depends on list position of saved router name
+    if (receiveType > 0 && receiveType < 99 ) {  // receive type depends on list position of saved router name
       debugPrintln(loRaBuffer);
       debugPrint("Received data from ");
-      debugPrintln(routerNames[receiveType]);
-      sprintf(sendAck, "%s%s", routerNames[receiveType],ackKey);
-      sendAck[strlen(sendAck)+1];
+      debugPrintln(flashLoggerName.sensorNameList[receiveType]);
+      sprintf(sendAck, "%s%s", flashLoggerName.sensorNameList[receiveType],ackKey);
+      sendAck[strlen(sendAck)+1] = 0x00;
       sendThruLoRa(sendAck);
       if (strstr(loRaBuffer, "VOLT")) { // in case of termitating string MADTB*VOLT:12.33*200214111000
         debugPrintln("Router info:");
@@ -169,6 +158,8 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
       } else  {
         if (receiveMode == 0) addToSMSStack(loRaBuffer);      // adds data from routers to sending stack
       }
+    } else {
+      // ano gusto mo gawin sa rejected na transmissions ?
     }
     if (voltCount == routerCount) break;
     // else () {  // deal with junk here
@@ -180,7 +171,7 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
     char numBuffer[10];
 
     strcpy(gatewayDataDump, "GATEWAY*RSSI,");
-    strncat(gatewayDataDump, flashLoggerName.sensorA, 3);
+    strncat(gatewayDataDump, flashLoggerName.sensorNameList[0], 3);
     strcat(gatewayDataDump, ",");
 
     for (byte rCount = 0; rCount < routerCount; rCount++) {
@@ -237,11 +228,11 @@ void key_gen(char *keyContainer, char *referenceString) {
   
   if (savedDataLoggerMode.read() == 2) {  //  add other router modes here
     //  gets first charaters (depending on router char length) from reference to generate acknowledgement key
-    strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorA)));   
+    strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorNameList[0])));   
   } else {  // gateway modes
     //  gets first charaters (depending on router char length) from reference to generate acknowledgement key
     
-    strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorB)));
+    strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorNameList[1]))); // bakit 1 ito? ang assumption ay pare parehas lang ang length ng router names kaya ito ang ginamit na reference.. 
 
   }    
   // ackMsg[strlen(ackMsg)+1] = 0x00;
@@ -252,34 +243,21 @@ void key_gen(char *keyContainer, char *referenceString) {
 /// Checks whether received data is from a valid datalogger.
 /// Router modes retuns 0 for valid acknowledgement.
 /// Gateways return the list position of matched router
-/// Currently limited to 3 routers, but can easily be extended
 ///
 /// @param  payloadToCheck received LoRa data to check
 /// @param  sizeOfPayload array size of receive data containe
 ///
 int loRaFilterPass(char* payloadToCheck, int sizeOfPayload) {
   uint8_t payloadType = 0;
-  uint8_t returnType = 99;       // default for routers
   char payloadBuffer[sizeOfPayload+1];
-  char matchKey[20];
 
   sprintf(payloadBuffer, payloadToCheck);
   payloadBuffer[strlen(payloadBuffer)+1]=0x00;
 
-  if (loggerWithGSM(savedDataLoggerMode.read()))  {  
-    sprintf(matchKey, ">>%s",flashLoggerName.sensorB);
-    if(strstr(payloadBuffer, matchKey)) return 0;
-    sprintf(matchKey, ">>%s",flashLoggerName.sensorC);
-    if(strstr(payloadBuffer, matchKey)) return 1;
-    sprintf(matchKey, ">>%s",flashLoggerName.sensorD);
-    if(strstr(payloadBuffer, matchKey)) return 2;
-    // add router names here if necessary
-
-  } else  {        // all routers
-    sprintf(matchKey, "%s%s",flashLoggerName.sensorA,ackKey);
-    if (strstr(payloadBuffer, matchKey)) return 0;
+  for (byte rIndex = 0; rIndex < savedRouterCount.read(); rIndex++) {
+    if (strstr(payloadBuffer, flashLoggerName.sensorNameList[rIndex])) return rIndex; // returns index of datalogger name
   }
-  return returnType;
+  return 99;    // return 99 if payload is not found/invalid
 }
 
 void extractRouterName(char *nameContainer, char * referenceString) {
@@ -300,7 +278,7 @@ void generateVoltString (char* stringContainer) {
   // char stringBUffer[50];
   char tsbuffer[15];
   getTimeStamp(tsbuffer, sizeof(tsbuffer));
-  sprintf(stringContainer, ">>%s*VOLT:%.2f*%s",flashLoggerName.sensorA, readBatteryVoltage(savedBatteryType.read()),tsbuffer);
+  sprintf(stringContainer, ">>%s*VOLT:%.2f*%s",flashLoggerName.sensorNameList[0], readBatteryVoltage(savedBatteryType.read()),tsbuffer);
   // stringBUffer[strlen(stringBUffer)+1] = 0x00;
   // sprintf(voltData,"%.2f", readBatteryVoltage(savedBatteryType.read()));
   // strcpy(stringBUffer, ">>");

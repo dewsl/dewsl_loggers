@@ -49,7 +49,7 @@ struct libConfig config_container[lib_LOGGER_COUNT] = {
   {
     "TESTA",                          // Mastername (5 char string)
     "5067,5115,5116,5201,5202",  // column IDs
-    4,                                // number of nodes
+    5,                                // number of nodes
     5,                                // sensor version
     4,                                // datalogger version
     0,                                // piezo

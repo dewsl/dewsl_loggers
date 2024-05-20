@@ -87,6 +87,9 @@ uint8_t DATALOGGERVERSION;
 //#define RELAYPIN 44
 #define COLUMN_SWITCH_PIN 44
 #define LED1 48
+#define LED2 49
+#define LED3 50
+#define LED4 51
 #define POLL_TIMEOUT 5000
 #define BAUDRATE 9600
 #define LORABAUDRATE 9600
@@ -328,6 +331,13 @@ struct f_config {
 
 int g_sensor_type = 1;
 
+int ledState = LOW; 
+unsigned long ledTimer; 
+int flash_check_flag; //flag if flash memory is empty
+
+unsigned long previousMillis = 0; // will store last time LEDs was updated
+
+const long interval = 500; // interval to blink LEDs (milliseconds)
 
 void setup() {
   //int _EXFUN(strcmp, (const char*, const char*));
@@ -337,6 +347,9 @@ void setup() {
   ina219.begin();
   pinMode(COLUMN_SWITCH_PIN, OUTPUT);
   pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED4, OUTPUT);
   canInit();
   init_char_arrays();
   init_gids();
@@ -351,7 +364,33 @@ void setup() {
 
 void loop() {
   int timestart = millis();
+
   while ((millis() - timestart < 30000) && (datalogger_flag == 0)) {
+    ledTimer = millis();
+    if(flash_LED() != 99 ){  
+      if (ledTimer - previousMillis >= interval) {
+        // save the last time you blinked the LED
+        previousMillis = ledTimer;
+
+        // Toggle LEDs:
+        if (ledState == LOW) {
+          ledState = HIGH;
+        } else {
+          ledState = LOW;
+        }    
+    // set the LED with the ledState of the variable:
+      digitalWrite(LED1, ledState);
+      digitalWrite(LED2, ledState);
+      digitalWrite(LED3, ledState);
+      digitalWrite(LED4, ledState);
+     }
+    } else {
+      digitalWrite(LED1, LOW);
+      digitalWrite(LED2, LOW);
+      digitalWrite(LED3, HIGH);
+      digitalWrite(LED4, LOW);
+    }
+
     if (Serial.available() > 0) {
       getATCommand();
       // Serial.println(F(comm_mode));
