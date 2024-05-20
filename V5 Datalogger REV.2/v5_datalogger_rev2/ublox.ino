@@ -293,7 +293,7 @@ void initialize_sitecode(char* siteCodeContainer) {
   if ((savedDataLoggerMode.read() == 1) || (savedDataLoggerMode.read() == 9)) { //Gateway with sensor and 1 lora tx (if gnss) ; Gateway rain gauge with gnss
     sprintf(siteCodeContainer, flashLoggerName.sensorB);
   } else {
-    sprintf(siteCodeContainer, flashLoggerName.sensorNameList[0]);
+    sprintf(siteCodeContainer, flashLoggerName.sensorA);
   } 
   siteCodeContainer[strlen(siteCodeContainer)+1]=0x00;
 }

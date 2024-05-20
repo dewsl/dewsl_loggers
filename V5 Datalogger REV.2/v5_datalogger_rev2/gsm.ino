@@ -16,10 +16,9 @@ void GSMInit() {
   unsigned long initStart = millis();
   int initTimeout = 20000;
   uint8_t errorCount = 0;
-
-  debugPrintln("Connecting GSM to network...");
-
   detachInterrupt(digitalPinToInterrupt(GSMINT));
+
+  // bool serial
   GSMSerial.begin(GSMBAUDRATE);
   delayMillis(1000);
     /* Assign pins 10 & 11 UART SERCOM functionality */
@@ -39,61 +38,52 @@ void GSMInit() {
     delayMillis(300);
   } while (millis() - gsmPowerOn < 5000);
    
+  debugPrintln("Connecting GSM to network...");
   while (!gsmSerial || !GSMconfig || !signalCOPS ) {  //include timeout later
-    if (!gsmSerial) GSMSerial.write("AT\r");
+    GSMSerial.write("AT\r");
     if (GSMWaitResponse("OK", 1000, 1) && !gsmSerial) { 
-      if (Serial) Serial.println("Serial comm ready!");
+      debugPrintln("Serial comm ready!");
       GSMSerial.write("ATE0\r");
       // GSMSerial.write("AT&W_SAVE\r");
       gsmSerial = true;
     } else errorCount++;
-    if (gsmSerial) {
-      GSMSerial.flush();
-      delayMillis(500);
-      GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0");
-      GSMSerial.write("\r");
-    }
-    if (gsmSerial && !GSMconfig && GSMWaitResponse("OK", 5000, 1)) {
-      GSMSerial.flush();
-      delayMillis(500);
-      GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0");
-      GSMSerial.write("\r");
+    GSMSerial.flush();
+    delayMillis(500);
+    GSMSerial.write("AT+COPS=0,1;+CMGF=1;+IPR=0");
+    GSMSerial.write("\r");
+    if (!GSMconfig && GSMWaitResponse("OK", 5000, 1)) {
       GSMSerial.write("AT+CNMI=0,0,0,0,0\r");
-      if (Serial) Serial.println("GSM module config OK!");
+      debugPrintln("GSM module config OK!");
       GSMconfig = true;
     }
-    if (GSMconfig) {
     GSMSerial.flush();
     GSMSerial.write("AT+CSQ\r");
     delayMillis(1000);
-    }
-    if (GSMconfig && !signalCOPS && GSMGetResponse(gsmInitResponse, sizeof(gsmInitResponse), "+CSQ", 4000)) {
+    if (!signalCOPS && GSMGetResponse(gsmInitResponse, sizeof(gsmInitResponse), "+CSQ", 4000)) {
       // int CSQval = parseCSQ(gsmInitResponse);
       // debugPrintln(gsmInitResponse);
       int CSQval = parseCSQ(gsmInitResponse);
       if (CSQval > 0) {
         debugPrintln("Checked network signal quality..");
-        if (Serial) Serial.print("CSQ: ");
-        if (Serial) Serial.println(CSQval);
+        debugPrint("CSQ: ");
+        debugPrintln(CSQval);
         signalCOPS = true;
       }
     }
     if (gsmSerial && GSMconfig && signalCOPS) {
       GSMSerial.write("AT&W\r");
       debugPrintln("");
-      if (Serial) Serial.println("GSM READY");
+      debugPrintln("GSM READY");
       REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT2;    // clears interrupt flag
       attachInterrupt(digitalPinToInterrupt(GSMINT), GSMISR, FALLING);
       break;
     }
-    if (errorCount == 5) {
-      debugPrintln("CHECK_GSM_SERIAL_OR_POWER");
-      break;
-    }
     if (millis() - initStart > initTimeout) {
       debugPrint("GSM_INIT: ");
-      if (!GSMconfig) {
-        debugPrintln("GSM_MODULE_CONFIG_ERROR");
+      if (!gsmSerial) {
+        debugPrintln("GSM_HARDWARE_SERIAL_CONNECTION_ERROR");
+      } else if (!GSMconfig) {
+        debugPrintln("GSM_MODULE_ERROR");
       } else if (!signalCOPS) {
         debugPrintln("NETWORK_OR_SIM_ERROR");
       }
@@ -236,7 +226,7 @@ bool GSMWaitResponse(const char* targetResponse, int waitDuration, int showRespo
         }
       }
 
-      if (strlen(responseBuffer) > 0 && responseBuffer != "\n") {
+      if (strlen(responseBuffer) > 0 && responseBuffer != "/n") {
         if (showResponse > 0) debugPrintln(responseBuffer);
         if (strstr(responseBuffer, toCheck)) {
           responseValid = true;
@@ -333,14 +323,11 @@ void textMode() {   // experimental
     }
     if (strlen(receiveLine) > 0) {
       if (strstr(receiveLine,"+CMT: ")){
-          char senderBuf[20];
           char *cmtBuf;
           cmtBuf = strtok(receiveLine, ": ");
           cmtBuf = strtok(NULL, ",");
-          debugPrint("From ");
-          sprintf(senderBuf, cmtBuf);
-          checkSender(senderBuf);
-          debugPrint(senderBuf);
+          debugPrint("From");
+          debugPrint(cmtBuf);
           debugPrint(" : ");
       } else debugPrintln(receiveLine);    // execute parsing here
       
@@ -546,7 +533,7 @@ void generateInfoMessage(char* infoContainer) {
     else if (savedRainCollectorType.read()==1)rainMultiplier = 0.2;   
   }
   sprintf(infoContainer,"%sW,%0.2f,%0.2f,%0.2f,%u,%s",
-    flashLoggerName.sensorNameList[0],
+    flashLoggerName.sensorA,
     readRTCTemp(),
     _rainTips*rainMultiplier,
     readBatteryVoltage(savedBatteryType.read()),
@@ -599,15 +586,11 @@ void checkServerNumber(char * serverNumber) {
   else if (inputIs(numberBuffer,"GLOBE2")) sprintf(serverNumber,"%s","09175388301");
   else if (inputIs(numberBuffer,"KATE")) sprintf(serverNumber,"%s","09476873967");
   else if (inputIs(numberBuffer,"JAY")) sprintf(serverNumber,"%s","09451136212");
-  else if (inputIs(numberBuffer,"JJ")) sprintf(serverNumber,"%s","09287706189");
   else if (inputIs(numberBuffer,"KENNEX")) sprintf(serverNumber,"%s","09293175812");
-  else if (inputIs(numberBuffer,"KIM")) sprintf(serverNumber,"%s","09458057992");
   else if (inputIs(numberBuffer,"REYN")) sprintf(serverNumber,"%s","09669622726");
-  else if (inputIs(numberBuffer,"SAM")) sprintf(serverNumber,"%s","09770452845");
   else if (inputIs(numberBuffer,"SMART1")) sprintf(serverNumber,"%s","09088125642");
   else if (inputIs(numberBuffer,"SMART2")) sprintf(serverNumber,"%s","09088125639");
   else if (inputIs(numberBuffer,"WEB")) sprintf(serverNumber,"%s","09053648335");
-  else if (inputIs(numberBuffer,"CHI")) sprintf(serverNumber,"%s","09179995183");
   else {
     sprintf(serverNumber,"%s","09175972526");
     debugPrintln("Defaulted to GLOBE1");
@@ -623,24 +606,19 @@ void checkServerNumber(char * serverNumber) {
   else if(strstr(senderNumBuffer,"9175388301")) sprintf(senderNum,"%s","GLOBE2");
   else if(strstr(senderNumBuffer,"9476873967")) sprintf(senderNum,"%s","KATE");
   else if(strstr(senderNumBuffer,"9451136212")) sprintf(senderNum,"%s","JAY");
-  else if(strstr(senderNumBuffer,"9287706189")) sprintf(senderNum,"%s","JJ");
   else if(strstr(senderNumBuffer,"9293175812")) sprintf(senderNum,"%s","KENNEX");
-  else if(strstr(senderNumBuffer,"9458057992")) sprintf(senderNum,"%s","KIM");
-  else if(strstr(senderNumBuffer,"9770452845")) sprintf(senderNum,"%s","SAM");
   else if(strstr(senderNumBuffer,"9088125642")) sprintf(senderNum,"%s","SMART1");
   else if(strstr(senderNumBuffer,"9088125639")) sprintf(senderNum,"%s","SMART2");
   else if(strstr(senderNumBuffer,"9669622726")) sprintf(senderNum,"%s","REYN");
   else if(strstr(senderNumBuffer,"9053648335")) sprintf(senderNum,"%s","WEB");
-  else if(strstr(senderNumBuffer,"9179995183")) sprintf(senderNum,"%s","CHI");
 
 }
 
 void deleteMessageInbox() {
   GSMSerial.flush();
   GSMSerial.write("AT+CMGDA=\"DEL ALL\"\r");
-  delayMillis(500);
-  if (GSMWaitResponse("OK", 15000, 1)) if (Serial) Serial.println("Deleted all SMS from SIM");
-  else {if (Serial) Serial.println("Delete SMS failed");}
+  if (GSMWaitResponse("OK", 15000, 1)) debugPrintln("deleted all SMS from SIM");
+  else {debugPrintln("Delete SMS failed");}
 }
 
 void checkOTACommand() {
@@ -719,13 +697,13 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
 
   flashLoggerName = savedLoggerName.read();
   sprintf(otaString, "%s", OTALineCheck);
-  sprintf(LoRaKey, "%s%s", flashLoggerName.sensorNameList[0], ackKey);
+  sprintf(LoRaKey, "%s%s", flashLoggerName.sensorA, ackKey);
 
   // tokenize response to extract OTA sender mobile number
   // overwrites preceeding sender mobile number with no valid OTA command
   //REGISTER:SENSLOPE:639954645704
   if (strncmp(otaString, "REGISTER:SENSLOPE:", 18) == 0) {
-    sprintf(OTAReply,"%s: Registration is no longer needed; proceed with normal OTA commands.",flashLoggerName.sensorNameList[0]);
+    sprintf(OTAReply,"%s: Registration is no longer needed; proceed with normal OTA commands.",flashLoggerName.sensorA);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -760,7 +738,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     //save to flash memory
 
     // compose OTA command reply
-    sprintf(OTAReply,"%s updated server number in flash: %s",flashLoggerName.sensorNameList[0], flashServerNumber.dataServer);
+    sprintf(OTAReply,"%s updated server number in flash: %s",flashLoggerName.sensorA, flashServerNumber.dataServer);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -768,7 +746,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
   //?SERVERNUMBER:SENSLOPE:
   else if (strncmp(otaString, "?SERVERNUMBER:", 14) == 0) {
 
-    sprintf(OTAReply, "%s current server number: %s",flashLoggerName.sensorNameList[0], flashServerNumber.dataServer);
+    sprintf(OTAReply, "%s current server number: %s",flashLoggerName.sensorA, flashServerNumber.dataServer);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -776,7 +754,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
   //RESET:SENSLOPE:
   else if (strncmp(otaString, "RESET:SENSLOPE:", 15) == 0 ) {
     // debugPrintln("Resetting microcontroller!");
-    sprintf(OTAReply, "Resetting datalogger %s...", flashLoggerName.sensorNameList[0]);
+    sprintf(OTAReply, "Resetting datalogger %s...", flashLoggerName.sensorA);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     deleteMessageInbox();
@@ -806,7 +784,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     setRTCDateTime(_YY, _MM, _DD, _hh, _mm, _ss, _dd);
     getTimeStamp(_timestamp, sizeof(_timestamp));
 
-    sprintf(OTAReply, "%s updated timestamp: %s",flashLoggerName.sensorNameList[0], _timestamp);
+    sprintf(OTAReply, "%s updated timestamp: %s",flashLoggerName.sensorA, _timestamp);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -816,7 +794,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
   else if (strncmp(otaString, "FETCHGPRSTIME", 13) == 0) {
     updateTimeWithGPRS(); //success depends the network connection quality
     getTimeStamp(_timestamp, sizeof(_timestamp));
-    sprintf(OTAReply, "%s current timestamp: %s",flashLoggerName.sensorNameList[0], _timestamp);
+    sprintf(OTAReply, "%s current timestamp: %s",flashLoggerName.sensorA, _timestamp);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -826,7 +804,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
   else if (strncmp(otaString, "CHECKTIMESTAMP:", 15) == 0) {
     
     getTimeStamp(_timestamp, sizeof(_timestamp));
-    sprintf(OTAReply, "%s current timestamp: %s",flashLoggerName.sensorNameList[0], _timestamp);
+    sprintf(OTAReply, "%s current timestamp: %s",flashLoggerName.sensorA, _timestamp);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -848,7 +826,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     savedAlarmInterval.write(_inputSending);
     delayMillis(100);
     
-    sprintf(OTAReply, "%s updated send interval setting: %d",flashLoggerName.sensorNameList[0], savedAlarmInterval.read());
+    sprintf(OTAReply, "%s updated send interval setting: %d",flashLoggerName.sensorA, savedAlarmInterval.read());
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -859,7 +837,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     //read DUE command
   
     flashCommands = savedCommands.read();
-    sprintf(OTAReply,"%s current sensor command: %s",flashLoggerName.sensorNameList[0], flashCommands.sensorCommand);
+    sprintf(OTAReply,"%s current sensor command: %s",flashLoggerName.sensorA, flashCommands.sensorCommand);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -876,7 +854,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
     savedCommands.write(flashCommands);  //save to flash memory
 
     flashCommands = savedCommands.read();
-    sprintf(OTAReply,"%s current sensor command: %s",flashLoggerName.sensorNameList[0], flashCommands.sensorCommand);
+    sprintf(OTAReply,"%s current sensor command: %s",flashLoggerName.sensorA, flashCommands.sensorCommand);
     OTAReply[strlen(OTAReply)+1]=0x00;
     sendThruGSM(OTAReply, OTASender);
     OTACommandFound = true;
@@ -892,7 +870,7 @@ bool runOTACommand(char* OTALineCheck, char * OTASender) {
 }
 
 void clearGlobalSMSDump() {
-  for (int d = 0; d < sizeof(_globalSMSDump);d++) _globalSMSDump[d]=0x00; 
+  for (byte d = 0; d < sizeof(_globalSMSDump);d++) _globalSMSDump[d]=0x00; 
 }
 
 void updateTimeWithGPRS() {
@@ -965,23 +943,4 @@ void updateTimeWithGPRS() {
   }
   REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT2; //clear interrupt flag before enabling
   attachInterrupt(digitalPinToInterrupt(GSMINT), GSMISR, FALLING);
-}
-
-void setGSMPowerMode() {
-  int intervalBuffer = 0;
-  unsigned long intervalWait = millis();
-  Serial.print("Enter GSM power mode: ");
-  while (millis() - intervalWait < 60000) {
-    if (Serial.available() > 0) {
-    intervalBuffer = Serial.parseInt();
-    if (intervalBuffer > 2) {
-      Serial.println("Invalid value, mode unchanged.");
-      return;
-    }
-    savedAlarmInterval.write(intervalBuffer);
-    Serial.print("Updated GSM power mode: ");
-    Serial.println(savedAlarmInterval.read());
-    break;
-    }
-  }
 }

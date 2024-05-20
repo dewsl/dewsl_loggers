@@ -552,9 +552,9 @@ void sleepNow() {
   disable_watchdog();
   // digitalWrite(LED_BUILTIN, HIGH);
   SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;  // disable systick interrupt
-  // LowPower.standby();                          // enters sleep mode
-  __DSB();
-  __WFI();
+  LowPower.standby();                          // enters sleep mode
+  // __DSB();
+  // __WFI();
   SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // Enable systick interrupt
 }
 

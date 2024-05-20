@@ -5,11 +5,10 @@ void dueInit (uint8_t dueTrigPin) {
 
 void dueDataCollection(int samplingTimeout) {
   bool readDueData = true;
-  // int lineBufferLength = 500;
-  char lineBuffer[500];
+  int lineBufferLength = 500;
+  char lineBuffer[lineBufferLength];
   char commandContainer[100];
-  char dueChar;
-  int dueCharIndex;
+  int lineBufferIndex;
   unsigned long samplingStart;
   samplingStart = millis();
 
@@ -28,29 +27,19 @@ void dueDataCollection(int samplingTimeout) {
   DUESerial.write(commandContainer);
   while (readDueData) {
     
-    dueCharIndex = 0;
+    lineBufferIndex = 0;
     
     if (millis() - samplingStart > samplingTimeout) {
       Serial.printf("Sampling timed out!");
       readDueData = false;
       break;
     }
-
-    for (int i=0; i < sizeof(lineBuffer); i++)  lineBuffer[i] = 0x00;
-
-    DUESerial.readBytesUntil('\n', lineBuffer, sizeof(lineBuffer));
-    // while (DUESerial.available() > 0) {
-    //   dueChar = DUESerial.read();
-    //   if (dueChar != '\n') {
-    //     lineBuffer[dueCharIndex];
-    //     dueCharIndex++;
-    //   }
-    // }
-    for (int n = 0; n < sizeof(lineBuffer); n++) {
-      if (lineBuffer[n] == '\n' || lineBuffer[n] == '\r') lineBuffer[n]=0x00; // Overwrite extra '\n' character from readBytesUntil
+    for (int i=0; i < lineBufferLength; i++) { 
+      lineBuffer[i] = 0x00;
     }
 
-    lineBuffer[strlen(lineBuffer)+1] = 0x00;
+    DUESerial.readBytesUntil('\n', lineBuffer, lineBufferLength);
+    lineBuffer[strlen(lineBuffer)] = 0x00;
     
     // Keeps updating timeout start as long as there is input from dueSerial
     if (strlen(lineBuffer) > 0 ) {
@@ -73,6 +62,75 @@ void dueDataCollection(int samplingTimeout) {
   DUESerial.end();
   Serial.println("Data collection finished!");
   // Serial.println(readBuffer);
+}
+
+void updateSensorNames() {
+
+  uint8_t currentLoggerMode = savedDataLoggerMode.read();
+
+  char dataLoggerNameA[10];
+  char dataLoggerNameB[10];
+  char dataLoggerNameC[10];
+  char dataLoggerNameD[10];
+
+  if (currentLoggerMode == 1) {
+        Serial.print("Input name of Gateway sensor: ");
+        getSerialInput(dataLoggerNameA, sizeof(dataLoggerNameA), 60000);
+        Serial.println(dataLoggerNameA);
+        if (strlen(dataLoggerNameA) > 0) strncpy(flashLoggerName.sensorA, dataLoggerNameA, strlen(dataLoggerNameA));
+        Serial.print("Input name of Remote Sensor: ");
+        getSerialInput(dataLoggerNameB, sizeof(dataLoggerNameB), 60000);
+        Serial.println(dataLoggerNameB);
+        if (strlen(dataLoggerNameB) > 0) strncpy(flashLoggerName.sensorB, dataLoggerNameB, strlen(dataLoggerNameB));
+
+      } else if (currentLoggerMode == 3) {
+        Serial.print("Input name of Gateway: ");
+        getSerialInput(dataLoggerNameA, sizeof(dataLoggerNameA), 60000);
+        Serial.println(dataLoggerNameA);
+        if (strlen(dataLoggerNameA) > 0) strncpy(flashLoggerName.sensorA, dataLoggerNameA, strlen(dataLoggerNameA));
+        Serial.print("Input name of Remote Sensor: ");
+        getSerialInput(dataLoggerNameB, sizeof(dataLoggerNameB), 60000);
+        Serial.println(dataLoggerNameB);
+        if (strlen(dataLoggerNameB) > 0) strncpy(flashLoggerName.sensorB, dataLoggerNameB, strlen(dataLoggerNameB));
+      } else if (currentLoggerMode == 4) {
+        Serial.print("Input name of Gateway: ");
+        getSerialInput(dataLoggerNameA, sizeof(dataLoggerNameA), 60000);
+        Serial.println(dataLoggerNameA);
+        if (strlen(dataLoggerNameA) > 0) strncpy(flashLoggerName.sensorA, dataLoggerNameA, strlen(dataLoggerNameA));
+        Serial.print("Input name of Remote Sensor A: ");
+        getSerialInput(dataLoggerNameB, sizeof(dataLoggerNameB), 60000);
+        Serial.println(dataLoggerNameB);
+        if (strlen(dataLoggerNameB) > 0) strncpy(flashLoggerName.sensorB, dataLoggerNameB, strlen(dataLoggerNameB));
+        Serial.print("Input name of Remote Sensor B: ");
+        getSerialInput(dataLoggerNameC, sizeof(dataLoggerNameC), 60000);
+        Serial.println(dataLoggerNameC);
+        if (strlen(dataLoggerNameC) > 0) strncpy(flashLoggerName.sensorC, dataLoggerNameC, strlen(dataLoggerNameC));
+      } else if (currentLoggerMode == 5) {
+        Serial.print("Input name of Gateway: ");
+        getSerialInput(dataLoggerNameA, sizeof(dataLoggerNameA), 60000);
+        Serial.println(dataLoggerNameA);
+        if (strlen(dataLoggerNameA) > 0) strncpy(flashLoggerName.sensorA, dataLoggerNameA, strlen(dataLoggerNameA));
+        Serial.print("Input name of Remote Sensor A: ");
+        getSerialInput(dataLoggerNameB, sizeof(dataLoggerNameB), 60000);
+        Serial.println(dataLoggerNameB);
+        if (strlen(dataLoggerNameB) > 0) strncpy(flashLoggerName.sensorB, dataLoggerNameB, strlen(dataLoggerNameB));
+        Serial.print("Input name of Remote Sensor B: ");
+        getSerialInput(dataLoggerNameC, sizeof(dataLoggerNameC), 60000);
+        Serial.println(dataLoggerNameC);
+        if (strlen(dataLoggerNameC) > 0) strncpy(flashLoggerName.sensorC, dataLoggerNameC, strlen(dataLoggerNameC));
+        Serial.print("Input name of Remote Sensor C: ");
+        getSerialInput(dataLoggerNameD, sizeof(dataLoggerNameD), 60000);
+        Serial.println(dataLoggerNameD);
+        if (strlen(dataLoggerNameD) > 0) strncpy(flashLoggerName.sensorD, dataLoggerNameD, strlen(dataLoggerNameD));
+      } else {  // 2; 6; 7
+        // Serial.print("Gateway sensor name: ");
+        // Serial.println(get_logger_A_from_flashMem());
+        Serial.print("Input Sensor name: ");
+        getSerialInput(dataLoggerNameA, sizeof(dataLoggerNameA), 60000);
+        Serial.println(dataLoggerNameA);
+        if (strlen(dataLoggerNameA) > 0) strncpy(flashLoggerName.sensorA, dataLoggerNameA, strlen(dataLoggerNameA));
+      }
+      savedLoggerName.write(flashLoggerName);
 }
 
 void updatSavedCommand() {
