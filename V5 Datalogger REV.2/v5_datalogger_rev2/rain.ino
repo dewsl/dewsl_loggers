@@ -5,15 +5,15 @@ void rainInit(int rainINTPin ) {
 
 void rainISR() {
   LEDOn();
-  const unsigned int DEBOUNCE_TIME = 75;  // 40
-  int collectorType = savedRainCollectorType.read();
-  unsigned long interrupt_time = millis();
-  if (interrupt_time - _last_interrupt_time > DEBOUNCE_TIME) {
-    _rainTips += 1;
-    debugPrint("Rain tips: ");
-    debugPrintln(_rainTips);
-  }
-  _last_interrupt_time = interrupt_time;
+  // const unsigned int DEBOUNCE_TIME = 75;  // 40
+  // int collectorType = savedRainCollectorType.read();
+  // unsigned long interrupt_time = millis();
+  // if (interrupt_time - _last_interrupt_time > DEBOUNCE_TIME) {
+  _rainTips += 1;
+  debugPrint("Rain tips: ");
+  debugPrintln(_rainTips);
+  // }
+  // _last_interrupt_time = interrupt_time;
   LEDOff();
 }
 
