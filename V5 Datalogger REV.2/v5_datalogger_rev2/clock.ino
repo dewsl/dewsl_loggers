@@ -182,7 +182,7 @@ void setSelfResetFlag(int alarm24hrFormat) {
   // extracting "30" from "2330"
   uint8_t minuteAlarm = (savedAlarm%100);    
   DateTime checkTime = rtc.now();
-  if ((checkTime.hour() == hourAlarm) && (checkTime.minute() == minuteAlarm)) alarmResetFlag = true;
+  if ((checkTime.hour() == hourAlarm) && (checkTime.minute() == minuteAlarm)) selfResetFlag = true;
 }
 
 void printDateTime() {

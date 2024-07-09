@@ -315,16 +315,7 @@ void extractRouterName(char *nameContainer, char * referenceString) {
 }
 // MADTB*VOLT:12.33*200214111000
 void generateVoltString (char* stringContainer) {
-  // char stringBUffer[50];
   char tsbuffer[15];
   getTimeStamp(tsbuffer, sizeof(tsbuffer));
   sprintf(stringContainer, ">>%s*VOLT:%.2f*%s",flashLoggerName.sensorNameList[0], readBatteryVoltage(savedBatteryType.read()),tsbuffer);
-  // stringBUffer[strlen(stringBUffer)+1] = 0x00;
-  // sprintf(voltData,"%.2f", readBatteryVoltage(savedBatteryType.read()));
-  // strcpy(stringBUffer, ">>");
-  // strcat(stringBUffer, flashLoggerName.sensorA);
-  // strcat(stringBUffer,"*VOLT:");
-  // strncat(stringBUffer, voltData, strlen(voltData)); 
-  // strcat(stringBUffer, "*");
-  // strncat(stringBUffer, tsbuffer, strlen(tsbuffer));
 }

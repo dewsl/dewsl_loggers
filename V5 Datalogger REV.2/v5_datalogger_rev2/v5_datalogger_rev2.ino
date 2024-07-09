@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2405.15
+#define FIRMWAREVERSION 2407.09
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 60000
@@ -72,13 +72,8 @@ commandStruct flashCommands;
 typedef struct
 {
   boolean valid;
-  char sensorA[6];
-  char sensorB[6];
-  char sensorC[6];
-  char sensorD[6];
-  char sensorNameList[20][20];      // currently limited to 10 
-  // char sensorE[6];
-  // char sensorF[6];
+  char sensorNameList[20][20];      // currently limited to 19 routers 
+  // pwede pa maglagay dito ng ibang list
 } SensorNameStruct;
 SensorNameStruct flashLoggerName;
 
@@ -144,7 +139,7 @@ FlashStorage(savedCommands, commandStruct);
 FlashStorage(savedLoggerName, SensorNameStruct);
 
 //Flags
-bool alarmResetFlag = false;
+bool selfResetFlag = false;
 
 //overloooooaaaaaad
 void debugPrint(const char * toPrint) {
@@ -218,8 +213,9 @@ void setup() {
 
 void loop() {
   
-  //  Runs once after upload of firmware and datalogger parameters are set
-  while (loggerParamSetFlag.read() == 0) {  
+  //  Runs once after upload of firmware and datalogger parameters are not set
+  while (loggerParamSetFlag.read() == 0) {
+    printLoggerModes();  
     updateLoggerMode();   // Set datalogger mode, ddefaults to 0 if invalid or timed-out
     Serial.println(F("------------------------------------------------------"));
     scalableUpdateSensorNames();
@@ -231,10 +227,10 @@ void loop() {
   // Runs once after upload/roboot/reset
   if (runGSMInit && loggerWithGSM(savedDataLoggerMode.read())) {
     runGSMInit = false;
-    if (GSMInit()) {                                    // Initializes GSM module after reset/boot
+    if (GSMInit()) {                                          // Initializes GSM module after reset/boot
       // If GSM reset if successful
       char bootMgs[100];
-      deleteMessageInbox();                             //  delete ALL messages in SIM inbox to prevent processing of old SMS
+      deleteMessageInbox();                                   //  delete ALL messages in SIM inbox to prevent processing of old SMS
       flashLoggerName = savedLoggerName.read();         //  update global param
       flashServerNumber = savedServerNumber.read();     
       sprintf(bootMgs,"%s: LOGGER POWER UP",flashLoggerName.sensorNameList[0]);  // build boot message
@@ -257,8 +253,9 @@ void loop() {
     RTCWakeFlag = false;
     LEDSleepWake();
     setNextAlarm(savedAlarmInterval.read());            //  sets next alarm immediately
-    setSelfResetFlag(savedLoggerResetAlarm.read());     //  Sets a flag "alarmResetFlag" to trigger self reset segment [below] instead of executing sleep function immediately
+    setSelfResetFlag(savedLoggerResetAlarm.read());     //  Sets a flag "selfResetFlag" to trigger self reset segment [below] instead of executing sleep function immediately
     Operation(flashServerNumber.dataServer);            //  main operation function for data collection and sending
+    LEDSleepWake();
   }
 
   // processing of received SMS
@@ -274,19 +271,19 @@ void loop() {
     }
     // deleteMessageInbox();
     LEDOff();
-  }
+  }        
 
-  setNextAlarm(savedAlarmInterval.read());        // sets next alarm
-
-  // point here all function that wants to reset the datalogger 
-  if (alarmResetFlag) {                           //  perform self reset function if self reset flag is TRUE  
-    alarmResetFlag = false;                       //  precaution only in case reset function fails (unlikely); pwede naman kahit wala ito
-    LEDSelfReset();                               //  distikct dapat ito sa regular sleep/wake LED pattern
-    NVIC_SystemReset();                           // reset
+  // point here all function that wants to reset the datalogger, instead of using a separate reset function
+  if (selfResetFlag) {                           //  perform self reset function if self reset flag is TRUE  
+    selfResetFlag = false;                       //  precaution only in case reset function fails (unlikely); pwede naman kahit wala ito
+    LEDSelfReset();                               //  distinct dapat ito sa regular sleep/wake LED pattern
+    NVIC_SystemReset();                           //  reset
   } else {            
-    LEDSleepWake();                               // 
+    LEDOn();                                      //  Pangtest ito ng interrupt [except RTCINT], pwede tanggalin later
+    delayMillis(500);                             // 
+    LEDOff();                                     //
     disableWatchdog();
-    sleepNow(savedDataLoggerMode.read());   // proceed with normal wake sleep cycle
+    sleepNow(savedDataLoggerMode.read());         // proceed with normal wake sleep cycle
   }
   // wdSleepDuration = Watchdog.sleep();  
 }

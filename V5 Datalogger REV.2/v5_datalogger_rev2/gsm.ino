@@ -995,7 +995,7 @@ void findOTACommand(const char* OTALineCheck, const char * OTASender, const char
     if (inputIs(otaSenderBuf,"NANEEE")) sendThruLoRa(OTAReply);
     else sendThruGSM(OTAReply, OTASender);         //  send reply first before resetting
     delayMillis(1000);
-    alarmResetFlag = true;                        //  set reset flag trigger reset function at the end of loop
+    selfResetFlag = true;                        //  set reset flag trigger reset function at the end of loop
   }
 
   //  Sets a flag to send additional parameter XXXXXXXXXXX [command] to router(s)

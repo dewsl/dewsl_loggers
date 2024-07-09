@@ -64,6 +64,11 @@ void debugFunction() {
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
+    } else if (inputIs(serialLineInput, "CC")) {
+      printExtraCommands();
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+
     } else if (inputIs(serialLineInput, "D")) {
       Serial.print("Saved data logger mode: ");
       Serial.println(savedDataLoggerMode.read());
@@ -264,16 +269,19 @@ void debugFunction() {
 
     } else if (inputIs(serialLineInput, "LORA_SEND_TEST")) {
       char payloadContainer[200];
-      Serial.print("Input LoRa test data: ");
+      Serial.print(F("Simple broadcast thru LoRa"));
+      Serial.print("Input data to send: ");
       getSerialInput(payloadContainer, sizeof(payloadContainer), 60000);
       Serial.println(payloadContainer);
       sendThruLoRa(payloadContainer);
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
-    } else if (inputIs(serialLineInput, "LORA_SEND_2_TEST")) {
+    } else if (inputIs(serialLineInput, "LORA_SEND_TEST_2")) {
       char payloadContainer[200];
-      Serial.print("Input LoRa test data: ");
+      Serial.print(F("Simulates sending from ROUTER to GATEWAY [with acknowledgement]"));
+      Serial.print(F("THIS datalogger must be listed as a ROUTER on the intended RECEIVER"));
+      Serial.print(F("Input data to send: "));
       getSerialInput(payloadContainer, sizeof(payloadContainer), 60000);
       Serial.println(payloadContainer);
       sendThruLoRaWithAck(payloadContainer, 2000, 0);
@@ -281,38 +289,33 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "LORA_WAIT_TEST")) {
+      Serial.println(F("Listens for any broadcasted LoRa data"));
+      Serial.print(F("Timeout: "));
+      Serial.print(MAX_GATWAY_WAIT);
+      Serial.println(F("ms"));
       Serial.println("Waiting for LoRa transmission: ");
       char payloadContainer[RH_RF95_MAX_MESSAGE_LEN+1];
-      receiveLoRaData(payloadContainer, sizeof(payloadContainer), 180000);
+      receiveLoRaData(payloadContainer, sizeof(payloadContainer), MAX_GATWAY_WAIT);
       Serial.println(payloadContainer);
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
     
-    } else if (inputIs(serialLineInput, "LORA_WAIT_2_TEST")) {
+    } else if (inputIs(serialLineInput, "LORA_WAIT_TEST_2")) {
       uint8_t receiveType = 99;
-      char debugBuffer[500];
+      Serial.println(F("Listens for any broadcasted LoRa data from the listed router(s)"));
+      Serial.print(F("Timeout: "));
+      Serial.print(MAX_GATWAY_WAIT);
+      Serial.println(F("ms"));
       // Serial.println("Waiting for LoRa transmission from listed router(s): ");
-      waitForLoRaRouterData(200000,2,1);
-      // char payloadContainer[RH_RF95_MAX_MESSAGE_LEN+1];
-      // receiveLoRaData(payloadContainer, sizeof(payloadContainer));
-      // Serial.println(payloadContainer);
-      // receiveType = loRaFilterPass(payloadContainer, sizeof(payloadContainer));
-      // Serial.println(receiveType);
-      // if (receiveType > 0) {  
-      //   Serial.print("Receieved from ");
-      //   extractRouterName(debugBuffer, payloadContainer);
-      //   Serial.println(debugBuffer);
-      // }
-      // if (strstr(debugBuffer, ">>VOLT")) {
-      
-      // }
+      if (savedRouterCount.read() == 0) Serial.println(F("No listed router(s), this might not work..."));
+      waitForLoRaRouterData(MAX_GATWAY_WAIT,2,1);
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "OTA_TEST")) {
       char payloadContainer[200];
       char tsBuf[50];
-      Serial.print("Input OTA command: ");
+      Serial.print("Input FULL OTA command string: ");
       getSerialInput(payloadContainer, sizeof(payloadContainer), 60000);
       Serial.println(payloadContainer);
       getNetworkFormatTimeStamp(tsBuf, sizeof(tsBuf));
@@ -340,9 +343,7 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "CHECK_OTA")) {
-
       checkForOTAMessages();
-      
         // do nothing
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
@@ -388,7 +389,7 @@ void printMenu() {
   Serial.println(F("------------------------------------------------------"));
   Serial.print(F("Firmware Version: "));
   Serial.print(FIRMWAREVERSION);
-  Serial.println("α");
+  Serial.println("β");
   Serial.print("Current datetime: ");
   printDateTime();
   Serial.println(F("------------------------------------------------------"));
@@ -436,6 +437,20 @@ void printLoggerModes() {
   Serial.println("[5] Rain gauge sensor only - Router");            // same with [2] but no sensors or ublox
 }
 
+void printExtraCommands() {
+  Serial.println(F("CHECK_OTA"));
+  Serial.println(F("OTA_TEST"));
+  Serial.println(F("LORA_SEND_TEST"));
+  Serial.println(F("LORA_SEND_TEST_2"));
+  Serial.println(F("LORA_WAIT_TEST"));
+  Serial.println(F("LORA_WAIT_TEST_2"));
+  Serial.println(F("VOLT_STRING"));
+  Serial.println(F("INFO_STRING"));
+  Serial.println(F("BUILD_PARAM_SMS"));
+  Serial.println(F(" "));
+  Serial.println(F("------------------------------------------------------"));
+}
+
 void updateLoggerMode() {
   unsigned long updateStart = millis();
   int updateTimeout = 60000;
@@ -444,7 +459,7 @@ void updateLoggerMode() {
   uint8_t initialLoggerMode = savedDataLoggerMode.read();
   uint8_t initialRouterCount = savedRouterCount.read();
   
-  printLoggerModes();
+  // printLoggerModes();
   Serial.print("Enter datalogger mode: ");
   getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
   loggerModeBuffer = atoi(addOnBuffer);
@@ -482,6 +497,7 @@ void updateLoggerMode() {
     Serial.println(rcount);
   
   } else if (loggerModeBuffer == 2) {
+    if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
     Serial.print("   Router with Subsurface Sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
@@ -494,9 +510,11 @@ void updateLoggerMode() {
     else hasUbloxRouterFlag.write(0);
 
   } else if (loggerModeBuffer == 1) {     // arQ mode + UBLOX rover
+    if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
     hasUbloxRouterFlag.write(99);
   }
   else {   // other non-gateway and non router datalogger
+    if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
   }
   Serial.println("Datalogger mode updated");
   Serial.println("");
@@ -568,35 +586,38 @@ bool changeParameter() {
 }
 
 void savedParameters() {
+  //  update global variables [from flash] that will be used
   flashLoggerName = savedLoggerName.read();
   flashServerNumber = savedServerNumber.read();
   flashCommands = savedCommands.read();
+  DateTime now = rtc.now();
 
   Serial.println(F("------------      STORED  PARAMETERS      ------------"));
   Serial.println(F("------------------------------------------------------"));
   Serial.println("");
+  Serial.print(">>>>> ");
+  getLoggerModeAndName();
+  Serial.println("");
   Serial.print("Date & Time:\t ");
   printDateTime();
-  getTimeStamp(_timestamp, sizeof(_timestamp));
-  Serial.print("Timestamp:\t ");
-  Serial.println(_timestamp);
-  setNextAlarm(savedAlarmInterval.read());
-  Serial.println("");
-  Serial.print(">>>> ");
-  getLoggerModeAndName();
-  Serial.print("Sensor command:\t ");
-  if (strlen(flashCommands.sensorCommand) == 0) Serial.println("[NOT SET] Default - ARQCM6T");
-  else Serial.println(flashCommands.sensorCommand);
-
-  Serial.print("Wake interval:\t ");
-  int alarmInterval = savedAlarmInterval.read();
-  if (alarmInterval == 0)       Serial.println("30 minutes (hh:00 & hh:30)");
+  getTimeStamp(_timestamp, sizeof(_timestamp));                                             //  Shows an easily readable datetime format 
+  Serial.print("Next alarm\t hh:");
+  Serial.println(nextAlarm((int)(now.minute()),savedAlarmInterval.read()));                   //  Shows next computed alarm based on the alamr interval and current time
+  // Serial.print("Timestamp:\t ");                                                
+  // Serial.println(_timestamp);                                                               //  Shows the timestamp format appended to data
+  Serial.print("Wake interval:\t "); 
+  int alarmInterval = savedAlarmInterval.read();                                            //  Shows periodic alarm interval
+  if (alarmInterval == 0)       Serial.println("30 minutes (hh:00 & hh:30)");               //
   else if (alarmInterval == 1)  Serial.println("15 minutes (hh:00, hh:15, hh:30, hh:45)");
   else if (alarmInterval == 2)  Serial.println("10 minutes (hh:00, hh:10, hh:20, ... )");
   else if (alarmInterval == 3)  Serial.println("5 minutes (hh:00, hh:05, hh:10, ... )");
   else if (alarmInterval == 4)  Serial.println("3 minutes (hh:00, hh:03, hh:06, ... )");
   else if (alarmInterval == 5)  Serial.println("30 minutes (hh:15 & hh:45)");
   else                          Serial.println("Default 30 minutes (hh:00 & hh:30)");
+  
+  Serial.print("Sensor command:\t ");
+  if (strlen(flashCommands.sensorCommand) == 0) Serial.println("[NOT SET] Default - ARQCM6T");
+  else Serial.println(flashCommands.sensorCommand);
   
   Serial.print("Rain collector:\t ");
   if (savedRainCollectorType.read() == 0)       Serial.println("Pronamic (0.5mm/tip)");
@@ -696,26 +717,28 @@ void getLoggerModeAndName() {
   char printBuffer[50];
 
   if (mode == 3) {      //gateways
-    Serial.print("GATEWAY MODE ");
-    if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("+ Subsurface Sensor ");
-    if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Rover: ");
-    Serial.print("with ");
-    Serial.print(savedRouterCount.read());
-    Serial.println(" Router(s)");
     Serial.print("Gateway name ");
     Serial.println(flashLoggerName.sensorNameList[0]);
     for (byte rCount = 1; rCount <= savedRouterCount.read(); rCount++){
       sprintf(printBuffer, "Router %d: %s", rCount, flashLoggerName.sensorNameList[rCount]);
       Serial.println(printBuffer);
-    }  
+    } 
+    Serial.print("GATEWAY MODE ");
+    if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
+    if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Rover: ");
+    Serial.print("and ");
+    Serial.print(savedRouterCount.read());
+    Serial.println(" Router(s)"); 
   } else {      // other standalone dataloggers
+    Serial.print("Datalogger name: ");
+    Serial.println(flashLoggerName.sensorNameList[0]);
     if (mode == 0) {
       Serial.println("ARQ MODE");
     } else if (mode == 1) {
       Serial.println("ARQ MODE + UBLOX Rover:");
     } else if (mode == 2) {
       Serial.print("ROUTER MODE ");
-      if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("+ Subsurface Sensor ");
+      if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
       if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Rover: ");
       Serial.println("");
     }  else if (mode == 4) {
@@ -723,8 +746,6 @@ void getLoggerModeAndName() {
     } else if (mode == 5) {         // arQ mode GNSS sensor
       Serial.println("Rain gauge only (Router)");  
     }
-    Serial.print("Datalogger name: ");
-    Serial.println(flashLoggerName.sensorNameList[0]);
   }
 }
 

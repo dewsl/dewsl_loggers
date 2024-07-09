@@ -79,7 +79,7 @@ void Operation(const char * operationServerNumber) {
 
   // Additional
   // insert datalogger self reset indicator
-  if (alarmResetFlag && !debugMode) {
+  if (selfResetFlag && !debugMode) {
     char resetNotif[100];
     sprintf(resetNotif, "Datalogger %s will reset after data collection", flashLoggerName.sensorNameList[0]);
     addToSMSStack(resetNotif);  // notif for interval based reset
