@@ -45,6 +45,34 @@ void updateRainCollectorType() {
   }
 }
 
+void updateRainDataType() {
+  unsigned long updateStart = millis();
+  int updateTimeout = 60000;
+  int newDataType = 0;
+  uint8_t currentType = savedRainSendType.read();
+  if (currentType == 0) debugPrintln("Sends converted \"mm\" equivalent");
+  else if (currentType == 1) debugPrintln("Sends RAW TIP COUNT");
+
+
+  debugPrint("Input rain data type to send:");
+  while (millis() - updateStart < updateTimeout) {
+    if (Serial.available() > 0) {
+      newDataType = Serial.parseInt();
+      break;
+    }
+  }
+  debugPrintln(newDataType);
+  if (newDataType > 1) {
+    debugPrint("Invalid value, rain data type unchanged");
+  } else if (newDataType == currentType){
+    debugPrintln("Rain data type unchanged");
+  } else {
+    savedRainSendType.write(newDataType);
+    delayMillis(500);
+    debugPrintln("Rain data type updated");
+  }
+}
+
 void resetRainTips() {
   _rainTips = 0.00;
   delayMillis(75);

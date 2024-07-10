@@ -158,6 +158,17 @@ void debugFunction() {
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
+    } else if (inputIs(serialLineInput, "JJ")) {
+      Serial.print("Rain data type to send: ");
+      Serial.println(savedRainCollectorType.read());
+      Serial.println("[0] Sends converted \"mm\" equivalent");
+      Serial.println("[1] Sends RAW TIP COUNT");
+      if (changeParameter())  {
+        updateRainDataType();
+      }
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+
     } else if (inputIs(serialLineInput, "K")) {
       Serial.print("Saved SLEEP/WAKE interval: ");
       Serial.println(savedAlarmInterval.read());
@@ -183,10 +194,15 @@ void debugFunction() {
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
     } else if (inputIs(serialLineInput, "M")) {
-      flashServerNumber = savedServerNumber.read();
-      Serial.print("Send custom SMS to server: ");
-      Serial.println(flashServerNumber.dataServer);
+      if (loggerWithGSM(savedDataLoggerMode.read())) {
+        flashServerNumber = savedServerNumber.read();
+        Serial.print("Send custom SMS to server: ");
+        Serial.println(flashServerNumber.dataServer);
+      } else {
+        Serial.println("Broadcast custom message thru LoRa: ");
+      }
       testSendToServer();
+      
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
@@ -430,7 +446,7 @@ void printRTCIntervalEquivalent() {
 
 void printLoggerModes() {
   Serial.println("[0] arQ mode - Standalone Datalogger");           // arQ like function only
-  Serial.println("[1] arQ mode + UBLOX Rover");                     // arQ like + Ublox router
+  Serial.println("[1] arQ mode + UBLOX Module");                    // arQ like + Ublox module
   Serial.println("[2] Router mode");                                // anything that send data through LoRa
   Serial.println("[3] Gateway mode");                               // anything that recevies LoRa data
   Serial.println("[4] Rain gauge sensor only - GSM");               // same as gateway mode with no routers, sensor, or ublox module
@@ -438,6 +454,7 @@ void printLoggerModes() {
 }
 
 void printExtraCommands() {
+  Serial.println(F("JJ"));
   Serial.println(F("CHECK_OTA"));
   Serial.println(F("OTA_TEST"));
   Serial.println(F("LORA_SEND_TEST"));
@@ -484,7 +501,7 @@ void updateLoggerMode() {
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasSubsurfaceSensorFlag.write(99);
-    Serial.print("   Gateway with UBLOX rover? [Y/N] ");
+    Serial.print("   Gateway with UBLOX module? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasUbloxRouterFlag.write(99);
@@ -503,13 +520,13 @@ void updateLoggerMode() {
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasSubsurfaceSensorFlag.write(99);
     else hasSubsurfaceSensorFlag.write(0);
-    Serial.print("   Router with UBLOX Rover? [Y/N] ");
+    Serial.print("   Router with UBLOX module? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasUbloxRouterFlag.write(99);
     else hasUbloxRouterFlag.write(0);
 
-  } else if (loggerModeBuffer == 1) {     // arQ mode + UBLOX rover
+  } else if (loggerModeBuffer == 1) {     // arQ mode + UBLOX module
     if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
     hasUbloxRouterFlag.write(99);
   }
@@ -725,7 +742,7 @@ void getLoggerModeAndName() {
     } 
     Serial.print("GATEWAY MODE ");
     if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
-    if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Rover: ");
+    if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
     Serial.print("and ");
     Serial.print(savedRouterCount.read());
     Serial.println(" Router(s)"); 
@@ -735,11 +752,11 @@ void getLoggerModeAndName() {
     if (mode == 0) {
       Serial.println("ARQ MODE");
     } else if (mode == 1) {
-      Serial.println("ARQ MODE + UBLOX Rover:");
+      Serial.println("ARQ MODE + UBLOX Module:");
     } else if (mode == 2) {
       Serial.print("ROUTER MODE ");
       if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
-      if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Rover: ");
+      if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
       Serial.println("");
     }  else if (mode == 4) {
       Serial.println("Rain gauge only (GSM)");

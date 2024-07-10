@@ -65,15 +65,16 @@ bool GSMInit() {
     }
     if (GSMconfig) {
     GSMSerial.flush();
-    GSMSerial.write("AT+CSQ\r");
+    if (Serial) Serial.println("Checking GSM network signal..");
+    GSMSerial.write("AT+CSQ;+COPS?\r");
     delayMillis(1000);
     }
-    if (GSMconfig && !signalCOPS && GSMGetResponse(gsmInitResponse, sizeof(gsmInitResponse), "+CSQ", 4000)) {
+    if (GSMconfig && !signalCOPS && GSMGetResponse(gsmInitResponse, sizeof(gsmInitResponse), "+COPS: 0,1,\"", 3000)) {
       // int CSQval = parseCSQ(gsmInitResponse);
       // debugPrintln(gsmInitResponse);
       int CSQval = parseCSQ(gsmInitResponse);
       if (CSQval > 0) {
-        debugPrintln("Checked network signal quality..");
+        // if (Serial) Serial.print("Checking GSM network signal..");
         if (Serial) Serial.print("CSQ: ");
         if (Serial) Serial.println(CSQval);
         signalCOPS = true;
@@ -83,6 +84,7 @@ bool GSMInit() {
       GSMSerial.write("AT&W\r");
       debugPrintln("");
       if (Serial) Serial.println("GSM READY");
+      delayMillis(1000);
       REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT2;    // clears interrupt flag
       attachInterrupt(digitalPinToInterrupt(GSMINT), GSMISR, FALLING);
       initOK = true;
@@ -481,9 +483,14 @@ void testSendToServer() {
       }
     }
   }
-  if (strlen(testSendBuffer) > 0) {
+  if (strlen(testSendBuffer) > 0 && loggerWithGSM(savedDataLoggerMode.read())) {
     flashServerNumber = savedServerNumber.read();
     if (sendThruGSM(testSendBuffer,flashServerNumber.dataServer)) debugPrintln("Message sent");
+  } else {
+    char loraSendBuffer[200];
+    getTimeStamp(_timestamp, sizeof(_timestamp));
+    sprintf(loraSendBuffer, ">>%s*%s*%s",flashLoggerName.sensorNameList[0],testSendBuffer,_timestamp);
+    sendThruLoRa(loraSendBuffer);
   }
 }
 

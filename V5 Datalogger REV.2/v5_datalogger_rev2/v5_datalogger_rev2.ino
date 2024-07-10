@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2407.09
+#define FIRMWAREVERSION 2407.10
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 60000
@@ -280,7 +280,7 @@ void loop() {
     NVIC_SystemReset();                           //  reset
   } else {            
     LEDOn();                                      //  Pangtest ito ng interrupt [except RTCINT], pwede tanggalin later
-    delayMillis(500);                             // 
+    delayMillis(300);                             // 
     LEDOff();                                     //
     disableWatchdog();
     sleepNow(savedDataLoggerMode.read());         // proceed with normal wake sleep cycle
