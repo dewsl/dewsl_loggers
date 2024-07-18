@@ -18,7 +18,7 @@ void Operation(const char * operationServerNumber) {
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   // 1.0 / First Part
   // complete data collection tasks according to datalogger requirements
-  // dump (delimited) everything to global SMS dump "_globalSMSDump" then tokenize for sending on second part
+  // dump everything [delimited] to global SMS dump "_globalSMSDump" then tokenize segments for sending on second part
   if (dataloggerMode == 0 || dataloggerMode == 1){
     debugPrint("ARQ MODE");
     if (hasUbloxRouterFlag.read() == 99) debugPrint("+ UBLOX");
@@ -33,7 +33,7 @@ void Operation(const char * operationServerNumber) {
     addToSMSStack(infoSMS);                                               //  adds info sms to global sms stack
   }
  else if (dataloggerMode == 2) {                                          // routine is almost the same as above, pwede pa ito (lahat ng modes) ma-consolidate sa mas simple na process
-    debugPrintln("ROUTER MODE:");
+    debugPrint("ROUTER MODE:");
     if (hasSubsurfaceSensorFlag.read() == 99) debugPrint("SUBSURFACE SENSOR ");
     if (hasUbloxRouterFlag.read() == 99) debugPrint("+ UBLOX");
     debugPrintln("");
@@ -101,7 +101,21 @@ void Operation(const char * operationServerNumber) {
     deleteMessageInbox();                                                                   //  deletes ALL messages in SIMCARD                                                      
   }
   
-  if (loggerWithGSM(savedDataLoggerMode.read()))  GSMPowerModeSet();                        //  Enable/sets power saving mode AFTER sending data
+  // checks supply voltage after data sending
+  if (savedBatteryType.read() ==  0 && autoPowerSaving.read() == 99) {
+    // swtiches to power saving mode (if not already) if battery dips below threshold
+    if (readBatteryVoltage(savedBatteryType.read()) < 12.5 && savedGSMPowerMode.read() == 0) if (savedGSMPowerMode.read() != 2) savedGSMPowerMode.write(2);  
+    // swtiches to back to always On (if not already) when battery is above threshold
+    if (readBatteryVoltage(savedBatteryType.read()) > 12.8 && savedGSMPowerMode.read() == 2) if (savedGSMPowerMode.read() != 0) savedGSMPowerMode.write(0);  
+  }
+  if (savedBatteryType.read() == 1 && autoPowerSaving.read() == 99) {
+    // swtiches to power saving mode (if not already) if battery dips below threshold
+    if (readBatteryVoltage(savedBatteryType.read()) < 3.8 && savedGSMPowerMode.read() == 0) if (savedGSMPowerMode.read() != 2) savedGSMPowerMode.write(2);
+    // swtiches to back to always On (if not already) when battery is above threshold
+    if (readBatteryVoltage(savedBatteryType.read()) > 4.0 && savedGSMPowerMode.read() == 2) if (savedGSMPowerMode.read() != 0) savedGSMPowerMode.write(0);
+  }
+
+  if (loggerWithGSM(savedDataLoggerMode.read()))  GSMPowerModeSet();                        //  Re-enable power saving mode (if any) AFTER sending data
   // debugPrintln("End of operation");
 
   //  router use only
@@ -149,13 +163,63 @@ void initSleepCycle() {
   SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;  // Enable Standby or "deep sleep" mode
 }
 
+void initSleepCycle2() {
+  SCB->SCR |= SCB_SCR_SLEEPONEXIT_Msk; // Enable Sleep-On-Exit feature
+  SCB->SCR |= SCB_SCR_SEVONPEND_Msk;  // Enable Send-Event-on-Pend
+}
+
 void sleepNow(uint8_t savedLoggerMode) {
   Serial.println(F("MCU is going to sleep . . ."));
   Serial.println(F(""));
 
-  SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;  // disable systick interrupt
+  // SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;  // disable systick interrupt
   // LowPower.standby();                          // enters sleep mode
-  __DSB();
-  __WFI();
+  // LowPower.deepSleep(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
+  // SCB->SCR |= SCB_SCR_SLEEPONEXIT_Msk; 
+  // while (1) {
+
   SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // Enable systick interrupt
+  __DSB(); // Use of memory barrier is recommended for portability
+  __WFI(); // Execute WFI and enter sleep
+  //     };
+
+  // __DSB();
+  // __WFI();
+
+  // SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
+	// PM->SLEEP.reg = IDLE_2;
+	// __DSB();
+	// __WFI();
+  
+}
+
+void runOnceInit() {
+
+  runOnceFlag = false;                                      // prevent re-execution
+
+
+  if (loggerWithGSM(savedDataLoggerMode.read())) {            // Boot message for gateways and standalone dataloggers
+    if (GSMInit()) {                                          // Initializes GSM module after reset/boot
+    // If GSM reset if successful
+      Serial.println("GSM READY\n");
+      char bootMgs[100];
+      deleteMessageInbox();                                   //  delete ALL messages in SIM inbox to prevent processing of old SMS
+      flashLoggerName = savedLoggerName.read();               //  update global param
+      flashServerNumber = savedServerNumber.read();     
+      
+      if(!debugMode) {
+        char restMsgBuffer[50];
+        resetStatCheck(restMsgBuffer);
+        sprintf(bootMgs,"%s: LOGGER POWER UP\nLast reset cause: %s",flashLoggerName.sensorNameList[0], restMsgBuffer);  // build boot message
+        delayMillis(1500);
+        sendThruGSM(bootMgs,flashServerNumber.dataServer);                         // send boot msg to server
+      }
+      GSMPowerModeSet(); 
+    }    
+  } 
+
+  if (hasUbloxRouterFlag.read() == 99 || savedRouterCount.read() > 0 || savedDataLoggerMode.read()) {  //applies for datalogger modes that uses LoRa
+    LoRaInit();
+  }
+  if (hasSubsurfaceSensorFlag.read() == 99 || hasUbloxRouterFlag.read() == 99) dueInit(DUETRIG);          //
 }

@@ -1,15 +1,19 @@
 #define LEAP_YEAR(Y)     ( (Y>0) && !(Y%4) && ( (Y%100) || !(Y%400) ))
 
+/// RTC initialization
 void RTCInit(uint8_t RTCPin) {
   pinMode(RTCPin, INPUT);
   attachInterrupt(digitalPinToInterrupt(RTCPin), RTCISR, FALLING);
 }
 
+/// RTC iterrupt service routine function
 void RTCISR() {
   RTCWakeFlag = true;
   // Serial.println("RTC interrupt");
 }
 
+/// Accepts sting input of date time;
+/// Accepted format: YYYY,MM,DD,hh,mm,ss,dd[0-6]Mon-Sun
 void setupTime() {
   unsigned long setupStart = millis();
   int MM = 0, DD = 0, YY = 0, hh = 0, mm = 0, ss = 0, dd = 0;
@@ -36,24 +40,34 @@ void setupTime() {
   }
 }
 
+/// Changes the saved date time with input paramters
+/// @param year - current year; format YYYY
+/// @param month - current month; format MM
+/// @param date - current date; format DD
+/// @param hour - current hour; format 24hr hh
+/// @param mim - current minute; format mm
+/// @param sec - current second; format ss (you can try..)
+/// @param weekday - current day of week; format [0-6], where 0=Mon, 1=Tue, 3=Wed,...
 void setRTCDateTime(int year, int month, int date, int hour, int min, int sec, int weekday) {
   DateTime dt(year, month, date, hour, min, sec, weekday);
   rtc.setDateTime(dt);  // adjust date-time as defined by 'dt'
 }
 
+/// Fetches current timestamp of RTC and stores it the container parameter
+/// Output is formatted as "YYMMDDhhmmss"
+/// Output string is used as timestamp of sensor data
+/// @param tsContainer - container of timetamp string
+/// @param sizeOfContainer - size of timestamp container [tsContainer]
 void getTimeStamp(char* tsContainer, uint8_t sizeOfContainer) {
-  // char tsBuffer[sizeOfContainer];
-  // tsBuffer[0] = 0x00;
-  // add function for generating easy to read date time 
   for (int t=0; t < sizeOfContainer; t++) tsContainer[t] = 0x00;
   DateTime now = rtc.now();  //get the current date-time
   sprintf(tsContainer, "%02d%02d%02d%02d%02d%02d", now.year()%1000,now.month(),now.date(),now.hour(),now.minute(),now.second());
-  // tsBuffer[strlen(tsBuffer)+1]=0x00;
-  // strncpy(tsContainer, tsBuffer, strlen(tsBuffer));
-
 }
 
-/// generates a timestring similar to network time strings 22/09/23,18:38:19
+/// generates a timestring similar to cellular network time format 22/09/23,18:38:19
+/// Output string is used for updating timestamp of routers
+/// @param tsContainer - container of network formatted timetamp
+/// @param sizeOf
 void getNetworkFormatTimeStamp(char* tsContainer, uint8_t sizeOfContainer) {
   // add function for generating easy to read date time 
   for (int t=0; t < sizeOfContainer; t++) tsContainer[t] = 0x00;
@@ -64,43 +78,47 @@ void getNetworkFormatTimeStamp(char* tsContainer, uint8_t sizeOfContainer) {
 
 }
 
-void setNextAlarm(int intervalSET) {
+
+/// Sets next alarm of RTC depending on the the interval equivalent value of the parameter
+/// Actual alrm interval is computed based on current minute and interval equivalent of parameter value
+/// @param IntervalEquivalent - interval equivalent value [0-5]; not the actual alarm interval value
+void setNextAlarm(int intervalEquivalent) {
   char tsBuf[30];
   uint16_t store_rtc = 00;
   DateTime now = rtc.now();  //get the current date-time
-  store_rtc = nextAlarm((int)(now.minute()),intervalSET);
+  store_rtc = nextAlarm((int)(now.minute()),intervalEquivalent);
   // enable rtc interrupt
-  rtc.enableInterrupts(store_rtc, 00);  // interrupt/wake at (minutes, seconds)
-  rtc.clearINTStatus();
-  if (Serial) {
-    // getTimeStamp(tsBuf, sizeof(tsBuf));
-    // Serial.print(tsBuf);
-    Serial.print("Next alarm\t hh:");
-    Serial.println(store_rtc);  
+  if (debugMode) Serial.print("Next alarm\t hh:");
+  if (debugMode) Serial.println(store_rtc);  
+  if (!debugMode) {
+    rtc.clearINTStatus();
+    delayMillis(100);
+    rtc.enableInterrupts(store_rtc, 00);  // interrupt/wake at (minutes, seconds)
   }
 }
 
-uint16_t nextAlarm(int currentMinute, int intervalSaved) {
-  int intervalEquivalent = 0;
+/// Computes actual alarm interval depending on 
+uint16_t nextAlarm(int currentMinute, int intervalEquivalent) {
+  int actualInterval = 0;
   uint16_t nextAlarm = 0;
   
-  if (intervalSaved == 1) {
-    intervalEquivalent = 15;
-  } else if (intervalSaved == 2) {
-    intervalEquivalent = 10;
-  } else if (intervalSaved == 3) {
-    intervalEquivalent = 5;
-  } else if (intervalSaved == 4) {
-    intervalEquivalent = 3;
-  } else if (intervalSaved == 5) {      // special case intervals for 15min offset
+  if (intervalEquivalent == 1) {
+    actualInterval = 15;
+  } else if (intervalEquivalent == 2) {
+    actualInterval = 10;
+  } else if (intervalEquivalent == 3) {
+    actualInterval = 5;
+  } else if (intervalEquivalent == 4) {
+    actualInterval = 3;
+  } else if (intervalEquivalent == 5) {      // special case intervals for 15min offset
     if (currentMinute < 15 || currentMinute >= 45) nextAlarm = 15;
     else nextAlarm = 45;
-    return nextAlarm;                 // skips the rest
+    return nextAlarm;                         // skips the rest of the function 
   } else {
-    intervalEquivalent = 30;
+    actualInterval = 30;
   }
-  // computed alarms for regular intervals starting and ending in minute 0 [intervals 1-4]
-  int computedAlarm = (((currentMinute/intervalEquivalent)+1)*intervalEquivalent);
+
+  int computedAlarm = (((currentMinute/actualInterval)+1)*actualInterval);  // next minute alarm computation for regular intervals starting and ending in minute 0 [intervals 1-4]
   if (computedAlarm >= 60) {
     nextAlarm = 0;
   } else {
@@ -187,11 +205,33 @@ void setSelfResetFlag(int alarm24hrFormat) {
 
 void printDateTime() {
   char timestring[100] = "INVALID";
+  char hourPeriod[3] =  "AM";
+  uint8_t hourBuffer = 0;  // 12hr format of hour
   // getTimeStamp(_timestamp, sizeof(_timestamp));
   const char * monthsEq[12] = {"Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"};
   DateTime now = rtc.now();
-  if (now.month()-1 <= 12) sprintf(timestring, "%s %d,%d %02d:%02d:%02d",monthsEq[now.month()-1],now.date(),now.year(),now.hour(),now.minute(),now.second());
+  if (now.hour() <= 12) hourBuffer = now.hour();
+  else hourBuffer = now.hour() - 12; 
+  if (now.hour() > 11 && now.hour() < 24) sprintf(hourPeriod, "PM"); 
+  // main  
+  if (now.month()-1 <= 12) sprintf(timestring, "%s %d,%d %02d:%02d:%02d %s",monthsEq[now.month()-1],now.date(),now.year(),hourBuffer,now.minute(),now.second(),hourPeriod);
   debugPrintln(timestring);
+
+  // if (now.month()-1 <= 12) {
+  //   Serial.print(monthsEq[now.month()-1]);
+  //   Serial.print(" ");
+  //   Serial.print(now.date());
+  //   Serial.print(", ");
+  //   Serial.print(now.year());
+  //   Serial.print(" ");
+  //   Serial.print(hourBuffer);
+  //   Serial.print(":");
+  //   Serial.print(now.minute());
+  //   Serial.print(":");
+  //   Serial.print(now.second());
+  //   Serial.print(" ");
+  //   Serial.println(hourPeriod);
+  // }
 }
 
 

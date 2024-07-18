@@ -141,7 +141,6 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "I")) {
-      Serial.println("Resetting the GSM module...");
       GSMReset();
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
@@ -202,23 +201,20 @@ void debugFunction() {
         Serial.println("Broadcast custom message thru LoRa: ");
       }
       testSendToServer();
-      
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "N")) {
       Serial.print("Saved GSM power mode: ");
       Serial.println(savedGSMPowerMode.read());
-      Serial.println("[0] Always ON");
-      Serial.println("[1] Low-power Mode (Always ON, but GSM SLEEPS when inactive)");
-      Serial.println("[2] Power Saving Mode");
+      Serial.println("[0] Always ON");                                                    //  Typically ~9-12mA @ 13v when idle (arQ mode), with short duration spikes up to 25-40mA around every 10-30 seconds (approximate).
+      Serial.println("[1] Low-power Mode (Always ON, but GSM SLEEPS when inactive)");     //  ~0-16mA @ 13v when idle (arQ mode). Typically 0mA, with very shord duration spikes of ~4-7mA around every 3-10 secs (approximate) and 11-17mA spikes around every 30-50sec (approximate). 
+      Serial.println("[2] Power Saving Mode");                                            //  ~0-8mA @ 13V when idle (arQ mode). Initially, around ~7-8mA yung idle, pero after ~1-2hrs ay nagiging 0mA (sabi ni sir Don baka daw µA na yung current draw) yung idle current draw. Either very efficient yung low power mode or napapagod lang yung power supply magdispaly ng mababang values...
       if (changeParameter()) {
       setGSMPowerMode();
       }
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
-
-
 
     } else if (inputIs(serialLineInput, "O")) {
       Serial.println("Input manual GSM Commands");
@@ -277,11 +273,14 @@ void debugFunction() {
 
     } else if (inputIs(serialLineInput, "X" ) || inputIs(serialLineInput, "EXIT" ) ) {
       Serial.println("Quitting debug mode...");
-      debugProcess = false;
-      debugMode = false;
       if (loggerWithGSM(savedDataLoggerMode.read())) deleteMessageInbox();
       else digitalWrite(GSMPWR, LOW); //should turn off GSM module
-      // Serial.println(F("------------------------------------------------------"));
+      setNextAlarm(savedAlarmInterval.read());
+      debugProcess = false;
+      debugMode = false;
+
+      // USBDevice.detach();
+      Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "LORA_SEND_TEST")) {
       char payloadContainer[200];
@@ -340,6 +339,40 @@ void debugFunction() {
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
+    } else if (inputIs(serialLineInput, "OTA_COMMANDS")) {
+      Serial.println("Over-the-air (OTA) Commands List:");
+      Serial.println("");
+      Serial.println("KEYWORD\t\t\t\t\tDESCRIPTION");
+      Serial.println(F("-------------------------------------------------------------------------------------------------------------------------------"));
+      Serial.println("REGISTER:SENSLOPE:\t\t\t*For checking code version..");
+      Serial.println("CONFIG:SENSLOPE:\t\t\tSends all saved parameters");
+      Serial.println("SENSORPOLL:SENSLOPE:\t\t\tSimulates the periodic operation function");
+      Serial.println("READRAINTIPS:SENSLOPE:\t\t\tReads rain collector type and stored 'tip' value");
+      Serial.println("SETRAINCOLLECTOR:SENSLOPE:\t\tUpdates the current/saved rain collector  type usng the additional parameter");
+      Serial.println("SETSENDINGTIME:SENSLOPE:\t\tUpdates the current/saved send interval type usng the additional parameter");
+      Serial.println("MODECHANGE:SENSLOPE:\t\t\tChanges the datalogger mode using additional parameter. USE WITH CAUTION");
+      Serial.println("SETDATETIME:SENSLOPE:\t\t\tReplaces current/saved timestamp with the additional parameter. Time format is YYYY,MM,DD,HH,MM,SS,dd");
+      Serial.println("FETCHGPRSTIME:SENSLOPE:\t\t\tAttempts to update datalogger timestamp using GPRS");
+      Serial.println("SMSTIMEUPDATE:SENSLOPE:\t\t\tUpdates timestamp using SMS 'send' timestamp");
+      Serial.println("CHECKTIMESTAMP:SENSLOPE:\t\tChecks the current/saved timestamp of the datalogger");
+      Serial.println("DATALOGGERNAME:SENSLOPE:\t\tReplaces current datalogger name with additional parameter");
+      Serial.println("SERVERNUMBER:SENSLOPE:\t\t\tReplaces the current server number with the additional parameter");
+      Serial.println("?SERVERNUMBER:SENSLOPE:\t\t\tChecks current/saved server number of the device");
+      Serial.println("RESETGSM:SENSLOPE:\t\t\tResets the microcontroller; similar to pressing the reset button");
+      Serial.println("SETBATTERYTYPE:SENSLOPE:\t\tReplaces current battery type with additional parameter");
+      Serial.println("SETGSMPOWERMODE:SENSLOPE:\t\t[experimental]Replaces current [saved] GSM power mode with additional parameter");
+      Serial.println("CMD?:SENSLOPE:\t\t\t\tCheck current [saved] sensor command");
+      Serial.println("CMD:SENSLOPE:\t\t\t\tReplaces current [saved] sensor comand with additional parameter [ARQCMD6T or ARQCMD6S]");
+      Serial.println("");
+      Serial.println(">>>>>> COMMANDS BELOW WORKS FOR GATEWAYS ONLY");
+      Serial.println("ROUTER:SENSLOPE:RESETDATALOGGER\t\tGateway will attempt to reset the routers after next data collection");
+      Serial.println("ROUTER:SENSLOPE:UPDATETIMESTAMP\t\tGateway will attempt to sync gateway and router timestamps");
+
+
+      
+      debugModeStart = millis();
+      Serial.println(F("-------------------------------------------------------------------------------------------------------------------------------"));
+
     } else if (inputIs(serialLineInput, "VOLT_STRING")) {
       char voltContainter[100];
       generateVoltString(voltContainter);
@@ -394,8 +427,9 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
       // setNextAlarm(savedAlarmInterval.read());
       delayMillis(75);
-      rtc.clearINTStatus();
-      GSMInit();
+      // rtc.clearINTStatus();
+      if (loggerWithGSM(savedDataLoggerMode.read())) if (GSMInit()) Serial.println("GSM READY");
+      GSMPowerModeSet();
       return;
   }
 }
@@ -408,6 +442,7 @@ void printMenu() {
   Serial.println("β");
   Serial.print("Current datetime: ");
   printDateTime();
+  delayMillis(1000);
   Serial.println(F("------------------------------------------------------"));
   Serial.println(F("[?] Print stored config parameters."));
   Serial.println(F("[A] Get data from customDue"));
@@ -454,8 +489,9 @@ void printLoggerModes() {
 }
 
 void printExtraCommands() {
-  Serial.println(F("JJ"));
+  Serial.println(F("JJ "));
   Serial.println(F("CHECK_OTA"));
+  Serial.println(F("OTA_COMMANDS"));
   Serial.println(F("OTA_TEST"));
   Serial.println(F("LORA_SEND_TEST"));
   Serial.println(F("LORA_SEND_TEST_2"));
@@ -540,11 +576,13 @@ void updateLoggerMode() {
 
   // prompts a change of names if datalogger modes are changed
   if ((initialLoggerMode != 3 && savedDataLoggerMode.read() == 3) ||     // if initally non-gateway to gateway type
-      (initialLoggerMode == 3 && savedDataLoggerMode.read() != 3) ||     // if initially gateway type to non-gateway type
-      (initialRouterCount != savedRouterCount.read())) {                  // if router count was changed
-      for (byte rCount = 0; rCount < initialRouterCount; rCount++) flashLoggerName.sensorNameList[rCount][0] = 0x00;  // obscure previous name list 
-      loggerNameChange = true;  // starts name change function after function end
-    }
+  (initialLoggerMode == 3 && savedDataLoggerMode.read() != 3) ||     // if initially gateway type to non-gateway type
+  (initialRouterCount != savedRouterCount.read())) {                  // if router count was changed
+    for (byte rCount = 0; rCount < initialRouterCount; rCount++) flashLoggerName.sensorNameList[rCount][0] = 0x00;  // obscure previous name list 
+    loggerNameChange = true;  // starts name change function after function end
+  }
+
+  if (!loggerWithGSM(savedDataLoggerMode.read())) GSMOff();
 }
 
 bool inputIs(const char *inputFromSerial, const char* expectedInput) {
@@ -591,7 +629,7 @@ bool changeParameter() {
 
   getSerialInput(changeBuffer, sizeof(changeBuffer), changeParamTimeout);
 
-  if ((changeBuffer[0] == 'C' || changeBuffer[0] == 'c') && strlen(changeBuffer) == 1) {
+  if (changeBuffer[0] == 'C' && strlen(changeBuffer) == 1) {
     Serial.print("\r");
     return true;
   } else {

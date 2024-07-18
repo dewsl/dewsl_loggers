@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2407.10
+#define FIRMWAREVERSION 2407.18
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 60000
@@ -43,7 +43,7 @@
 #define RAININT A4
 
 // RTC
-#define RTCINTPIN 6
+#define RTCINT 6
 
 // voltage check
 #define VBATPIN A7
@@ -96,9 +96,10 @@ void SERCOM1_Handler() {
   Serial2.IrqHandler();
 }
 bool GSMReadyFlag = false;
-bool runGSMInit = true;
 volatile bool GSMIntFlag = false;
 char defaultServerNumber[] = "09175388301";   //  GLOBE2
+int ringCounter = 0;
+bool runOnceFlag = true;
 
 typedef struct
 {
@@ -137,6 +138,7 @@ FlashStorage(savedLoggerResetAlarm,int);
 FlashStorage(savedServerNumber, serverNumberStruct);
 FlashStorage(savedCommands, commandStruct);
 FlashStorage(savedLoggerName, SensorNameStruct);
+FlashStorage(autoPowerSaving,int);
 
 //Flags
 bool selfResetFlag = false;
@@ -172,12 +174,12 @@ void setup() {
   pinPeripheral(11, PIO_SERCOM);
   
   Wire.begin();
-  rtc.begin();
+  // rtc.begin();
   LoRaInit();
   LEDInit();
   initSleepCycle();
 
-  RTCInit(RTCINTPIN);
+  RTCInit(RTCINT);
   GSMINTInit(GSMINT);
   rainInit(RAININT);
   dueInit(DUETRIG);
@@ -213,10 +215,15 @@ void setup() {
 
 void loop() {
   
+  // for testing use, tanggalin sa final version
+  char restMsg[30];
+  resetStatCheck(restMsg);
+  Serial.println(F("------------------------------------------------------"));
+
   //  Runs once after upload of firmware and datalogger parameters are not set
   while (loggerParamSetFlag.read() == 0) {
-    printLoggerModes();  
-    updateLoggerMode();   // Set datalogger mode, ddefaults to 0 if invalid or timed-out
+    printLoggerModes();     //   
+    updateLoggerMode();     // Set datalogger mode, ddefaults to 0 if invalid or timed-out
     Serial.println(F("------------------------------------------------------"));
     scalableUpdateSensorNames();
     loggerParamSetFlag.write(99);
@@ -225,21 +232,25 @@ void loop() {
   }
 
   // Runs once after upload/roboot/reset
-  if (runGSMInit && loggerWithGSM(savedDataLoggerMode.read())) {
-    runGSMInit = false;
+  if (runOnceFlag && loggerWithGSM(savedDataLoggerMode.read())) {
+    runOnceFlag = false;
     if (GSMInit()) {                                          // Initializes GSM module after reset/boot
       // If GSM reset if successful
+      Serial.println("GSM READY\n");
       char bootMgs[100];
       deleteMessageInbox();                                   //  delete ALL messages in SIM inbox to prevent processing of old SMS
-      flashLoggerName = savedLoggerName.read();         //  update global param
+      flashLoggerName = savedLoggerName.read();               //  update global param
       flashServerNumber = savedServerNumber.read();     
-      sprintf(bootMgs,"%s: LOGGER POWER UP",flashLoggerName.sensorNameList[0]);  // build boot message
+      char restMsgBuffer[50];
+      resetStatCheck(restMsgBuffer);
+      sprintf(bootMgs,"%s: LOGGER POWER UP\nLast reset cause: %s",flashLoggerName.sensorNameList[0], restMsgBuffer);  // build boot message
       if(!debugMode) {
         delayMillis(1500);
         sendThruGSM(bootMgs,flashServerNumber.dataServer);                         // send boot msg to server
-      } 
-    }
-      
+      }
+      rf95.sleep();
+      GSMPowerModeSet(); 
+    }    
   }
   
   // main loop for debug mode
@@ -252,7 +263,7 @@ void loop() {
   if (RTCWakeFlag) {
     RTCWakeFlag = false;
     LEDSleepWake();
-    setNextAlarm(savedAlarmInterval.read());            //  sets next alarm immediately
+    ringCounter = 0;                                    //  resets GSM couter for reset thru calls
     setSelfResetFlag(savedLoggerResetAlarm.read());     //  Sets a flag "selfResetFlag" to trigger self reset segment [below] instead of executing sleep function immediately
     Operation(flashServerNumber.dataServer);            //  main operation function for data collection and sending
     LEDSleepWake();
@@ -263,7 +274,7 @@ void loop() {
     GSMIntFlag = false;
     LEDOn();
     if (savedGSMPowerMode.read() == 0) checkForOTAMessages();
-    else if (savedGSMPowerMode.read() == 1) {
+    if (savedGSMPowerMode.read() == 1) {
       GSMPowerModeReset();
       // checkOTACommand();
       checkForOTAMessages();
@@ -273,8 +284,10 @@ void loop() {
     LEDOff();
   }        
 
+  setNextAlarm(savedAlarmInterval.read());            //  sets next alarm
+
   // point here all function that wants to reset the datalogger, instead of using a separate reset function
-  if (selfResetFlag) {                           //  perform self reset function if self reset flag is TRUE  
+  if (selfResetFlag || ringCounter >= 3) {                           //  perform self reset function if self reset flag is TRUE  
     selfResetFlag = false;                       //  precaution only in case reset function fails (unlikely); pwede naman kahit wala ito
     LEDSelfReset();                               //  distinct dapat ito sa regular sleep/wake LED pattern
     NVIC_SystemReset();                           //  reset
@@ -303,4 +316,15 @@ bool loggerWithGSM(uint8_t dMode) {
       dMode == 7 )
       return false;
   else return true;
+}
+
+void resetStatCheck(char* resetCauseMsg) {
+  if (REG_PM_RCAUSE == PM_RCAUSE_SYST) sprintf(resetCauseMsg, "Reset by system");
+  else if (REG_PM_RCAUSE == PM_RCAUSE_WDT) sprintf(resetCauseMsg, "Reset by Watchdog");
+  else if (REG_PM_RCAUSE == PM_RCAUSE_EXT) sprintf(resetCauseMsg, "External reset requested");
+  else if (REG_PM_RCAUSE == PM_RCAUSE_BOD33) sprintf(resetCauseMsg, "Reset brown out 3.3V");
+  else if (REG_PM_RCAUSE == PM_RCAUSE_BOD12) sprintf(resetCauseMsg, "Reset brown out 1.2v");
+  else if (REG_PM_RCAUSE == PM_RCAUSE_POR) sprintf(resetCauseMsg, "Normal power on reset");
+  // resetCauseMsg[strlen(resetCauseMsg)+1]=0x00;
+  Serial.println(resetCauseMsg);
 }

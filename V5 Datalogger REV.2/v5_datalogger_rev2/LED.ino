@@ -1,3 +1,4 @@
+/// LED pinout initialization
 void LEDInit() {
   //init LED pin as output
   pinMode(LED_BUILTIN, OUTPUT);
