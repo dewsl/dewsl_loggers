@@ -291,7 +291,7 @@ void noGNSSDataAcquired(char* msgContainer, int containerSize, char* sitecode) {
 
 void initialize_sitecode(char* siteCodeContainer) {
   if ((savedDataLoggerMode.read() == 1) || (savedDataLoggerMode.read() == 9)) { //Gateway with sensor and 1 lora tx (if gnss) ; Gateway rain gauge with gnss
-    sprintf(siteCodeContainer, flashLoggerName.sensorB);
+    sprintf(siteCodeContainer, flashLoggerName.sensorNameList[1]);
   } else {
     sprintf(siteCodeContainer, flashLoggerName.sensorA);
   } 

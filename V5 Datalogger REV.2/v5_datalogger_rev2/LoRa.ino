@@ -35,7 +35,7 @@ void LoRaInit() {
 /// 
 /// @param radiopacket - pointer for data to be sent thru LoRa
 ///
-void sendThruLoRa(char *radiopacket) {
+void sendThruLoRa(const char *radiopacket) {
   uint8_t payload[RH_RF95_MAX_MESSAGE_LEN];
   int sendRetryLimit = 3;
   int i = 0, j = 0;
@@ -55,25 +55,39 @@ void sendThruLoRa(char *radiopacket) {
 }
 
 //used by routers
-bool sendThruLoRaWithAck(char* payloadToSend, uint32_t responseWaitTime, uint8_t retryCount) {
+bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, uint8_t retryCount) {
   char ackResponseBuffer[300];
   char validResponse[30];
   bool noResponse = true;
+<<<<<<< HEAD
   sprintf(validResponse, "%s%s",flashLoggerName.sensorA,ackKey);
   validResponse[strlen(validResponse)+1]=0x00;
+=======
+  sprintf(validResponse, "%s%s",flashLoggerName.sensorNameList[0],ackKey);
+>>>>>>> 741137fe53ab096d63f884a8d994883109a9f9ea
   
   for (int retryIndex = 0; retryIndex <= retryCount; retryIndex++) {
     sendThruLoRa(payloadToSend);
     unsigned long ackWaitStart = millis();
     while (millis() - ackWaitStart < responseWaitTime && noResponse) {
       debugPrintln("Checking response..");
-      receiveLoRaData(ackResponseBuffer, sizeof(ackResponseBuffer), 5000);
-      // debugPrintln(ackResponseBuffer);
+      receiveLoRaData(ackResponseBuffer, sizeof(ackResponseBuffer), responseWaitTime);
+      debugPrint(ackResponseBuffer);
       // debugPrintln(validResponse);
-      if (strstr(ackResponseBuffer, validResponse)) {
+      if (inputHas(ackResponseBuffer, validResponse)) {
+        debugPrintln(" << acknowledged by gateway");
+      
+        if (inputHas(ackResponseBuffer, "~ROUTER~")) {
+          routerProcessOTAflag = true;
+          sprintf(routerOTACommand, ackResponseBuffer);
+          
+        }
+          
+
+
         noResponse = false;
         break;
-      }
+      } else debugPrintln("");
     }
     if (!noResponse) break;
   }
@@ -117,13 +131,14 @@ void receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsi
 ///
 /// Mode 0: [Normal operation] Received data are filtered and added to SMS stack for sending.
 /// Mode 1: [Testing mode for LoRa send/receive] Data received are filtered but not added to the sending stack.
-/// Mode 2: [Listen mode LoRa send/receive] Data received displayed but are not filtered and are not added to SMS stack.
+/// Mode 2: [Listen mode; LoRa send/receive] Data received displayed but are not filtered and are not added to SMS stack.
 void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCount, uint8_t receiveMode) {
   char gatewayDataDump[200];
   char routerNames[routerCount][20];
   unsigned long waitStart = millis();
   char loRaBuffer[1000];
-  uint8_t receiveType = 99;
+  uint8_t routerNameIndex = 100;
+  uint8_t nameIndexLimit = 100;     // temporary limit
   uint8_t voltCount = 0;
   uint8_t routerPos;
   // char senderLabelBuffer[20];
@@ -132,6 +147,7 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
   int RSSIContainer[routerCount];
   float voltContainer[routerCount];  
 
+<<<<<<< HEAD
   //insert function here to populate routerData
   if (routerCount == 1) {
     sprintf(routerNames[0], "%s", flashLoggerName.sensorB);
@@ -143,11 +159,21 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
     sprintf(routerNames[1], "%s", flashLoggerName.sensorC);
     sprintf(routerNames[2], "%s", flashLoggerName.sensorD);
   }
+=======
+  for (int r = 0; r <= routerCount;r++) RSSIContainer[r]=0;
+  for (int v = 0; v <= routerCount;v++) voltContainer[v]=0;
+  bool voltFlag = false;
+
+>>>>>>> 741137fe53ab096d63f884a8d994883109a9f9ea
   debugPrintln("Waiting for LoRa transmission from listed router(s): ");
+  for (int r=1; r<=savedRouterCount.read(); r++) debugPrintln(flashLoggerName.sensorNameList[r]);
   while (millis() - waitStart < receiverWaitDuration) {
-    receiveLoRaData(loRaBuffer, sizeof(loRaBuffer), 30000);        //receive instances of lora data here
-    debugPrint(".");
+
+    receiveLoRaData(loRaBuffer, sizeof(loRaBuffer), 30000);        // receive instances of lora data here
+    debugPrintln("~");                                               // waiting/recieving indicator
+
     //filters data depending on saved datalogger names
+<<<<<<< HEAD
     if (receiveMode == 0 || receiveMode == 1) receiveType = loRaFilterPass(loRaBuffer, sizeof(loRaBuffer));
     if (receiveType >= 0 && receiveType < 99 ) {  // receive type depends on list position of saved router name
       debugPrintln(loRaBuffer);
@@ -157,24 +183,58 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
       sendAck[strlen(sendAck)+1];
       sendThruLoRa(sendAck);
       if (strstr(loRaBuffer, "VOLT")) { // in case of termitating string MADTB*VOLT:12.33*200214111000
+=======
+    if (receiveMode == 0 || receiveMode == 1) routerNameIndex = loRaFilterPass(loRaBuffer, sizeof(loRaBuffer));
+    //  if filter below
+    //  0 - 99 indicates list position of saved router name
+    //  100+ it is not incuded in the loggername list as self[0] or routers[1-99]
+    if (routerNameIndex > 0 && routerNameIndex < nameIndexLimit ) {   
+      //RECEIVE IDENTIFIED HERE
+      LEDReceive();
+      debugPrint("Received data from ");
+      debugPrintln(flashLoggerName.sensorNameList[routerNameIndex]);
+      debugPrintln(loRaBuffer);
+      RSSIContainer[routerNameIndex] = rf95.lastRssi();
+      debugPrint("Signal Loss: "); 
+      debugPrintln(RSSIContainer[routerNameIndex]);
+
+      //STORE IDENTIFIED DATA HERE
+      if (inputHas(loRaBuffer, "*VOLT")) { // in case of termitating string MADTB*VOLT:12.33*
+        voltFlag = true;            // set volt flag
+>>>>>>> 741137fe53ab096d63f884a8d994883109a9f9ea
         debugPrintln("Router info:");
-        voltContainer[receiveType] = parseVoltage(loRaBuffer, sizeof(loRaBuffer));
-        RSSIContainer[receiveType] = rf95.lastRssi();
+        voltContainer[routerNameIndex] = parseVoltage(loRaBuffer, sizeof(loRaBuffer));
 
         debugPrint("Supply voltage: "); 
-        debugPrintln(voltContainer[receiveType]);
-        debugPrint("Signal Loss: "); 
-        debugPrintln(RSSIContainer[receiveType]);     
+        debugPrintln(voltContainer[routerNameIndex]);
+   
         voltCount++;
       } else  {
         if (receiveMode == 0) addToSMSStack(loRaBuffer);      // adds data from routers to sending stack
       }
+<<<<<<< HEAD
+=======
+
+      //SEND ACKNOWLEDGMENT RESPONSE HERE
+      char tsNetBuffer[50];
+      getNetworkFormatTimeStamp(tsNetBuffer, sizeof(tsNetBuffer));
+      if (voltFlag && routerOTAflag) sprintf(sendAck, "%s%s~ROUTER~%s~%s", flashLoggerName.sensorNameList[routerNameIndex],ackKey,routerOTACommand,tsNetBuffer); // sample: LTEG^REC'D_~ROUTER~RESET~24/07/08,10:30:00
+      else sprintf(sendAck, "%s%s", flashLoggerName.sensorNameList[routerNameIndex],ackKey);
+      sendThruLoRa(sendAck);
+
+    } else {
+      // ano gusto mo gawin sa rejected na transmissions ?
+>>>>>>> 741137fe53ab096d63f884a8d994883109a9f9ea
     }
     if (voltCount == routerCount) break;
     // else () {  // deal with junk here
     // do something with the strings that didn't get through the filter?
     // } 
   }
+
+  routerOTAflag = false;      // reset router OTA flag
+  for (int r=0;r<sizeof(routerOTACommand);r++) routerOTACommand[r]=0x00; // clears global router OTA container
+  
   if (receiveMode == 0) {
     // build gateway data here
     char numBuffer[10];
@@ -183,9 +243,9 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
     strncat(gatewayDataDump, flashLoggerName.sensorA, 3);
     strcat(gatewayDataDump, ",");
 
-    for (byte rCount = 0; rCount < routerCount; rCount++) {
-      strcat(gatewayDataDump, routerNames[rCount]);
-      strcat(gatewayDataDump, ",");
+    for (byte rCount = 1; rCount <= routerCount; rCount++) {   
+      strcat(gatewayDataDump, flashLoggerName.sensorNameList[rCount]);    // adds router name first
+      strcat(gatewayDataDump, ",");                                       // delimiter
       if (RSSIContainer[rCount] != 0) {
         sprintf(numBuffer, "%d", RSSIContainer[rCount]);
         strcat(gatewayDataDump, numBuffer);
@@ -266,6 +326,7 @@ int loRaFilterPass(char* payloadToCheck, int sizeOfPayload) {
   sprintf(payloadBuffer, payloadToCheck);
   payloadBuffer[strlen(payloadBuffer)+1]=0x00;
 
+<<<<<<< HEAD
   if (loggerWithGSM(savedDataLoggerMode.read()))  {  
     sprintf(matchKey, ">>%s",flashLoggerName.sensorB);
     if(strstr(payloadBuffer, matchKey)) return 0;
@@ -280,6 +341,17 @@ int loRaFilterPass(char* payloadToCheck, int sizeOfPayload) {
     if (strstr(payloadBuffer, matchKey)) return 0;
   }
   return returnType;
+=======
+  // remove first ">>" characters
+  // tokenize using "*" as delimiter to get the name?
+
+  for (byte rIndex = 0; rIndex <= savedRouterCount.read(); rIndex++) {
+    if (inputHas(payloadBuffer, flashLoggerName.sensorNameList[rIndex])) return rIndex; // returns index of datalogger name
+  }
+  return 199;    
+  // return 199 if payload is not found/invalid
+  // or any value higher than the max router count
+>>>>>>> 741137fe53ab096d63f884a8d994883109a9f9ea
 }
 
 void extractRouterName(char *nameContainer, char * referenceString) {
@@ -297,9 +369,9 @@ void extractRouterName(char *nameContainer, char * referenceString) {
 }
 // MADTB*VOLT:12.33*200214111000
 void generateVoltString (char* stringContainer) {
-  // char stringBUffer[50];
   char tsbuffer[15];
   getTimeStamp(tsbuffer, sizeof(tsbuffer));
+<<<<<<< HEAD
   sprintf(stringContainer, ">>%s*VOLT:%.2f*%s",flashLoggerName.sensorA, readBatteryVoltage(savedBatteryType.read()),tsbuffer);
   // stringBUffer[strlen(stringBUffer)+1] = 0x00;
   // sprintf(voltData,"%.2f", readBatteryVoltage(savedBatteryType.read()));
@@ -347,4 +419,7 @@ void runLoRaOTA(char * ackSegment) {
     debugPrint("Current timestamp: ");
     debugPrintln(_timestamp);
   }
+=======
+  sprintf(stringContainer, ">>%s*VOLT:%.2f*%s",flashLoggerName.sensorNameList[0], readBatteryVoltage(savedBatteryType.read()),tsbuffer);
+>>>>>>> 741137fe53ab096d63f884a8d994883109a9f9ea
 }

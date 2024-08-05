@@ -39,7 +39,7 @@ By : DRM
 #define DUESerial Serial1
 #define RTCINTPIN 6
 #define RTCSCLPIN 21
-#define DUETRIG 5
+#define DUETRIG 5 //pin also used for ublox board
 #define DEBUG 1
 #define VBATPIN A7
 #define VBATEXT A5

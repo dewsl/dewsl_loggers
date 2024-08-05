@@ -4,25 +4,32 @@ SFE_UBLOX_GNSS myGNSS;
 #define BUFLEN (5*RH_RF95_MAX_MESSAGE_LEN) //max size of data burst we can handle - (5 full RF buffers) - just arbitrarily large
 #define RFWAITTIME 500 //maximum milliseconds to wait for next LoRa packet - used to be 600 - may have been too long
 #define RTCM_TIMEOUT 180000 //3 minutes
+#define UBXPOWER 5
 
 char sitecode[6]; //logger name - sensor site code
 int MIN_SAT = 30;
 int AVE_COUNT = 12;
 
+bool UBX_INIT_FLAG = false;
 bool READ_FLAG = false;
 uint8_t RX_LORA_FLAG = 0;
 unsigned long start;
 
 void init_ublox() {
-  DUESerial.begin(BAUDRATE);
+  // DUESerial.begin(BAUDRATE);
+  GSMSerial.begin(BAUDRATE); //new board - rover (10&11 pin)
   Wire.begin();
   Watchdog.reset();
+
+  pinMode(UBXPOWER, OUTPUT);
+  digitalWrite(UBXPOWER, HIGH);
 
   for (int x = 0; x < 10; x++) {        //10 retries to not exceed watchdog limit(16sec)
     if (myGNSS.begin(Wire) == false) {
       Serial.println(F("u-blox GNSS not detected at default I2C address. Please check wiring. Freezing."));
       delay(1000);
     } else {
+      UBX_INIT_FLAG = true;
       Serial.println("u-blox GNSS begin");
       break;
     }
@@ -99,7 +106,8 @@ void getRTCM() {
       Serial.println("Receive failed");
     }
     buflen = (bufptr - buf);     //Total bytes received in all packets
-    DUESerial.write(buf, buflen); //Send data to the GPS
+    // DUESerial.write(buf, buflen); //Send data to the GPS
+    GSMSerial.write(buf, buflen); //Send data to the GPS
     digitalWrite(LED_BUILTIN, LOW);
   }
 }
@@ -110,6 +118,12 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
   RX_LORA_FLAG = 0;
 
   init_ublox();
+  // if (UBX_INIT_FLAG == false) {
+  //   READ_FLAG = true;
+  // } else {
+
+  // }
+
   Watchdog.reset();
   start = millis();
 
@@ -155,6 +169,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
       aggregate_received_data(dataToSend);
     }
     Watchdog.reset();
+    digitalWrite(UBXPOWER, LOW);
   }
 }
 

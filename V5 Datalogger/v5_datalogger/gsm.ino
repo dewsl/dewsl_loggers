@@ -167,6 +167,8 @@ void process_data(char *data) {
     }
 
     ota_sender[strlen(ota_sender)+1] = 0X00;
+  } else if (gsmReadRing()) {
+      ringCounter++;
   }
   //REGISTER:SENSLOPE:639954645704
   if (strncmp(data, "REGISTER:SENSLOPE:", 18) == 0) {
@@ -474,7 +476,7 @@ void gsmHangup() {
 
 void gsmDeleteReadSmsInbox() {
   Serial.println("deleting sms read from inbox . . .");
-  GSMSerial.write("AT+CMGD=1,2\r");
+  // GSMSerial.write("AT+CMGDA=\"DEL ALL\"\r");
   delay_millis(1000);
   if (gsmReadOK()) {
     Serial.println("deleting done!");

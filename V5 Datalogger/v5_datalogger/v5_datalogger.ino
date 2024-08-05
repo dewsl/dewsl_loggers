@@ -154,6 +154,7 @@ char sending_stack[4000];
 char stack_temp[4000];
 char prev_gsm_line[500];
 char ota_sender[20];
+uint8_t ringCounter = 0;
 
 //some default values for config parameters
 char default_dataloggerNameA[6] = "TESTA";
@@ -344,6 +345,7 @@ void loop() {
     runGSMInit = false;
     delay_millis(500);
     resetGSM();
+    gsmDeleteReadSmsInbox();
     if (debug_flag != 1) send_thru_gsm("LOGGER POWER UP", get_serverNum_from_flashMem());
     turn_OFF_GSM(get_gsm_power_mode());
   }
@@ -368,7 +370,12 @@ void loop() {
     if (get_gsm_power_mode() == 0) checkOTACommand();  
   }
 
+  if (ringCounter == 3) {
+    NVIC_SystemReset();
+  }
+
   if (OperationFlag) {    // main operation
+    ringCounter = 0;      // reset ring counter
     Watchdog.reset();
     flashLed(LED_BUILTIN, 5, 100);
     detachInterrupt(digitalPinToInterrupt(RTCINTPIN));
