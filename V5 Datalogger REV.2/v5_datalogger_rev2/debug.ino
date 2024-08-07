@@ -377,7 +377,7 @@ void debugFunction() {
       // Serial.println(F("------------------------------------------------------"));
       Serial.println(F("Exiting DEBUG MENU"));
       Serial.println(F("------------------------------------------------------"));
-      // setNextAlarm(savedAlarmInterval.read());
+      setNextAlarm(savedAlarmInterval.read());
       delayMillis(75);
       rtc.clearINTStatus();
       GSMInit();
@@ -966,15 +966,15 @@ void CheckingSavedParameters() {
       Serial.println(serialInput);
 
       if (inputIs(serialInput, "N") || inputIs(serialInput, "n")) {
-        delay(1000);
+        delay(500);
         printLoggerModes();
-        delay(1000);
+        delay(500);
         updateLoggerMode();
         Serial.println("------------------------------------------------------");
 
       } else if (inputIs(serialInput, "Y") || inputIs(serialInput, "y")) {
         Serial.println("------------------------------------------------------");
-        delay(1000);
+        delay(500);
         break;
       }
     }
@@ -985,19 +985,19 @@ void CheckingSavedParameters() {
       while (true) {
         Serial.print("Current server number: ");
         Serial.println(flashServerNumber.dataServer);
-        delay(1000);
+        delay(500);
         Serial.print("Is server number correct? [Y/N]: ");
         getSerialInput(serialInput, sizeof(serialInput), 60000);
-        delay(1000);
+        delay(500);
         Serial.println(serialInput);
 
         if (inputIs(serialInput, "N") || inputIs(serialInput, "n")) {
-          delay(1000);
+          delay(500);
           updateServerNumber();
           Serial.println("------------------------------------------------------");
         } else if (inputIs(serialInput, "Y") || inputIs(serialInput, "y")) {
           Serial.println("------------------------------------------------------");
-          delay(1000);
+          delay(500);
           break;
         }
       }
@@ -1008,19 +1008,19 @@ void CheckingSavedParameters() {
       getLoggerModeAndName();
       //Serial.println(flashLoggerName.sensorNameList[0]);
       //Serial.println(flashLoggerName);
-      delay(1000);
+      delay(500);
       Serial.print("Is logger name correct? [Y/N]: ");
       getSerialInput(serialInput, sizeof(serialInput), 60000);
-      delay(1000);
+      delay(500);
       Serial.println(serialInput);
 
       if (inputIs(serialInput, "N") || inputIs(serialInput, "n")) {
-        delay(1000);
+        delay(500);
         scalableUpdateSensorNames();
         Serial.println("------------------------------------------------------");
       } else if (inputIs(serialInput, "Y") || inputIs(serialInput, "y")) {
         Serial.println("------------------------------------------------------");
-        delay(1000);
+        delay(500);
         break;
       }
     }
@@ -1031,16 +1031,16 @@ void CheckingSavedParameters() {
       Serial.println(_timestamp);
       Serial.print("Is timestamp correct? [Y/N]: ");
       getSerialInput(serialInput, sizeof(serialInput), 60000);
-      delay(1000);
+      delay(500);
       Serial.println(serialInput);
 
       if (inputIs(serialInput, "N") || inputIs(serialInput, "n")) {
-        delay(1000);
+        delay(500);
         setupTime();
         Serial.println("------------------------------------------------------");
       } else if (inputIs(serialInput, "Y") || inputIs(serialInput, "y")) {
         Serial.println("------------------------------------------------------");
-        delay(1000);
+        delay(500);
         break;
       }
     }
@@ -1072,41 +1072,41 @@ void CheckingSavedParameters() {
           Serial.println("Invalid mode");
           break;
       }
-      delay(1000);
-      Serial.print("Is Wake Interval correct? [Y/N]: ");
+      delay(500);
+      Serial.print("Is wake interval correct? [Y/N]: ");
       getSerialInput(serialInput, sizeof(serialInput), 60000);
-      delay(1000);
+      delay(500);
       Serial.println(serialInput);
 
       if (inputIs(serialInput, "N") || inputIs(serialInput, "n")) {
         printRTCIntervalEquivalent();
         setAlarmInterval();
-        delay(1000);
+        delay(500);
         Serial.println("------------------------------------------------------");
       } else if (inputIs(serialInput, "Y") || inputIs(serialInput, "y")) {
         Serial.println("------------------------------------------------------");
-        delay(1000);
+        delay(500);
         break;
       }
     }
     while (true) {
       Serial.print("Current sensor command: ");
       Serial.println(flashCommands.sensorCommand);
-      Serial.println("T: Tilt sensor only");
-      Serial.println("S: Tilt sensor with SOMS");
-      delay(1000);
+      Serial.println("ARQCMD6T: Tilt sensor only");
+      Serial.println("ARQCMD6TS: Tilt sensor with SOMS");
+      delay(500);
       Serial.print("Is sensor command correct? [Y/N]: ");
       getSerialInput(serialInput, sizeof(serialInput), 60000);
-      delay(1000);
+      delay(500);
       Serial.println(serialInput);
 
       if (inputIs(serialInput, "N") || inputIs(serialInput, "n")) {
-        delay(1000);
+        delay(500);
         updatSavedCommand();
         Serial.println("------------------------------------------------------");
       } else if (inputIs(serialInput, "Y") || inputIs(serialInput, "y")) {
         Serial.println("------------------------------------------------------");
-        delay(1000);
+        delay(500);
         break;
       }
     }
@@ -1129,22 +1129,22 @@ void CheckingSavedParameters() {
           Serial.println("Invalid mode");
           break;
       }
-      delay(1000);
+      delay(500);
       Serial.print("Is Rain collector correct? [Y/N]: ");
       getSerialInput(serialInput, sizeof(serialInput), 60000);
-      delay(1000);
+      delay(500);
       Serial.println(serialInput);
 
       if (inputIs(serialInput, "N") || inputIs(serialInput, "n")) {
         Serial.println("[0] Pronamic Rain Collector (0.5mm/tip)");
         Serial.println("[1] DAVIS Rain Collector (0.2mm/tip)");
         Serial.println("[2] Generic Rain Collector (1.0/tip)");
-        delay(1000);
+        delay(500);
         updateRainCollectorType();
         Serial.println("------------------------------------------------------");
       } else if (inputIs(serialInput, "Y") || inputIs(serialInput, "y")) {
         Serial.println("------------------------------------------------------");
-        delay(1000);
+        delay(500);
         break;
       }
     }
@@ -1164,34 +1164,46 @@ void CheckingSavedParameters() {
           Serial.println("Invalid mode");
           break;
       }
-      delay(1000);
+      delay(500);
       Serial.print("Is battery type correct? [Y/N]: ");
       getSerialInput(serialInput, sizeof(serialInput), 60000);
-      delay(1000);
+      delay(500);
       Serial.println(serialInput);
 
       if (inputIs(serialInput, "N") || inputIs(serialInput, "n")) {
         Serial.println("[0] 12V Lead Acid battery");
         Serial.println("[1] 4.2V Li-Ion battery");
-        delay(1000);
+        delay(500);
         updateBatteryType();
         Serial.println("------------------------------------------------------");
       } else if (inputIs(serialInput, "Y") || inputIs(serialInput, "y")) {
         Serial.println("------------------------------------------------------");
-        delay(1000);
+        delay(500);
         break;
       }
     }
 
+    if (currentDataLoggerMode == 0 || currentDataLoggerMode == 1 || currentDataLoggerMode == 3 || currentDataLoggerMode == 4 || currentDataLoggerMode == 5) {
     Serial.print("Enter maintenance staff's initials: ");
-    getSerialInput(staff, sizeof(staff), 60000);      
+    getSerialInput(staff, sizeof(staff), 60000);   
+    buidParamSMS(Params); 
+    strcat(Params, " - ");
+    strcat(Params, staff);
     sendThruGSM(Params,rcvr); 
-    //sendThruGSM(staff,rcvr); 
+    delay(2000);
 
     Serial.println("Exit debug mode");
     debugProcess = false;
     debugMode = false;
     deleteMessageInbox();
     Serial.println(F("----------------------------------------------"));
+  }
+  else {
+    Serial.println("Exit debug mode");
+    debugProcess = false;
+    debugMode = false;
+    deleteMessageInbox();
+    Serial.println(F("----------------------------------------------"));
+  }
   }
 }

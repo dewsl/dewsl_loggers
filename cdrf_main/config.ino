@@ -70,6 +70,59 @@ void flash_fetch() {
   }
 }
 
+/*void flash_fetch() {
+  bool valid_flag = false;
+  byte* b2 = dueFlashStorage.readAddress(4);
+  char* flash_mastername;
+  int flash_check, override_check;
+  f_config fetch_config;
+  memcpy(&fetch_config, b2, sizeof(f_config));
+  flash_mastername = fetch_config.f_mastername;
+  flash_check = fetch_config.check;
+  override_check = fetch_config.override_lib_config;
+  
+  if (override_check == 99) {  // check whether an override value has been set
+    // insert SD override function here
+    Serial.println("SD CARD CONFIG IN USE");
+    open_config();
+  } else {
+    if (flash_check != 99) {
+      Serial.println("NO SENSOR NAME SET FOR CONFIG!");
+    } else {
+      strcpy(g_mastername, flash_mastername);
+      g_mastername[5] = '\0';  // Ensuring g_mastername is limited to 5 characters
+
+      for (int i = 0; i <= (LOGGER_COUNT - 1); i++) {
+        if (strncmp(config_container[i].lib_mastername, g_mastername, 4) == 0 || strncmp(config_container[i].lib_mastername, g_mastername, 5) == 0) {
+          strcpy(g_mastername, config_container[i].lib_mastername);
+          g_mastername[5] = '\0';  // Ensuring g_mastername is limited to 5 characters
+
+          strcpy(column_id_holder, config_container[i].lib_column_ids);
+          column_id_holder[strlen(column_id_holder) + 1] = '\0';
+
+          parse_column_ids_from_library();
+          g_num_of_nodes = config_container[i].lib_num_of_nodes;
+          g_datalogger_version = config_container[i].lib_datalogger_version;
+          g_sensor_version = config_container[i].lib_sensor_version;
+          has_piezo = config_container[i].lib_has_piezo;
+          g_turn_on_delay = config_container[i].lib_turn_on_delay;
+          broad_timeout = config_container[i].lib_broad_timeout;
+          g_sampling_max_retry = config_container[i].lib_sampling_max_retry;
+          b64 = config_container[i].lib_b64;
+          valid_flag = true;
+        }
+      }
+
+      if (valid_flag) {
+        print_stored_config();
+      } else {
+        Serial.println("No matching datalogger configuration found in library.");
+      }
+    }
+  }
+}*/
+
+
 // Checks if something is stored in flash memory
 int flash_LED(){
   byte* b2 = dueFlashStorage.readAddress(4);
