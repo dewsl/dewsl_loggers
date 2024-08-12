@@ -1,6 +1,6 @@
 #include "Due_config.h"
 
-const int lib_LOGGER_COUNT = 78;
+const int lib_LOGGER_COUNT = 79;
 // #define LIB_LOGGER_COUNT 80
 // READ FIRST:
 // #define LIB_LOGGER_COUNT 79
@@ -33,18 +33,18 @@ struct libConfig config_container[lib_LOGGER_COUNT] = {
     3,                                // max sampling retry
     1                                 // b64
   },*/
-  /*{
-    "EXPTA",                          // Mastername (5 char string)
-    "5363,5324,5355,5344,5352,5180",  // column IDs
-    6,                                // number of nodes
+  {
+    "TESTX",                          // Mastername (5 char string)
+    "5363,5324,5355,5344,5352",  // column IDs
+    5,                                // number of nodes
     5,                                // sensor version
-    2,                                // datalogger version
+    4,                                // datalogger version
     0,                                // piezo
     1000,                              // turn on delay
     3000,                             // broadcast timeout
     3,                                // max sampling retry
     1                                 // b64
-  },*/
+  },
 
   {
     "TESTA",                          // Mastername (5 char string)

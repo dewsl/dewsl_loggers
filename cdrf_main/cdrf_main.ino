@@ -550,26 +550,16 @@ void operation(int sensor_type, char communication_mode[]) {
     //  for arQ rain gauge only
     //  sends voltage data thru arQ
     send_current_voltage_thru_arq();
-  } else if (sensor_type == 5)  // for sending config to v5 datalogger serial
-  {
-    if (!SD.begin(g_chip_select)) {
-      Serial.println("error opening config.txt");
-      Serial2.println("error opening config.txt");
-    } else {
-      int data;
-      root = SD.open("config.txt");
-
-      while ((data = root.read()) >= 0) {
-        Serial.write(data);
-        Serial2.write(data);
-      }
-      Serial.println(" CONFIG.TXT end of file");
-      Serial2.println(" CONFIG.TXT end of file");
-      root.close();
-    }
-    Serial.print("OK");
-    Serial2.print("OK");
-
+  } else if (sensor_type == 5) { // for sending config to v5 datalogger serial
+    Serial2.println("OK");
+    print_stored_config2();
+    Serial2.println("END OF CONFIG");
+    return;
+  } else if (sensor_type == 6) {
+    flash_fetch();
+    if (Serial2) Serial2.println("END OF UPDATE");
+    return;
+    // add something here later
   } else {
     int counter = 0;
     int num_of_tokens = 0;
@@ -758,38 +748,6 @@ char* getTimestamp(char communication_mode[]) {
   }
 }
 
-/* 
-  Function: set_rtc_time()
-
-    Set the time of the customDue internal rtc.
-  
-  Parameters:
-  
-    time_str - String  
-  
-  Returns:
-  
-    timestamp or String "0TIMESTAMP"
-  
-  See Also:
-  
-    <poll_data>
-*/
-// void set_rtc_time(String time_string) {
-//   int hours, minutes, seconds, day, month, year;
-
-//   year = time_string.substring(0, 2).toInt();
-//   month = time_string.substring(2, 4).toInt();
-//   day = time_string.substring(4, 6).toInt();
-//   hours = time_string.substring(6, 8).toInt();
-//   minutes = time_string.substring(8, 10).toInt();
-//   seconds = time_string.substring(10, 12).toInt();
-//   if (ENABLE_RTC) {
-//     RTCDue rtc(XTAL);
-//     rtc.setTime(hours, minutes, seconds);
-//     rtc.setDate(day, month, year);
-//   }
-// }
 
 int wait_arq_cmd() {
   char c_serial_line[30];
@@ -803,25 +761,7 @@ int wait_arq_cmd() {
   return parse_cmd(c_serial_line);
 }
 
-// void wait_lora_cmd(char* result){
-//   char serial_line[30];
-//   char end = '\n';
-//   char rc;
-//   int counter = 0;
-//   bool newData = false;
-//   while( (LORA.available() > 0) && (newData == false) ){
-//       rc = LORA.read();
-//       if (rc != end){
-//           serial_line[counter] = rc;
-//           counter++;      
-//       } else{
-//         serial_line[counter] = '\0';
-//         newData = true;
-//       }
-//   }
-//   Serial.println(serial_line);
-//   strncpy(result,serial_line, 21); // ARQCMD6T/240216141600 = 21 chars + 1 terminating char
-// }
+
 void wait_lora_cmd(char* result){
   char c_serial_line[30];
   while (!LORA.available())
@@ -910,6 +850,22 @@ int parse_cmd(char* command_string) {
       return 4;
     } else if (*(pch + strlen(cmd)) == 'C') {  //ARQCMD6C: SD card config
       return 5;
+    } else if (*(pch + strlen(cmd)) == 'D') {  //ARQCMD6D: SD card config
+      Serial2.println("Updating due config...");
+      char * newName = strtok(command + 8, "/");
+      byte d[sizeof(f_config)];
+      f_config flash_config;
+      strncpy(flash_config.f_mastername, newName, sizeof(flash_config.f_mastername) - 1); // Copy input to flash_config
+      flash_config.f_mastername[sizeof(flash_config.f_mastername) - 1] = '\0'; // Ensure null termination
+
+      flash_config.check = 99;
+      memcpy(d, &flash_config, sizeof(f_config));
+      dueFlashStorage.write(4, d, sizeof(f_config));
+      delay(1000);
+      Serial2.println(flash_config.f_mastername);
+      Serial2.println(" saved to flash");
+      return 6;
+
     } else {
       Serial.println("wait_arq_cmd returned 0");
       return 0;

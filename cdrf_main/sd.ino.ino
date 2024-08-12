@@ -228,6 +228,63 @@ void print_stored_config() {
   }
   Serial.println(F("======================================"));
 }
+
+/* 
+	Function: print_stored_config2
+
+		Print in the gids and uids from the global g_gids and,
+		other variables read from CONFIG.txt. Cloned of print_stored_config()      
+
+	Parameters:
+
+		n/a
+
+	Returns:
+
+		n/a
+
+	See Also:
+
+		<init_gids>
+*/
+void print_stored_config2() {
+  char gid[2], uid[4], desc[25];
+  Serial2.println(F("======================================"));
+  sprintf(desc, "%-24s", "Sensor Name:");
+  Serial2.print(desc);
+  Serial2.println(g_mastername);
+  sprintf(desc, "%-24s", "Datalogger Version: ");
+  Serial2.print(desc);
+  Serial2.println(g_datalogger_version);
+  sprintf(desc, "%-24s", "Sensor Version: ");
+  Serial2.print(desc);
+  Serial2.println(g_sensor_version);
+  sprintf(desc, "%-24s", "Broadcast Timeout: ");
+  Serial2.print(desc);
+  Serial2.println(broad_timeout);
+  sprintf(desc, "%-24s", "Sampling Max Retry: ");
+  Serial2.print(desc);
+  Serial2.println(g_sampling_max_retry);
+  sprintf(desc, "%-24s", "Turn On Delay: ");
+  Serial2.print(desc);
+  Serial2.println(g_turn_on_delay);
+  sprintf(desc, "%-24s", "Number of Nodes");
+  Serial2.print(desc);
+  Serial2.println(g_num_of_nodes);
+  Serial2.println(F("======================================"));
+  Serial2.println(F("Geographic ID\t\tUnique ID"));
+  Serial2.println(F("======================================"));
+  for (int i = 0; i < g_num_of_nodes; i++) {
+    sprintf(gid, "%2d", g_gids[i][1]);
+    sprintf(uid, "%4d", g_gids[i][0]);
+    Serial2.print("\t");
+    Serial2.print(gid);
+    Serial2.print("\t\t");
+    Serial2.println(uid);
+  }
+  Serial2.println(F("======================================"));
+}
+
 /* 
 	Function: get_value_from_line
 

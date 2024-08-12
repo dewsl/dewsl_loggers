@@ -27,27 +27,23 @@ void flash_fetch() {
   if (override_check == 99) {  //check whether a override value has been set
     //insert SD override function here
     Serial.println("SD CARD CONFIG IN USE");
+    if (Serial2) Serial2.println("SD CARD CONFIG IN USE");
     open_config();
   } else {
     if (flash_check != 99) {
       Serial.println("NO SENSOR NAME SET FOR CONFIG!");
+      if (Serial2) Serial2.println("NO SENSOR NAME SET FOR CONFIG!");
     } else {
       // Serial.print("Stored datalogger name: ");
       strcpy(g_mastername, flash_mastername);
       g_mastername[5] = '\0';
-      // Serial.println(g_mastername);
-      // Serial.println(sizeof(g_mastername));
       char* name_buffer;
       for (int i = 0; i <= (LOGGER_COUNT - 1); i++) {
         if (strcmp(config_container[i].lib_mastername, g_mastername) == 0) {
           strcpy(g_mastername, config_container[i].lib_mastername);
           g_mastername[5] = '\0';
-          // Serial.print("Saved configuration for sensor ");
-          // Serial.println(g_mastername);
-          // Serial.print("Column IDs: ");
           strcpy(column_id_holder, config_container[i].lib_column_ids);
           column_id_holder[strlen(column_id_holder) + 1] = '\0';
-          // Serial.println(column_id_holder);
           parse_column_ids_from_library();
           g_num_of_nodes = config_container[i].lib_num_of_nodes;
           g_datalogger_version = config_container[i].lib_datalogger_version;
@@ -63,8 +59,10 @@ void flash_fetch() {
       }
       if (valid_flag) {
         print_stored_config();
+        if (Serial2) print_stored_config2();
       } else {
         Serial.println("No matching datalogger configuration found in library.");
+        if (Serial2) Serial2.println("No matching datalogger configuration found in library.");
       }
     }
   }
@@ -157,6 +155,7 @@ void name_entry() {
   char serial_input[20]; // Adjusted size based on requirements
   f_config flash_config;
   Serial.print("Input datalogger name: ");
+  if (Serial2) Serial2.print("Input datalogger name: ");
   delay(1000);
   do {
     while (!Serial.available()) {
@@ -169,14 +168,17 @@ void name_entry() {
   strncpy(flash_config.f_mastername, serial_input, sizeof(flash_config.f_mastername) - 1); // Copy input to flash_config
   flash_config.f_mastername[sizeof(flash_config.f_mastername) - 1] = '\0'; // Ensure null termination
   Serial.println();
+  if (Serial2) Serial2.println();
   Serial.print(flash_config.f_mastername);
+  if (Serial2) Serial2.print(flash_config.f_mastername);
 
   flash_config.check = 99;
   memcpy(f, &flash_config, sizeof(f_config));
   dueFlashStorage.write(4, f, sizeof(f_config));
   Serial.println(F(" saved to flash"));
+  if (Serial2) Serial2.println(F(" saved to flash"));
   delay(1000);
-}
+} 
 /*
 Function: Parse column IDs stored in the library configurations in to the column ID holder array g_gids[i][i]   
 */
