@@ -341,6 +341,10 @@ void setup() {
 
 void loop() {
   
+  // Serial.println("Resume");
+  // Serial.begin(BAUDRATE);
+  // delay_millis(1000);
+  
   if (runGSMInit && get_logger_mode() != 2){  // single instance run to initiate gsm module
     runGSMInit = false;
     delay_millis(500);
@@ -361,6 +365,7 @@ void loop() {
       if (get_logger_mode() != 2 && get_gsm_power_mode() == 0) resetGSM();
       turn_OFF_GSM(get_gsm_power_mode());
       debug_flag = 0;
+      flashLed(LED_BUILTIN, 5, 300);
     }
   }
 
@@ -368,6 +373,7 @@ void loop() {
   if (gsmRingFlag) {
     gsmRingFlag = false;
     if (get_gsm_power_mode() == 0) checkOTACommand();  
+    flashLed(LED_BUILTIN, 5, 300);
   }
 
   if (ringCounter == 3) {
@@ -473,14 +479,6 @@ void loop() {
 
     } else {
       // default arQ like sending
-      // turn_ON_GSM(get_gsm_power_mode());
-      // Watchdog.reset();
-      // send_rain_data(0);
-      // Watchdog.reset();
-      // get_Due_Data(1, get_serverNum_from_flashMem());
-      // Watchdog.reset();
-      // turn_OFF_GSM(get_gsm_power_mode());
-      // Watchdog.reset();
 
       Watchdog.reset();
       turn_ON_due(get_logger_mode());
@@ -555,14 +553,18 @@ void sleepNow() {
   Serial.println("MCU is going to sleep . . .");
   Serial.println("");
   Serial.end();
-  flashLed(LED_BUILTIN, 5, 300);
+  // flashLed(LED_BUILTIN, 5, 300);
   disable_watchdog();
   // digitalWrite(LED_BUILTIN, HIGH);
-  SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;  // disable systick interrupt
-  // LowPower.standby();                          // enters sleep mode
-  __DSB();
-  __WFI();
+  // SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;  // disable systick interrupt
+  // // LowPower.standby();                          // enters sleep mode
+  // __DSB();
+  // __WFI();
+  // SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // Enable systick interrupt
+
   SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // Enable systick interrupt
+  __DSB(); // Use of memory barrier is recommended for portability
+  __WFI(); // Execute WFI and enter sleep
 }
 
 /**RTC Pin interrupt
@@ -903,14 +905,19 @@ float readBatteryVoltage(uint8_t ver) {
 */
 void init_Sleep() {
 
+  // SYSCTRL->XOSC32K.bit.RUNSTDBY = 1;
+
+  // SYSCTRL->DFLLCTRL.bit.RUNSTDBY = 1;    // Set the DFLL48M to run standby mode 
+  // while(!SYSCTRL->PCLKSR.bit.DFLLRDY);   // Wait for synchronization
   // SYSCTRL->VREG.bit.RUNSTDBY = 1;
+
   SYSCTRL->XOSC32K.reg |= (SYSCTRL_XOSC32K_RUNSTDBY | SYSCTRL_XOSC32K_ONDEMAND);  // set external 32k oscillator to run when idle or sleep mode is chosen
 
   REG_GCLK_CLKCTRL |= GCLK_CLKCTRL_ID(GCM_EIC) |  // generic clock multiplexer id for the external interrupt controller
                       GCLK_CLKCTRL_GEN_GCLK1 |    // generic clock 1 which is xosc32k
                       GCLK_CLKCTRL_CLKEN;         // enable it
-  while (GCLK->STATUS.bit.SYNCBUSY)
-    ;  // write protected, wait for sync
+  
+  while (GCLK->STATUS.bit.SYNCBUSY);  // write protected, wait for sync
 
   EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN4;  // Set External Interrupt Controller to use channel 4 (pin 6)
   EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN5;  // Set External Interrupt Controller to use channel 5 (pin A4)
@@ -1129,6 +1136,7 @@ void turn_OFF_due(uint8_t mode) {
 
 void rainISR() {
   // detachInterrupt(digitalPinToInterrupt(RAININT));
+  digitalWrite(LED_BUILTIN, HIGH);
   if (debug_flag == 0) {
     Watchdog.reset();
   }
@@ -1153,6 +1161,7 @@ void rainISR() {
     }
   }
   last_interrupt_time = interrupt_time;
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void resetRainTips() {
@@ -1246,9 +1255,9 @@ void send_message_segments(char *msg_dump) {
     }
 
     msg_token = strtok(NULL, "~");
-    if (debug_flag == 0) {
-      Watchdog.reset();
-    }
+    if (debug_flag == 0) Watchdog.reset();
+    delay_millis(random(5000,10000));
+    if (debug_flag == 0) Watchdog.reset();
   }
 
   itoa(freeRam(), freeram_buf, 10);

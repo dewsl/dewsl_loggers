@@ -427,7 +427,7 @@ void getAtcommand() {
       processIncomingByte(GSMSerial.read(), 0);
     }
 
-    // Serial.println("delete sms");
+    // is (Serial) Serial.println("delete sms");
     // gsmDeleteReadSmsInbox();
     Serial.println("* * * * * * * * * * * * * * * * * * * *");
   } else if (command == "INPUT_VOLTAGE") {

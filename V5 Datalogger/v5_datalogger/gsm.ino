@@ -7,7 +7,9 @@ void send_thru_gsm(const char* messageToSend, const char* serverNumber) {
   if (!send_SMS_instance(messageToSend, serverNumber)) {
     if (debug_flag == 0) Watchdog.reset();
     delay_millis(random(5000,10000));
+    if (debug_flag == 0) Watchdog.reset();
     resetGSM();
+    if (debug_flag == 0) Watchdog.reset();
     Serial.println("Retrying..");
     if (debug_flag == 0) Watchdog.reset();
     send_SMS_instance(messageToSend, serverNumber);
@@ -48,10 +50,12 @@ bool send_SMS_instance(const char* messageToSend, const char* serverNumber) {
   Serial.print("': ");
   Serial.println(messageContainer);
 
-  GSMSerial.write("AT\r");                                                                     
+  GSMSerial.write("AT\r");
+  if (debug_flag == 0) Watchdog.reset();                                                                     
   if (GSMWaitResponse("OK",1000, 0)) {                                                        // Checks if GSM serial is accessible
     GSMSerial.write(CMGSContainer);
     if (GSMWaitResponse(">",5000, 1)) {
+      if (debug_flag == 0) Watchdog.reset();
       GSMSerial.write(messageContainer);
       delay_millis(500);
       GSMSerial.write(26);
@@ -60,11 +64,14 @@ bool send_SMS_instance(const char* messageToSend, const char* serverNumber) {
       GSMSerial.write(27);
       GSMSerial.write(27);
     }
+    if (debug_flag == 0) Watchdog.reset();
     if (GSMWaitResponse("+CMGS",15000, 1)) {
+      if (debug_flag == 0) Watchdog.reset();
       Serial.println("Message sent!");
       flashLed(LED_BUILTIN, 3, 50);
       sentFlag = true;
     } else {
+      if (debug_flag == 0) Watchdog.reset();
       delay_millis(5000);
       Serial.println("Sending failed");
       GSMSerial.write(27);  //crude escape
@@ -78,7 +85,7 @@ bool send_SMS_instance(const char* messageToSend, const char* serverNumber) {
     //insert GSM reset function here
     // GSMSerial.write(messageContainer);
   }
-
+  if (debug_flag == 0) Watchdog.reset();
   return sentFlag;
 }
 
@@ -476,10 +483,10 @@ void gsmHangup() {
 
 void gsmDeleteReadSmsInbox() {
   Serial.println("deleting sms read from inbox . . .");
-  // GSMSerial.write("AT+CMGDA=\"DEL ALL\"\r");
+  GSMSerial.write("AT+CMGDA=\"DEL ALL\"\r");
   delay_millis(1000);
   if (gsmReadOK()) {
-    Serial.println("deleting done!");
+    Serial.println("deleted all sms!");
   } else {
     Serial.println("deleting failed!");
   }
@@ -530,6 +537,7 @@ void gsmNetworkAutoConnect() {
       if (strstr(readGSMResponse(), ",\"")) {
         signalCOPS = true;
       } else delay_millis(2000);
+      if (debug_flag == 0) Watchdog.reset();
     }
     if (gsmSerial && GSMconfig && signalCOPS) {
       GSMSerial.write("AT&W\r");
@@ -601,7 +609,9 @@ void resetGSM() {
   digitalWrite(GSMPWR, HIGH);
   digitalWrite(GSMRST, HIGH);
   delay_millis(4000);
+  if (debug_flag == 0) Watchdog.reset();
   gsmNetworkAutoConnect();
+  if (debug_flag == 0) Watchdog.reset();
   REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT2; //clear interrupt flag before enabling
   attachInterrupt(digitalPinToInterrupt(GSMINT), ringISR, FALLING);
   if (debug_flag == 0) Watchdog.reset();
