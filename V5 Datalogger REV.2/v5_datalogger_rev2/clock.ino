@@ -9,12 +9,13 @@ void RTCInit(uint8_t RTCPin) {
 /// RTC iterrupt service routine function
 void RTCISR() {
   RTCWakeFlag = true;
-  // Serial.println("RTC interrupt");
+  debugPrintln("RTC interrupt");
 }
 
 /// Accepts sting input of date time;
 /// Accepted format: YYYY,MM,DD,hh,mm,ss,dd[0-6]Mon-Sun
 void setupTime() {
+  resetWatchdog();
   unsigned long setupStart = millis();
   int MM = 0, DD = 0, YY = 0, hh = 0, mm = 0, ss = 0, dd = 0;
   Serial.println(F("\nSet time and date in this format: YYYY,MM,DD,hh,mm,ss,dd[0-6]Mon-Sun"));
@@ -35,6 +36,7 @@ void setupTime() {
     getTimeStamp(_timestamp, sizeof(_timestamp));
     // Serial.println(_timestamp);
     Serial.println();
+    resetWatchdog();
     return;
     }
   }
@@ -98,10 +100,11 @@ void setNextAlarm(int intervalEquivalent) {
 }
 
 /// Computes actual alarm interval depending on 
-uint16_t nextAlarm(int currentMinute, int intervalEquivalent) {
+uint8_t nextAlarm(int currentMinute, int intervalEquivalent) {
+  resetWatchdog();
   int actualInterval = 0;
-  uint16_t nextAlarm = 0;
-  
+  uint16_t nextMinuteAlarm = 0;
+     
   if (intervalEquivalent == 1) {
     actualInterval = 15;
   } else if (intervalEquivalent == 2) {
@@ -111,20 +114,22 @@ uint16_t nextAlarm(int currentMinute, int intervalEquivalent) {
   } else if (intervalEquivalent == 4) {
     actualInterval = 3;
   } else if (intervalEquivalent == 5) {      // special case intervals for 15min offset
-    if (currentMinute < 15 || currentMinute >= 45) nextAlarm = 15;
-    else nextAlarm = 45;
-    return nextAlarm;                         // skips the rest of the function 
+    if (currentMinute < 15 || currentMinute >= 45) nextMinuteAlarm = 15;
+    else nextMinuteAlarm = 45;
+    resetWatchdog();
+    return nextMinuteAlarm;                         // skips the rest of the function 
   } else {
     actualInterval = 30;
   }
 
   int computedAlarm = (((currentMinute/actualInterval)+1)*actualInterval);  // next minute alarm computation for regular intervals starting and ending in minute 0 [intervals 1-4]
   if (computedAlarm >= 60) {
-    nextAlarm = 0;
+    nextMinuteAlarm = 0;
   } else {
-    nextAlarm = computedAlarm;
+    nextMinuteAlarm = computedAlarm;
   }
-  return nextAlarm;
+  resetWatchdog();
+  return nextMinuteAlarm;
 }
 
 void setAlarmInterval() {
@@ -144,15 +149,16 @@ void setAlarmInterval() {
 }
 
 float readRTCTemp() {
+  resetWatchdog();
   float temp;
   rtc.convertTemperature();
   temp = rtc.getTemperature();
   return temp;
 }
 
-int dayOfWeek(uint16_t YYYY, uint8_t MM, uint8_t DD)
-{
+int dayOfWeek(uint16_t YYYY, uint8_t MM, uint8_t DD)  {
   //  for context, this computation assumes that 'start' of the gregorian calendar; January 1st, year '0000', is a Saturday.
+  resetWatchdog();
   uint16_t months[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};   
   uint32_t days = YYYY * 365;                                           //  days until year 
   for (uint16_t i = 4; i < YYYY; i += 4) if (LEAP_YEAR(i) ) days++;     //  adjust leap years, test only multiple of 4 of course
@@ -160,11 +166,12 @@ int dayOfWeek(uint16_t YYYY, uint8_t MM, uint8_t DD)
   if ((MM > 2) && LEAP_YEAR(YYYY)) days++;                              //  adjust 1 if this year is a leap year, but only after febr
   //  removes all multiples of 7 and compute for day offset so count (zero index) begins on a SUNDAY instead of Saturday
   //  why? why not?
+  resetWatchdog();
   return ((days + 6) % 7);   
-
 }
 
 void setResetAlarmTime() {
+  resetWatchdog();
   int alarmBuffer = 0;
   unsigned long intervalWait = millis();
   Serial.println("***To ensure datalogger will RESET itself..");
@@ -186,10 +193,12 @@ void setResetAlarmTime() {
     
     break;
     }
+  resetWatchdog();
   }
 }
 
 void setSelfResetFlag(int alarm24hrFormat) {
+  resetWatchdog();
   int savedAlarm = alarm24hrFormat;
   if (savedAlarm > 2400) savedAlarm == 0; 
   // with input example "2330" (or 11:30PM)
@@ -201,42 +210,36 @@ void setSelfResetFlag(int alarm24hrFormat) {
   uint8_t minuteAlarm = (savedAlarm%100);    
   DateTime checkTime = rtc.now();
   if ((checkTime.hour() == hourAlarm) && (checkTime.minute() == minuteAlarm)) selfResetFlag = true;
+  resetWatchdog();
 }
 
 void printDateTime() {
+  resetWatchdog();
   char timestring[100] = "INVALID";
-  char hourPeriod[3] =  "AM";
-  uint8_t hourBuffer = 0;  // 12hr format of hour
   // getTimeStamp(_timestamp, sizeof(_timestamp));
   const char * monthsEq[12] = {"Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"};
+  const char * daysEq[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+  const char * timeOfDayEq[2] = {"AM", "PM"};
+  uint8_t timeOfDayIndex = 0; // defaults to AM ddaytime indicator
   DateTime now = rtc.now();
-  if (now.hour() <= 12) hourBuffer = now.hour();
-  else hourBuffer = now.hour() - 12; 
-  if (now.hour() > 11 && now.hour() < 24) sprintf(hourPeriod, "PM"); 
-  // main  
-  if (now.month()-1 <= 12) sprintf(timestring, "%s %d,%d %02d:%02d:%02d %s",monthsEq[now.month()-1],now.date(),now.year(),hourBuffer,now.minute(),now.second(),hourPeriod);
+  uint8_t hourBuffer = now.hour();
+  
+  if (hourBuffer > 11 && hourBuffer < 24) timeOfDayIndex = 1;                   //  sets PM as daytime indicator
+  if (hourBuffer > 12 && hourBuffer < 24) hourBuffer = hourBuffer - 12;         //  subtract 12 from 24hr format to get 12hr format
+  if (hourBuffer == 0) hourBuffer = 12;                                         //  replace midnight time 00 to 12
+  if (now.month()-1 <= 12) sprintf(timestring, "%s %s %d, %d", daysEq[now.dayOfWeek()-1],monthsEq[now.month()-1],now.date(),now.year());  //  generate day and data string
+  debugPrint("Current date:\t ");
   debugPrintln(timestring);
-
-  // if (now.month()-1 <= 12) {
-  //   Serial.print(monthsEq[now.month()-1]);
-  //   Serial.print(" ");
-  //   Serial.print(now.date());
-  //   Serial.print(", ");
-  //   Serial.print(now.year());
-  //   Serial.print(" ");
-  //   Serial.print(hourBuffer);
-  //   Serial.print(":");
-  //   Serial.print(now.minute());
-  //   Serial.print(":");
-  //   Serial.print(now.second());
-  //   Serial.print(" ");
-  //   Serial.println(hourPeriod);
-  // }
+  sprintf(timestring, "%d:%02d:%02d %s" ,hourBuffer,now.minute(),now.second(),timeOfDayEq[timeOfDayIndex]);                             // generte timestring & daytime indicator
+  debugPrint("Current time:\t ");
+  debugPrintln(timestring);
+  resetWatchdog();
 }
 
 
 // Comapres current [stored] timestamp with newTiemstamp for datetime updating
 void timestampUpdate(const char* newTimestamp) {
+  resetWatchdog();
   bool updateTS = false;
   char timeBuffer[50];
   uint8_t tsIndex = 0;
@@ -261,7 +264,7 @@ void timestampUpdate(const char* newTimestamp) {
   if (updateTS) {
     updateTsNetworkFormat(newTimestamp);
   }
-  
+  resetWatchdog();
   // now.year()%1000,now.month(),now.date(),now.hour(),now.minute(),now.second()
 }
 
@@ -270,22 +273,23 @@ void timestampUpdate(const char* newTimestamp) {
 /// @param networkTimeString - container of timestamp to be used for device ts update 
 ///
 void updateTsNetworkFormat(const char * networkTimeString) {
+  resetWatchdog();
   char timeStringBuffer[50];
   sprintf(timeStringBuffer, "%s",networkTimeString); //copy it to a new variable container because we will tokenizze this
   int ts_buffer[7];
   char *ts_token = strtok(timeStringBuffer, ",/:+");  
 
-    byte ts_counter = 0;
-    while (ts_token != NULL) {
-      ts_buffer[ts_counter] = atoi(ts_token);
-      ts_counter++;
-      ts_token = strtok(NULL, ",/:+");
-    }
+  byte ts_counter = 0;
+  while (ts_token != NULL) {
+    ts_buffer[ts_counter] = atoi(ts_token);
+    ts_counter++;
+    ts_token = strtok(NULL, ",/:+");
+  }
 
-    // debugPrintln(timebuffer);
-    ts_buffer[6] = dayOfWeek((2000+ts_buffer[0]),ts_buffer[1],ts_buffer[2]); // attempt to get correct weekday data
-    setRTCDateTime(ts_buffer[0], ts_buffer[1], ts_buffer[2], ts_buffer[3], ts_buffer[4], ts_buffer[5], ts_buffer[6]);
+  // debugPrintln(timebuffer);
+  ts_buffer[6] = dayOfWeek((2000+ts_buffer[0]),ts_buffer[1],ts_buffer[2]); // attempt to get correct weekday data
+  setRTCDateTime(ts_buffer[0], ts_buffer[1], ts_buffer[2], ts_buffer[3], ts_buffer[4], ts_buffer[5], ts_buffer[6]);
 
-    debugPrintln("Timestamp updated!");
-
+  debugPrintln("Timestamp updated!");
+  resetWatchdog();
 }

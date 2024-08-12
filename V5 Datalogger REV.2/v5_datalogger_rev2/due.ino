@@ -4,6 +4,7 @@ void dueInit (uint8_t dueTrigPin) {
 }
 
 void dueDataCollection(int samplingTimeout) {
+  resetWatchdog();
   bool readDueData = true;
   // int lineBufferLength = 500;
   char lineBuffer[500];
@@ -27,7 +28,7 @@ void dueDataCollection(int samplingTimeout) {
   Serial.println(commandContainer);
   DUESerial.write(commandContainer);
   while (readDueData) {
-    
+    resetWatchdog();
     dueCharIndex = 0;
     
     if (millis() - samplingStart > samplingTimeout) {
@@ -39,13 +40,7 @@ void dueDataCollection(int samplingTimeout) {
     for (int i=0; i < sizeof(lineBuffer); i++)  lineBuffer[i] = 0x00;
 
     DUESerial.readBytesUntil('\n', lineBuffer, sizeof(lineBuffer));
-    // while (DUESerial.available() > 0) {
-    //   dueChar = DUESerial.read();
-    //   if (dueChar != '\n') {
-    //     lineBuffer[dueCharIndex];
-    //     dueCharIndex++;
-    //   }
-    // }
+    
     for (int n = 0; n < sizeof(lineBuffer); n++) {
       if (lineBuffer[n] == '\n' || lineBuffer[n] == '\r') lineBuffer[n]=0x00; // Overwrite extra '\n' character from readBytesUntil
     }
@@ -67,15 +62,18 @@ void dueDataCollection(int samplingTimeout) {
       addToSMSStack(lineBuffer);
       DUESerial.write("OK");
     }
+    resetWatchdog();
   } 
 
   digitalWrite(DUETRIG, LOW);
   DUESerial.end();
   Serial.println("Data collection finished!");
   // Serial.println(readBuffer);
+  resetWatchdog();
 }
 
 void updatSavedCommand() {
+  resetWatchdog();
   char sensorCommandBuffer[50];
   Serial.print("Input sensor command: ");
   getSerialInput(sensorCommandBuffer, sizeof(sensorCommandBuffer), 60000);
@@ -88,4 +86,5 @@ void updatSavedCommand() {
     Serial.println("Defaulted to \"ARQCMD6T\"");
   }
   savedCommands.write(flashCommands);
+  resetWatchdog();
 }

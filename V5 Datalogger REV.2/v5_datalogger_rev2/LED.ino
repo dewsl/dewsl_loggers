@@ -8,6 +8,7 @@ void LEDInit() {
 ///  Turn on LED.
 void LEDOn() {
   digitalWrite(LED_BUILTIN, HIGH);
+
 }
 
 ///  Turn off LED.
@@ -27,6 +28,7 @@ void LEDSend() {
       delayMillis(60);
     }
   }
+  resetWatchdog();
 }
 
 ///  LED receive notification.
@@ -41,6 +43,7 @@ void LEDReceive() {
       delayMillis(30);
     }
   }
+  resetWatchdog();
 }
 
 ///  Sleep/Wake notification.
@@ -54,24 +57,29 @@ void LEDSleepWake() {
       delayMillis(200);
     }
   }
+  resetWatchdog();
 }
 
 ///  Manual LED parameter input.
 ///  custom blinkCount/blinkDurationInterval.
 void LEDManual(int blinkCount, int blinkDurationInterval) {
   for (int i = 0; i < blinkCount; i++) {
+    resetWatchdog();
     digitalWrite(LED_BUILTIN, HIGH);
     delayMillis(blinkDurationInterval);
     digitalWrite(LED_BUILTIN, LOW);
     if (i + 1 < blinkCount) {
+      resetWatchdog();
       delayMillis(blinkDurationInterval);
     }
+    resetWatchdog();
   }
 }
 
 ///  Self reset notification
 ///  two short (100ms) and one long(1s) LED blink
 void LEDSelfReset() {
+  resetWatchdog();
   digitalWrite(LED_BUILTIN, HIGH);
   delayMillis(100);
   digitalWrite(LED_BUILTIN, LOW);
@@ -83,5 +91,5 @@ void LEDSelfReset() {
   digitalWrite(LED_BUILTIN, HIGH);
   delayMillis(1000);
   digitalWrite(LED_BUILTIN, LOW);
-
+  resetWatchdog();
 }

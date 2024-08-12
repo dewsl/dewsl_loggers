@@ -18,6 +18,7 @@ void rainISR() {
 }
 
 void updateRainCollectorType() {
+  resetWatchdog();
   unsigned long updateStart = millis();
   int updateTimeout = 60000;
   int collectorTypeBuf = 0;
@@ -43,9 +44,11 @@ void updateRainCollectorType() {
     delayMillis(500);
     debugPrintln("Rain collector type updated");
   }
+  resetWatchdog();
 }
 
 void updateRainDataType() {
+  resetWatchdog();
   unsigned long updateStart = millis();
   int updateTimeout = 60000;
   int newDataType = 0;
@@ -60,6 +63,7 @@ void updateRainDataType() {
       newDataType = Serial.parseInt();
       break;
     }
+    resetWatchdog();
   }
   debugPrintln(newDataType);
   if (newDataType > 1) {
@@ -71,9 +75,11 @@ void updateRainDataType() {
     delayMillis(500);
     debugPrintln("Rain data type updated");
   }
+  resetWatchdog();
 }
 
 void resetRainTips() {
   _rainTips = 0.00;
   delayMillis(75);
+  resetWatchdog();
 }

@@ -5,7 +5,8 @@
 /// Transmit power can be set from 5 to 23 dB with RFM95/96/97/98 with PA_BOOST transmitter pin.
 /// The default transmitter power is 13dBm, using PA_BOOST.
 ///
-void LoRaInit() {
+void LoRaInit(uint32_t initWaitTime) {
+  resetWatchdog();
   pinMode(RFM95_RST, OUTPUT);
   digitalWrite(RFM95_RST, HIGH);
 
@@ -14,20 +15,23 @@ void LoRaInit() {
   delayMillis(10);
   digitalWrite(RFM95_RST, HIGH);
   delayMillis(10);
-
-  while (!rf95.init()) {
-    Serial.println("LoRa radio init failed"); 
+  bool loraInitOK = false;
+  unsigned long initWaitStart = millis();
+  while (millis() - initWaitStart < initWaitTime && !loraInitOK) {
+    resetWatchdog();
+    if (rf95.init()) {
+      Serial.println("LoRa radio init OK!"); 
+      if (!rf95.setFrequency(RF95_FREQ)) Serial.println("set frequency failed");
+      else  {Serial.print("Set Freq to: "); Serial.println(RF95_FREQ); }
+      rf95.setTxPower(23, false);
+      break;
+    }
+    else Serial.println("LoRa radio init failed"); 
+    delayMillis(1000);
     // set error flag here for next action
+    resetWatchdog();
   }
-  Serial.println("LoRa radio init OK!");
-
-  if (!rf95.setFrequency(RF95_FREQ)) {
-    Serial.println("setFrequency failed");
-    // set error flag here for next action
-  }
-  Serial.print("Set Freq to: ");
-  Serial.println(RF95_FREQ);
-  rf95.setTxPower(23, false);
+  resetWatchdog();
 }
 
 
@@ -36,6 +40,7 @@ void LoRaInit() {
 /// @param radiopacket - pointer for data to be sent thru LoRa
 ///
 void sendThruLoRa(const char *radiopacket) {
+  resetWatchdog();
   uint8_t payload[RH_RF95_MAX_MESSAGE_LEN];
   int sendRetryLimit = 3;
   int i = 0, j = 0;
@@ -50,12 +55,15 @@ void sendThruLoRa(const char *radiopacket) {
 
   debugPrint("Sending to LoRa: ");
   debugPrintln((char *)payload);
-  rf95.send(payload, sizeof(payload));  // sending data to LoRa
+  if (!rf95.send(payload, sizeof(payload))) debugPrint("packet sending failed");  // sending data to LoRa
+  resetWatchdog();
   rf95.waitPacketSent();       // Waiting for packet to complete...
+  resetWatchdog();
 }
 
 //used by routers
 bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, uint8_t retryCount) {
+  resetWatchdog();
   char ackResponseBuffer[300];
   char validResponse[30];
   bool noResponse = true;
@@ -65,6 +73,7 @@ bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, u
     sendThruLoRa(payloadToSend);
     unsigned long ackWaitStart = millis();
     while (millis() - ackWaitStart < responseWaitTime && noResponse) {
+      resetWatchdog();
       debugPrintln("Checking response..");
       receiveLoRaData(ackResponseBuffer, sizeof(ackResponseBuffer), responseWaitTime);
       debugPrint(ackResponseBuffer);
@@ -74,18 +83,16 @@ bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, u
       
         if (inputHas(ackResponseBuffer, "~ROUTER~")) {
           routerProcessOTAflag = true;
-          sprintf(routerOTACommand, ackResponseBuffer);
-          
+          sprintf(routerOTACommand, ackResponseBuffer);          
         }
-          
-
-
         noResponse = false;
         break;
       } else debugPrintln("");
+      resetWatchdog();
     }
     if (!noResponse) break;
   }
+  resetWatchdog();
   return !noResponse;
 }
 
@@ -96,6 +103,7 @@ bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, u
 /// @param receiveContainerSize - size of the data container
 ///
 void receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsigned long waitDuration) {
+  resetWatchdog();
   uint8_t receiveBuffer[RH_RF95_MAX_MESSAGE_LEN];
   uint8_t bufferLength = sizeof(receiveBuffer);
   bool waitDataFlag = true;
@@ -104,6 +112,7 @@ void receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsi
   for (int i = 0; i < receiveContainerSize; i++) receiveContainer[i]=0x00;
   // char payloadBuffer[RH_RF95_MAX_MESSAGE_LEN+1];
   while (millis() - LoRaWaitStart < waitDuration && waitDataFlag) {
+    resetWatchdog();
     if (rf95.available()) {
       if (rf95.recv(receiveBuffer, &bufferLength)) {
         int l = 0;
@@ -114,7 +123,9 @@ void receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsi
       }
     }
     if (strlen(receiveContainer)) waitDataFlag = false;
+    resetWatchdog();
   }
+  resetWatchdog();
 }
 
 /// Waits for LoRa data from router(s) until data sending is ended or timeout is reached.
@@ -128,6 +139,7 @@ void receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsi
 /// Mode 1: [Testing mode for LoRa send/receive] Data received are filtered but not added to the sending stack.
 /// Mode 2: [Listen mode; LoRa send/receive] Data received displayed but are not filtered and are not added to SMS stack.
 void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCount, uint8_t receiveMode) {
+  resetWatchdog();
   char gatewayDataDump[200];
   char routerNames[routerCount][20];
   unsigned long waitStart = millis();
@@ -149,7 +161,7 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
   debugPrintln("Waiting for LoRa transmission from listed router(s): ");
   for (int r=1; r<=savedRouterCount.read(); r++) debugPrintln(flashLoggerName.sensorNameList[r]);
   while (millis() - waitStart < receiverWaitDuration) {
-
+    resetWatchdog();
     receiveLoRaData(loRaBuffer, sizeof(loRaBuffer), 30000);        // receive instances of lora data here
     debugPrintln("~");                                               // waiting/recieving indicator
 
@@ -196,6 +208,7 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
     // else () {  // deal with junk here
     // do something with the strings that didn't get through the filter?
     // } 
+    resetWatchdog();
   }
 
   routerOTAflag = false;      // reset router OTA flag
@@ -228,9 +241,11 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
     addToSMSStack(gatewayDataDump);
     debugPrintln(gatewayDataDump);
   }
+  resetWatchdog();
 }
 
 float parseVoltage(char* stringToParse, int stringContainerSize) {
+  resetWatchdog();
   int i = 0;
   float voltageParsed=0;
   char parseBuffer[stringContainerSize];
@@ -245,6 +260,7 @@ float parseVoltage(char* stringToParse, int stringContainerSize) {
     buff = strtok(NULL, ":*");
     i++;
   }
+  resetWatchdog();
   return voltageParsed;
 }
 
@@ -257,6 +273,7 @@ float parseVoltage(char* stringToParse, int stringContainerSize) {
 /// @param referenceString - used by gateways to indentify if transmission came from a listed router
 ///
 void key_gen(char *keyContainer, char *referenceString) {
+  resetWatchdog();
   char referenceBuffer[sizeof(referenceString)+1];
   char keyBuffer[20];
   // strncpy(toFind, ">>", 2);
@@ -265,14 +282,11 @@ void key_gen(char *keyContainer, char *referenceString) {
     //  gets first charaters (depending on router char length) from reference to generate acknowledgement key
     strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorNameList[0])));   
   } else {  // gateway modes
-    //  gets first charaters (depending on router char length) from reference to generate acknowledgement key
-    
-    strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorNameList[1]))); // bakit 1 ito? ang assumption ay pare parehas lang ang length ng router names kaya ito ang ginamit na reference.. 
-
+    //  gets first characters (depending on router char length) from reference to generate acknowledgement key
+    //  alternative ito sa tokenization kasi nanggaling tayo sa strtok
+    strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorNameList[1]))); // bakit 1 ito? ang assumption ay pare parehas lang ang length ng router names kaya ito ang ginamit na reference [temporary].. 
   }    
-  // ackMsg[strlen(ackMsg)+1] = 0x00;
-  // strcat(ackMsg, ackKey);
-  // ackMsg[strlen(ackMsg)+1] = 0x00; 
+  resetWatchdog();
 }
 
 /// Checks whether received data is from a valid datalogger.
@@ -283,6 +297,7 @@ void key_gen(char *keyContainer, char *referenceString) {
 /// @param  sizeOfPayload array size of receive data containe
 ///
 int loRaFilterPass(char* payloadToCheck, int sizeOfPayload) {
+  resetWatchdog();
   uint8_t payloadType = 0;
   char payloadBuffer[sizeOfPayload+1];
 
@@ -293,14 +308,18 @@ int loRaFilterPass(char* payloadToCheck, int sizeOfPayload) {
   // tokenize using "*" as delimiter to get the name?
 
   for (byte rIndex = 0; rIndex <= savedRouterCount.read(); rIndex++) {
+    resetWatchdog();
     if (inputHas(payloadBuffer, flashLoggerName.sensorNameList[rIndex])) return rIndex; // returns index of datalogger name
   }
-  return 199;    
-  // return 199 if payload is not found/invalid
-  // or any value higher than the max router count
+  resetWatchdog();
+  return MAX_ROUTER_COUNT+99;    
+  //  return any value higher than the max router count
+  //  default return value unless router name is found on sensorNameList
+  
 }
 
 void extractRouterName(char *nameContainer, char * referenceString) {
+  resetWatchdog();
   char referenceBuffer[strlen(referenceString)+1];
   sprintf(referenceBuffer, referenceString);
   referenceBuffer[strlen(referenceBuffer)+1] = 0x00;
@@ -312,10 +331,14 @@ void extractRouterName(char *nameContainer, char * referenceString) {
     nameContainer[strlen(nameContainer)+1] = 0x00;
     break;
   }
+  resetWatchdog();
 }
 // MADTB*VOLT:12.33*200214111000
 void generateVoltString (char* stringContainer) {
+  resetWatchdog();
   char tsbuffer[15];
   getTimeStamp(tsbuffer, sizeof(tsbuffer));
+  delayMillis(1000);
   sprintf(stringContainer, ">>%s*VOLT:%.2f*%s",flashLoggerName.sensorNameList[0], readBatteryVoltage(savedBatteryType.read()),tsbuffer);
+  resetWatchdog();
 }

@@ -1,11 +1,13 @@
 void Operation(const char * operationServerNumber) {
 
+  resetWatchdog();
+
   char smsSegmentContainer[500];
   char infoSMS[100];
   // char routerEndIdentifier[100];     // "volt" string
   uint8_t dataloggerMode = savedDataLoggerMode.read();
   // LEDOn();
-
+  
   clearGlobalSMSDump();
 
   // reload global variables (parameters) here
@@ -13,7 +15,7 @@ void Operation(const char * operationServerNumber) {
   flashServerNumber = savedServerNumber.read();
   flashCommands = savedCommands.read();
   getTimeStamp(_timestamp, sizeof(_timestamp));
-  
+  resetWatchdog();
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   // 1.0 / First Part
@@ -69,9 +71,9 @@ void Operation(const char * operationServerNumber) {
   //   RAIN GAUGE ONLY - LoRA
   //   Pwede din ito maacheive kung gagawa ka ng router na walang ubox and subsurface sensor
   //   pero ganito na lang setup para mas madali makita or kung may kailangan pa i-add sa process flow
+  //   same lang sa mode 4, nka separate lang, baka may kailangan idagdag
       generateInfoMessage(infoSMS);
       addToSMSStack(infoSMS);
-  
   } 
 
   // reset rain tips after adding stored rain tips to sms stack
@@ -95,9 +97,10 @@ void Operation(const char * operationServerNumber) {
   clearGlobalSMSDump();                                                                     //  as the name suggests...
   
   if (savedGSMPowerMode.read() == 2 && loggerWithGSM(savedDataLoggerMode.read())) {         //  Mode 2: (power saving) GSM module is inactive (turned OFF) except when sending data
+    resetWatchdog();
     delayMillis(15000);                                                                     //  allow some wait time for some OTA SMS to arrive (if any). Not sure kung reliable yung ganitong process, may instance na hindi na dumadating yung SMS. Pero mas priority ang data avaiilability than OTA capabilities
-    checkForOTAMessages();
-    // checkOTACommand();                                                                   //  opens message inbox and execute any OTA COMMANDS found 
+    resetWatchdog();
+    checkForOTAMessages();                                                                  //  check message inbox and execute the first OTA COMMAND found 
     deleteMessageInbox();                                                                   //  deletes ALL messages in SIMCARD                                                      
   }
   
@@ -163,12 +166,13 @@ void initSleepCycle() {
   SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;  // Enable Standby or "deep sleep" mode
 }
 
-void initSleepCycle2() {
-  SCB->SCR |= SCB_SCR_SLEEPONEXIT_Msk; // Enable Sleep-On-Exit feature
-  SCB->SCR |= SCB_SCR_SEVONPEND_Msk;  // Enable Send-Event-on-Pend
-}
+// void initSleepCycle2() {
+//   SCB->SCR |= SCB_SCR_SLEEPONEXIT_Msk; // Enable Sleep-On-Exit feature
+//   SCB->SCR |= SCB_SCR_SEVONPEND_Msk;  // Enable Send-Event-on-Pend
+// }
 
 void sleepNow(uint8_t savedLoggerMode) {
+
   Serial.println(F("MCU is going to sleep . . ."));
   Serial.println(F(""));
 
@@ -177,7 +181,6 @@ void sleepNow(uint8_t savedLoggerMode) {
   // LowPower.deepSleep(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
   // SCB->SCR |= SCB_SCR_SLEEPONEXIT_Msk; 
   // while (1) {
-
   SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // Enable systick interrupt
   __DSB(); // Use of memory barrier is recommended for portability
   __WFI(); // Execute WFI and enter sleep
@@ -190,36 +193,5 @@ void sleepNow(uint8_t savedLoggerMode) {
 	// PM->SLEEP.reg = IDLE_2;
 	// __DSB();
 	// __WFI();
-  
-}
-
-void runOnceInit() {
-
-  runOnceFlag = false;                                      // prevent re-execution
-
-
-  if (loggerWithGSM(savedDataLoggerMode.read())) {            // Boot message for gateways and standalone dataloggers
-    if (GSMInit()) {                                          // Initializes GSM module after reset/boot
-    // If GSM reset if successful
-      Serial.println("GSM READY\n");
-      char bootMgs[100];
-      deleteMessageInbox();                                   //  delete ALL messages in SIM inbox to prevent processing of old SMS
-      flashLoggerName = savedLoggerName.read();               //  update global param
-      flashServerNumber = savedServerNumber.read();     
-      
-      if(!debugMode) {
-        char restMsgBuffer[50];
-        resetStatCheck(restMsgBuffer);
-        sprintf(bootMgs,"%s: LOGGER POWER UP\nLast reset cause: %s",flashLoggerName.sensorNameList[0], restMsgBuffer);  // build boot message
-        delayMillis(1500);
-        sendThruGSM(bootMgs,flashServerNumber.dataServer);                         // send boot msg to server
-      }
-      GSMPowerModeSet(); 
-    }    
-  } 
-
-  if (hasUbloxRouterFlag.read() == 99 || savedRouterCount.read() > 0 || savedDataLoggerMode.read()) {  //applies for datalogger modes that uses LoRa
-    LoRaInit();
-  }
-  if (hasSubsurfaceSensorFlag.read() == 99 || hasUbloxRouterFlag.read() == 99) dueInit(DUETRIG);          //
+  resetWatchdog();
 }
