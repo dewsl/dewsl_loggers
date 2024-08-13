@@ -683,11 +683,11 @@ void updateLoggerMode() {
     if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasUbloxRouterFlag.write(99);
     Serial.print("   Input router count: ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
-    uint8_t rcount = atoi(addOnBuffer);
-    if (rcount == 0) rcount = 1;  // should not accept ZERO as router count
-    if (rcount > (arrayCount(flashLoggerName.sensorNameList)-1)) rcount = (arrayCount(flashLoggerName.sensorNameList)-1);   // limited to the number of rows of array holder 
-    savedRouterCount.write(rcount);
-    Serial.println(rcount);
+    uint8_t inputCount = atoi(addOnBuffer);
+    if (inputCount == 0) inputCount = 1;  // should not accept ZERO as router count
+    if (inputCount > (arrayCount(flashLoggerName.sensorNameList)-1)) inputCount = (arrayCount(flashLoggerName.sensorNameList)-1);   // limited to the number of rows to array holder max usable index
+    savedRouterCount.write(inputCount);
+    Serial.println(inputCount);
   
   } else if (loggerModeBuffer == 2) {
     if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
@@ -718,7 +718,7 @@ void updateLoggerMode() {
   if ((initialLoggerMode != 3 && savedDataLoggerMode.read() == 3) ||     // if initally non-gateway to gateway type
   (initialLoggerMode == 3 && savedDataLoggerMode.read() != 3) ||     // if initially gateway type to non-gateway type
   (initialRouterCount != savedRouterCount.read())) {                  // if router count was changed
-    for (byte rCount = 0; rCount < initialRouterCount; rCount++) flashLoggerName.sensorNameList[rCount][0] = 0x00;  // obscure previous name list 
+    for (byte rPos = 0; rPos < initialRouterCount; rPos++) flashLoggerName.sensorNameList[rPos][0] = 0x00;  // obscure previous name list 
     loggerNameChange = true;  // starts name change function after function end
   }
   if (!loggerWithGSM(savedDataLoggerMode.read())) GSMOff();
@@ -945,14 +945,14 @@ void scalableUpdateSensorNames() {
     if (strlen(nameBuffer) == 0) sprintf(nameBuffer,"TESG");
     Serial.println(nameBuffer);
     sprintf(flashLoggerName.sensorNameList[0], nameBuffer);
-    for (byte rCount = 1; rCount <= savedRouterCount.read(); rCount++) {   // router name positining starts at index 1, 0 is self
+    for (byte listPos = 1; listPos <= savedRouterCount.read(); listPos++) {   // router name positioning starts at index 1, 0 is self
       Serial.print("Input name of ROUTER ");
-      Serial.print(rCount);
+      Serial.print(listPos);
       Serial.print(": ");
       getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
-      if (strlen(nameBuffer) == 0) sprintf(nameBuffer,"TEST%d",rCount);
+      if (strlen(nameBuffer) == 0) sprintf(nameBuffer,"TEST%d",listPos);
       Serial.println(nameBuffer);
-      sprintf(flashLoggerName.sensorNameList[rCount], nameBuffer);
+      sprintf(flashLoggerName.sensorNameList[listPos], nameBuffer);
     }
   } else {
     Serial.print("Input DATALOGGER name: ");
@@ -979,12 +979,13 @@ void getLoggerModeAndName() {
       Serial.println(printBuffer);
     } 
     Serial.print("GATEWAY MODE ");
+    
     if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
     if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
-    Serial.print("and ");
+    if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("Rain gauge only");
+    Serial.print("with ");
     Serial.print(savedRouterCount.read());
     Serial.println(" Router(s)"); 
-    if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("Rain gauge only");
   } else {      // other standalone dataloggers
     Serial.print("Datalogger name: ");
     Serial.println(flashLoggerName.sensorNameList[0]);

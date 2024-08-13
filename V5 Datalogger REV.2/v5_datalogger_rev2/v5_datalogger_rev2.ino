@@ -15,10 +15,10 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2408.12
+#define FIRMWAREVERSION 2408.13
 #define BAUDRATE 115200
 #define DUEBAUD 9600
-#define DEBUGTIMEOUT 60000
+#define DEBUGTIMEOUT 300000
 #define WAITDEBUGTIMEOUT 15000            // wait 15 sec
 #define DUESerial Serial1
 #define DUETRIG 5
@@ -129,7 +129,7 @@ FlashStorage(savedAlarmInterval, uint8_t);
 FlashStorage(savedDataLoggerMode, uint8_t);
 FlashStorage(hasSubsurfaceSensorFlag, uint8_t);
 FlashStorage(hasUbloxRouterFlag, uint8_t);
-FlashStorage(savedRouterCount, uint8_t);
+FlashStorage(savedRouterCount, int);
 FlashStorage(savedGSMPowerMode, uint8_t);
 FlashStorage(savedRainCollectorType, uint8_t);
 FlashStorage(savedRainSendType, uint8_t);
@@ -162,6 +162,12 @@ void debugPrint(int toPrint) {
   if (debugMode && Serial) Serial.print(toPrint);
 }
 void debugPrintln(int toPrintln) {
+  if (debugMode && Serial) Serial.println(toPrintln);
+}
+void debugPrint(unsigned long toPrint) {
+  if (debugMode && Serial) Serial.print(toPrint);
+}
+void debugPrintln(unsigned long toPrintln) {
   if (debugMode && Serial) Serial.println(toPrintln);
 }
 
@@ -314,8 +320,23 @@ void disableWatchdog() {
 }
 
 void enableWatchdog() {
-  Serial.println("Watchdog Enabled!");
+  Serial.println("");
+  Serial.println(F("------------------------------------------------------"));
   int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
+  int yourChances = random(1,4);             // 25%ish
+  if (yourChances == 3) {                    // good luck  
+    delay(3000);
+    Serial.println(F("     |\\_/| "));    // some escape sequence 
+    Serial.println(F("     | @ @   Woof! Watchdog Enabled!"));
+    Serial.println(F("     |   <>              _ "));
+    Serial.println(F("     |  _/\\------____ ((| |))"));    // and here
+    Serial.println(F("     |               `--' |   "));
+    Serial.println(F(" ____|_       ___|   |___.' "));
+    Serial.println(F("/_/_____/____/_______|"));
+    delay(3000);
+  } else Serial.println(F("Watchdog Enabled!"));
+  Serial.println(F("------------------------------------------------------"));
+  resetWatchdog();
 }
 
 /// Kick watchdog to reset timer

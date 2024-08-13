@@ -138,17 +138,14 @@ void receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsi
 /// Mode 0: [Normal operation] Received data are filtered and added to SMS stack for sending.
 /// Mode 1: [Testing mode for LoRa send/receive] Data received are filtered but not added to the sending stack.
 /// Mode 2: [Listen mode; LoRa send/receive] Data received displayed but are not filtered and are not added to SMS stack.
-void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCount, uint8_t receiveMode) {
+void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, uint8_t receiveMode) {
   resetWatchdog();
   char gatewayDataDump[200];
   char routerNames[routerCount][20];
-  unsigned long waitStart = millis();
   char loRaBuffer[1000];
   uint8_t routerNameIndex = 100;
   uint8_t nameIndexLimit = 100;     // temporary limit
   uint8_t voltCount = 0;
-  uint8_t routerPos;
-  // char senderLabelBuffer[20];
   char sendAck[50];
   int RSSIbuffer = 0;
   int RSSIContainer[routerCount];
@@ -158,9 +155,21 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
   for (int v = 0; v <= routerCount;v++) voltContainer[v]=0;
   bool voltFlag = false;
 
-  debugPrintln("Waiting for LoRa transmission from listed router(s): ");
-  for (int r=1; r<=savedRouterCount.read(); r++) debugPrintln(flashLoggerName.sensorNameList[r]);
-  while (millis() - waitStart < receiverWaitDuration) {
+  // debugPrint("Router count: ");
+  // debugPrintln(savedRouterCount.read());
+  debugPrintln("Listed router(s): ");
+  for (int routerPos=1; routerPos<=savedRouterCount.read(); routerPos++) debugPrintln(flashLoggerName.sensorNameList[routerPos]);
+  debugPrintln("");
+  debugPrint("Wait time limit: ");
+  debugPrint(receiverWaitDuration/1000/60);
+  debugPrintln(" minute(s)");
+  debugPrintln("Waiting for transmission... ");
+
+  unsigned long routerWaitStart = millis();
+  // Serial.println(routerWaitStart);
+
+  while (millis() - routerWaitStart < receiverWaitDuration) {
+    debugPrintln("~");
     resetWatchdog();
     receiveLoRaData(loRaBuffer, sizeof(loRaBuffer), 30000);        // receive instances of lora data here
     debugPrintln("~");                                               // waiting/recieving indicator
@@ -204,7 +213,10 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, uint8_t routerCou
     } else {
       // ano gusto mo gawin sa rejected na transmissions ?
     }
-    if (voltCount == routerCount) break;
+    if (voltCount == routerCount) {
+      debugPrint("Router check count complete.."); 
+      break;
+    }
     // else () {  // deal with junk here
     // do something with the strings that didn't get through the filter?
     // } 
