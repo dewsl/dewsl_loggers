@@ -185,9 +185,11 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, 
       debugPrint("Received data from ");
       debugPrintln(flashLoggerName.sensorNameList[routerNameIndex]);
       debugPrintln(loRaBuffer);
-      RSSIContainer[routerNameIndex] = rf95.lastRssi();
+      RSSIbuffer = rf95.lastRssi();
+      if (RSSIbuffer > -100) RSSIContainer[routerNameIndex] = RSSIbuffer;
       debugPrint("Signal Loss: "); 
-      debugPrintln(RSSIContainer[routerNameIndex]);
+      debugPrintln(RSSIbuffer);
+      RSSIbuffer = 0;
 
       //STORE IDENTIFIED DATA HERE
       if (inputHas(loRaBuffer, "*VOLT")) { // in case of termitating string MADTB*VOLT:12.33*
@@ -314,7 +316,6 @@ int loRaFilterPass(char* payloadToCheck, int sizeOfPayload) {
   char payloadBuffer[sizeOfPayload+1];
 
   sprintf(payloadBuffer, payloadToCheck);
-  payloadBuffer[strlen(payloadBuffer)+1]=0x00;
 
   // remove first ">>" characters
   // tokenize using "*" as delimiter to get the name?

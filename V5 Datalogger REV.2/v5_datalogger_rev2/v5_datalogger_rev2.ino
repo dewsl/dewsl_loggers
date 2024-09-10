@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2408.13
+#define FIRMWAREVERSION 2409.11
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 300000
@@ -212,7 +212,7 @@ void setup() {
       char restMsg[50];
       delayMillis(2000);
       if (loggerParamSetFlag.read() == 0) introMSG();
-      Serial.println(F(""));
+      // Serial.println(F(""));
       Serial.println(F("------------------------------------------------------"));
       Serial.println(F("-                     DEBUG MODE                     -"));
       Serial.println(F("------------------------------------------------------"));
@@ -259,7 +259,7 @@ void loop() {
       if(!debugMode) {
         sprintf(bootMgs,"%s: LOGGER POWER UP\nLast reset cause: %s",flashLoggerName.sensorNameList[0], restMsgBuffer);  // build boot message
         delayMillis(1500);
-        sendThruGSM(bootMgs,flashServerNumber.dataServer);                         // send boot msg to server
+        if (!(sendThruGSM(bootMgs,flashServerNumber.dataServer))) sendThruGSM(bootMgs,flashServerNumber.dataServer);                         // send boot msg to server
       }
       // rf95.sleep();
       GSMPowerModeSet(); 
@@ -323,19 +323,23 @@ void enableWatchdog() {
   Serial.println("");
   Serial.println(F("------------------------------------------------------"));
   int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
-  int yourChances = random(1,4);             // 25%ish
-  if (yourChances == 3) {                    // good luck  
+  randomSeed(analogRead(0));
+  long yourChances = random(5);                   // 20%ish
+  // Serial.print(yourChances);
+  if (yourChances == 4) {                    // good luck  
+    delay(2000);
+    Serial.println("     |\\_/| ");    // some escape sequence, wag kalimutan
+    Serial.println("     | @ @   Woof! Watchdog Enabled!");
+    Serial.println("     |   <>              _ ");
+    Serial.println("     |  _/\\------____ ((| |))");    // and here
+    Serial.println("     |               `--' |   ");
+    Serial.println(" ____|_       ___|   |___.' ");
+    Serial.println("/_/_____/____/_______|");
     delay(3000);
-    Serial.println(F("     |\\_/| "));    // some escape sequence 
-    Serial.println(F("     | @ @   Woof! Watchdog Enabled!"));
-    Serial.println(F("     |   <>              _ "));
-    Serial.println(F("     |  _/\\------____ ((| |))"));    // and here
-    Serial.println(F("     |               `--' |   "));
-    Serial.println(F(" ____|_       ___|   |___.' "));
-    Serial.println(F("/_/_____/____/_______|"));
-    delay(3000);
-  } else Serial.println(F("Watchdog Enabled!"));
-  Serial.println(F("------------------------------------------------------"));
+  } else {
+    Serial.println(F("Watchdog Enabled!"));
+    Serial.println(F("------------------------------------------------------"));
+  }
   resetWatchdog();
 }
 
@@ -352,13 +356,14 @@ bool loggerWithGSM(uint8_t dMode) {
   else return true;
 }
 
+// add
 void resetStatCheck(char* resetCauseMsg) {
-  if (REG_PM_RCAUSE == PM_RCAUSE_SYST) sprintf(resetCauseMsg, "Reset by system");
-  else if (REG_PM_RCAUSE == PM_RCAUSE_WDT) sprintf(resetCauseMsg, "Reset by Watchdog");
-  else if (REG_PM_RCAUSE == PM_RCAUSE_EXT) sprintf(resetCauseMsg, "External reset requested");
+  if (REG_PM_RCAUSE == PM_RCAUSE_SYST) sprintf(resetCauseMsg, "Reset by system");                 // sotware equivalent of reset button
+  else if (REG_PM_RCAUSE == PM_RCAUSE_WDT) sprintf(resetCauseMsg, "Reset by Watchdog");           //
+  else if (REG_PM_RCAUSE == PM_RCAUSE_EXT) sprintf(resetCauseMsg, "External reset requested");    // similar with using the physical reset buttong
   else if (REG_PM_RCAUSE == PM_RCAUSE_BOD33) sprintf(resetCauseMsg, "Reset brown out 3.3V");
   else if (REG_PM_RCAUSE == PM_RCAUSE_BOD12) sprintf(resetCauseMsg, "Reset brown out 1.2v");
-  else if (REG_PM_RCAUSE == PM_RCAUSE_POR) sprintf(resetCauseMsg, "Normal power on reset");
+  else if (REG_PM_RCAUSE == PM_RCAUSE_POR) sprintf(resetCauseMsg, "Normal power on reset");       //
   // resetCauseMsg[strlen(resetCauseMsg)+1]=0x00;
   // Serial.println(resetCauseMsg);
 }

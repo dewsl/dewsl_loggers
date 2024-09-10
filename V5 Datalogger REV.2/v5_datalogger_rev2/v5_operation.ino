@@ -62,7 +62,10 @@ void Operation(const char * operationServerNumber) {
     if (hasSubsurfaceSensorFlag.read() == 99) {
       debugPrintln("Collecting sensor column data..");
       dueDataCollection(SAMPLINGTIMEOUT); 
-    } 
+    }
+    generateInfoMessage(infoSMS);                                         // if rain data / datalogger info string is needed
+    addToSMSStack(infoSMS);
+    
   } else if (dataloggerMode == 4) {                                       //   RAIN GAUGE ONLY - GSM
     generateInfoMessage(infoSMS);
     addToSMSStack(infoSMS);
@@ -194,4 +197,10 @@ void sleepNow(uint8_t savedLoggerMode) {
 	// __DSB();
 	// __WFI();
   resetWatchdog();
+}
+
+
+void updateGlobals() {
+}
+void resetGlobals() {
 }

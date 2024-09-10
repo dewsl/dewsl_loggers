@@ -123,7 +123,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     if (RX_LORA_FLAG == 0) {
       resetWatchdog();
       readUbloxData(dataBuffer, sizeof(dataBuffer), siteCode);
-      dataBuffer[strlen(dataBuffer)+1]=0x00;
+      dataBuffer[strlen(dataBuffer)]=0x00;
       RX_LORA_FLAG == 1;
       READ_FLAG = true;
       resetWatchdog();
@@ -132,7 +132,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     Serial.println("Unable to obtain fix or no. of satellites reqd. not met");
     resetWatchdog();
     noGNSSDataAcquired(dataBuffer, sizeof(dataBuffer), siteCode);
-    dataBuffer[strlen(dataBuffer)+1]=0x00; // not needed 
+    dataBuffer[strlen(dataBuffer)]=0x00; // not needed 
     RX_LORA_FLAG == 1;
     READ_FLAG = true;
     resetWatchdog();
@@ -295,5 +295,5 @@ void initialize_sitecode(char* siteCodeContainer) {
   } else {
     sprintf(siteCodeContainer, flashLoggerName.sensorNameList[0]);
   } 
-  siteCodeContainer[strlen(siteCodeContainer)+1]=0x00;
+  siteCodeContainer[strlen(siteCodeContainer)]=0x00;
 }

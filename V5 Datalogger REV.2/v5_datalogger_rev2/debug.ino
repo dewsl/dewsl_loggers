@@ -248,7 +248,7 @@ void debugFunction() {
         getSerialInput(manualCommandInput, sizeof(manualCommandInput), DEBUGTIMEOUT);
         if (inputIs(manualCommandInput, "EXIT")) break;
         strcat(manualCommandInput, "\r");
-        manualCommandInput[strlen(manualCommandInput)+1]=0x00;
+        manualCommandInput[strlen(manualCommandInput)]=0x00;
         GSMSerial.write(manualCommandInput);
         delayMillis(1000);
         GSMAnswer(GSMResponse, sizeof(GSMResponse));
@@ -489,7 +489,7 @@ void debugFunction() {
         getSerialInput(dueCommandInput, sizeof(dueCommandInput), DEBUGTIMEOUT);
         if (inputIs(dueCommandInput, "EXIT_DUE")) break;
         strcat(dueCommandInput, "\n");
-        dueCommandInput[strlen(dueCommandInput)+1]=0x00;
+        dueCommandInput[strlen(dueCommandInput)]=0x00;
         DUESerial.write(dueCommandInput);
         // delayMillis(1000);
         while(DUESerial.available() > 0) {
@@ -513,12 +513,12 @@ void debugFunction() {
     } else if (inputIs(serialLineInput, "INFO_STRING")) {
       resetWatchdog();
       Serial.println("Generating info strings");
-      char infoContainter[100];
-      generateInfoMessage(infoContainter);
-      infoContainter[strlen(infoContainter)+1]=0x00;
-      Serial.println(infoContainter);
-      generateVoltString(infoContainter);
-      Serial.println(infoContainter);
+      char infoStrContainer[100];
+      generateInfoMessage(infoStrContainer);
+      infoStrContainer[strlen(infoStrContainer)]=0x00;
+      Serial.println(infoStrContainer);
+      generateVoltString(infoStrContainer);
+      Serial.println(infoStrContainer);
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
@@ -531,12 +531,26 @@ void debugFunction() {
     
     } else if (inputIs(serialLineInput, "BUILD_PARAM_SMS")) {
       resetWatchdog();
-      char smsContainer[1000];
-      buidParamSMS(smsContainer);
-      Serial.println(smsContainer);
-      if (sendThruGSM(smsContainer,flashServerNumber.dataServer)) debugPrintln("Message sent");
-      else debugPrintln("Message NOT sent?");
-      // debugPrintln("Send Fisnifh");0
+      char paramContainer[1000];
+      buidParamSMS(paramContainer);
+      Serial.println(paramContainer);
+      if (loggerWithGSM(savedDataLoggerMode.read())) {
+        if (sendThruGSM(paramContainer,flashServerNumber.dataServer)) debugPrintln(">> Parameter message sent to server");
+        else debugPrintln(">> Parameter message NOT sent");
+      }
+      Serial.println(F("------------------------------------------------------"));
+
+    } else if (inputIs(serialLineInput, "BEACON_MODE")) {
+      resetWatchdog();
+      char beaconMsg[100];
+      uint32_t pingCount = 0;
+
+      while(1) {
+        
+        delayMillis(30000);
+        sprintf(beaconMsg, "");
+        pingCount++;
+      } 
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "?")) {
@@ -582,7 +596,7 @@ void printMenu() {
   delayMillis(1000);
   Serial.println(F("------------------------------------------------------"));
   Serial.println(F("[?] Print stored config parameters."));
-  Serial.println(F("[A] Test operation function"));
+  Serial.println(F("[A] Test OPERATION function"));
   Serial.println(F("[B] Read rain gauge tips"));
   Serial.println(F("[C] Print this menu"));
   Serial.println(F("[D] Change LOGGER MODE"));
@@ -598,7 +612,7 @@ void printMenu() {
   Serial.println(F("[N] Set GSM POWER MODE"));
   Serial.println(F("[O] Manual GSM commands"));
   Serial.println(F("[P] Change SENSLOPE command."));
-  Serial.println(F("[Q] Text Mode."));
+  Serial.println(F("[Q] Text [Thread] Mode"));
   Serial.println(F("[R] Update SELF RESET alarm time."));
   Serial.println(F("[X] Exit Debug mode."));
   Serial.println(F(" "));
@@ -706,8 +720,10 @@ void updateLoggerMode() {
     if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
     hasUbloxRouterFlag.write(99);
   }
-  else {   // other non-gateway and non router datalogger
+  else {   // other non-gateway and non router datalogger; currently: rain gauge only
     if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
+    hasSubsurfaceSensorFlag.write(0);      // 
+    hasUbloxRouterFlag.write(0);
   }
   Serial.println("Datalogger mode updated");
   Serial.println("");
@@ -716,8 +732,8 @@ void updateLoggerMode() {
 
   // prompts a change of names if datalogger modes are changed
   if ((initialLoggerMode != 3 && savedDataLoggerMode.read() == 3) ||     // if initally non-gateway to gateway type
-  (initialLoggerMode == 3 && savedDataLoggerMode.read() != 3) ||     // if initially gateway type to non-gateway type
-  (initialRouterCount != savedRouterCount.read())) {                  // if router count was changed
+  (initialLoggerMode == 3 && savedDataLoggerMode.read() != 3) ||         // if initially gateway type to non-gateway type
+  (initialRouterCount != savedRouterCount.read())) {                     // if router count was changed
     for (byte rPos = 0; rPos < initialRouterCount; rPos++) flashLoggerName.sensorNameList[rPos][0] = 0x00;  // obscure previous name list 
     loggerNameChange = true;  // starts name change function after function end
   }
@@ -896,11 +912,12 @@ void savedParameters() {
         int CSQval = parseCSQ(gsmCSQResponse);
         if (CSQval > 0) {
           // if (Serial) Serial.print("Checking GSM network signal..");
-          Serial.print("CSQ: ");
-          Serial.println(CSQval);
+          debugPrint("CSQ: ");
+          debugPrintln(CSQval);
         }
       }
     }
+    for (int c = 0; c < sizeof(gsmCSQResponse); c++) gsmCSQResponse[c] = 0x00; 
     GSMSerial.write("AT+COPS?\r");
     delayMillis(1000);
     while (GSMSerial.available() > 0) {
@@ -908,21 +925,15 @@ void savedParameters() {
         uint8_t netIndex = 0;
         char * _netInfo = strtok(gsmCSQResponse, "\"");
         while (_netInfo != NULL) {
-          if  (netIndex == 1) { Serial.print("Network registered: "); Serial.println(_netInfo);}
+          if  (netIndex == 1) { debugPrint("Network registered: "); debugPrintln(_netInfo);}
           netIndex++;
           _netInfo= strtok(NULL, "\"");
         }
       }
     }
-    
-    
-    // delayMillis(1000);
-    // char gsmCSQResponse[200];
-    // GSMAnswer(gsmCSQResponse, sizeof(gsmCSQResponse));
-    // Serial.println(gsmCSQResponse);
 
   }
-  Serial.println("");
+  debugPrintln("");
   resetWatchdog();
 }
 
@@ -1158,21 +1169,21 @@ void buidParamSMS(char* paramSMSContainer) {
 /// Masyado lang mahaba kung buong "Dynaslope" name ang ilalagay.. pero pwede naman...
 void introMSG() {
   resetWatchdog();
-  Serial.println("");  
-  Serial.println(F(" ██████████   █████ █████ ██████   █████   █████████  "));
+  // Serial.println("");  
+  Serial.println(" ██████████   █████ █████ ██████   █████   █████████  ");
   delayMillis(350);
-  Serial.println(F("░░███░░░░███ ░░███ ░░███ ░░██████ ░░███   ███░░░░░███ "));
+  Serial.println("░░███░░░░███ ░░███ ░░███ ░░██████ ░░███   ███░░░░░███ ");
   delayMillis(200);
-  Serial.println(F(" ░███   ░░███ ░░███ ███   ░███░███ ░███  ░███    ░███ "));
+  Serial.println(" ░███   ░░███ ░░███ ███   ░███░███ ░███  ░███    ░███ ");
   delayMillis(150);
-  Serial.println(F(" ░███    ░███  ░░█████    ░███░░███░███  ░███████████ "));
+  Serial.println(" ░███    ░███  ░░█████    ░███░░███░███  ░███████████ ");
   delayMillis(100);
-  Serial.println(F(" ░███    ░███   ░░███     ░███ ░░██████  ░███░░░░░███ "));
+  Serial.println(" ░███    ░███   ░░███     ░███ ░░██████  ░███░░░░░███ ");
   delayMillis(50);
-  Serial.println(F(" ░███    ███     ░███     ░███  ░░█████  ░███    ░███ "));
+  Serial.println(" ░███    ███     ░███     ░███  ░░█████  ░███    ░███ ");
   delayMillis(10);
-  Serial.println(F(" ██████████      █████    █████  ░░█████ █████   █████"));
-  Serial.println(F("░░░░░░░░░░      ░░░░░    ░░░░░    ░░░░░ ░░░░░   ░░░░░ "));                                                  
+  Serial.println(" ██████████      █████    █████  ░░█████ █████   █████");
+  Serial.println("░░░░░░░░░░      ░░░░░    ░░░░░    ░░░░░ ░░░░░   ░░░░░ ");                                                  
   delayMillis(1000);
   delayMillis(750);
   delayMillis(500);

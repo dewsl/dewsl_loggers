@@ -7,10 +7,10 @@ void dueDataCollection(int samplingTimeout) {
   resetWatchdog();
   bool readDueData = true;
   // int lineBufferLength = 500;
-  char lineBuffer[500];
+  char dueLineBuffer[500];
   char commandContainer[100];
   char dueChar;
-  int dueCharIndex;
+  int dataSegmentCount;
   unsigned long samplingStart;
   samplingStart = millis();
 
@@ -24,12 +24,10 @@ void dueDataCollection(int samplingTimeout) {
   getTimeStamp(_timestamp, sizeof(_timestamp));
   if (strlen(flashCommands.sensorCommand) == 0) sprintf(commandContainer, "ARQCMD6T/%s", _timestamp); //defaults to tilt if sensor command is not set
   else sprintf(commandContainer, "%s/%s", flashCommands.sensorCommand,_timestamp);
-  commandContainer[strlen(commandContainer)]=0x00;
   Serial.println(commandContainer);
   DUESerial.write(commandContainer);
   while (readDueData) {
     resetWatchdog();
-    dueCharIndex = 0;
     
     if (millis() - samplingStart > samplingTimeout) {
       Serial.printf("Sampling timed out!");
@@ -37,29 +35,30 @@ void dueDataCollection(int samplingTimeout) {
       break;
     }
 
-    for (int i=0; i < sizeof(lineBuffer); i++)  lineBuffer[i] = 0x00;
+    for (int i=0; i < sizeof(dueLineBuffer); i++)  dueLineBuffer[i] = 0x00;
 
-    DUESerial.readBytesUntil('\n', lineBuffer, sizeof(lineBuffer));
+    DUESerial.readBytesUntil('\n', dueLineBuffer, sizeof(dueLineBuffer));
     
-    for (int n = 0; n < sizeof(lineBuffer); n++) {
-      if (lineBuffer[n] == '\n' || lineBuffer[n] == '\r') lineBuffer[n]=0x00; // Overwrite extra '\n' character from readBytesUntil
+    for (int n = 0; n < sizeof(dueLineBuffer); n++) {
+      if (dueLineBuffer[n] == '\n' || dueLineBuffer[n] == '\r') dueLineBuffer[n]=0x00; // Overwrite extra '\n' character from readBytesUntil
     }
 
-    lineBuffer[strlen(lineBuffer)+1] = 0x00;
+    dueLineBuffer[strlen(dueLineBuffer)] = 0x00;
     
     // Keeps updating timeout start as long as there is input from dueSerial
-    if (strlen(lineBuffer) > 0 ) {
-      Serial.println(lineBuffer);
+    if (strlen(dueLineBuffer) > 0 ) {
+      Serial.println(dueLineBuffer);
       samplingStart = millis();
     }
 
-    if (strstr(lineBuffer,"STOPLORA")) {
+    if (strstr(dueLineBuffer,"STOPLORA")) {
       readDueData = false;
       break;  
     }
     
-    if (strstr(lineBuffer, ">>"))  {
-      addToSMSStack(lineBuffer);
+    if (strstr(dueLineBuffer, ">>"))  {
+      dataSegmentCount++;
+      addToSMSStack(dueLineBuffer);
       DUESerial.write("OK");
     }
     resetWatchdog();
@@ -67,8 +66,15 @@ void dueDataCollection(int samplingTimeout) {
 
   digitalWrite(DUETRIG, LOW);
   DUESerial.end();
+
+  if (dataSegmentCount == 0) {
+    char noDataBUffer[30];
+    getTimeStamp(_timestamp, sizeof(_timestamp));
+    sprintf(noDataBUffer, "%s*NODATAFROMSENSLOPE*%s",flashLoggerName.sensorNameList[0],_timestamp);
+    addToSMSStack(noDataBUffer);
+  }
+
   Serial.println("Data collection finished!");
-  // Serial.println(readBuffer);
   resetWatchdog();
 }
 

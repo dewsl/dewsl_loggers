@@ -75,8 +75,6 @@ void getNetworkFormatTimeStamp(char* tsContainer, uint8_t sizeOfContainer) {
   for (int t=0; t < sizeOfContainer; t++) tsContainer[t] = 0x00;
   DateTime now = rtc.now();  //get the current date-time
   sprintf(tsContainer, "%02d/%02d/%02d,%02d:%02d:%02d", now.year()%1000,now.month(),now.date(),now.hour(),now.minute(),now.second());
-  // tsBuffer[strlen(tsBuffer)+1]=0x00;
-  // strncpy(tsContainer, tsBuffer, strlen(tsBuffer));
 
 }
 
