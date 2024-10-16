@@ -270,6 +270,7 @@ char g_delim[2] = "~";
 char g_temp_dump[5000];
 char g_final_dump[5000];
 char g_no_gids_dump[5000];
+char v1_check[6];
 
 /* 
   Variable: text_message

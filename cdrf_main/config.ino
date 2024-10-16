@@ -167,6 +167,11 @@ void name_entry() {
   strupr(serial_input); // Convert input to uppercase
   strncpy(flash_config.f_mastername, serial_input, sizeof(flash_config.f_mastername) - 1); // Copy input to flash_config
   flash_config.f_mastername[sizeof(flash_config.f_mastername) - 1] = '\0'; // Ensure null termination
+  strncpy(v1_check, flash_config.f_mastername, sizeof(v1_check) - 1);
+  v1_check[4] = '\0';
+  if(strcmp("HUMB",v1_check)==0||strcmp("LABT",v1_check)==0||strcmp("LABB",v1_check)==0){
+    flash_config.f_mastername[sizeof(flash_config.f_mastername) - 2] = '\0'; // Ensure null termination
+  }  
   Serial.println();
   if (Serial2) Serial2.println();
   Serial.print(flash_config.f_mastername);
