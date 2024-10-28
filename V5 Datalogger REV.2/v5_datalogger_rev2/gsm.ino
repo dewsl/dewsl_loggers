@@ -202,19 +202,23 @@ void sendSMSDump(const char* messageDelimilter, const char* dumpServer) {
   resetWatchdog();
   char tokenBuffer[1000];
   int retryCount = 0;
+  int sendCount = 1;
 
   char * sendToken = strtok(_globalSMSDump, messageDelimilter);
   while (sendToken != NULL) {
+    debugPrint("Sending segment no. ");
+    debugPrintln(sendCount);
     resetWatchdog();  
+    
     sprintf(tokenBuffer, "%s", sendToken);
     // debugPrintln(_globalSMSDump);
     if (loggerWithGSM(savedDataLoggerMode.read())) {  // send thru GSM
       if (sendThruGSM(tokenBuffer, dumpServer)) {
       // LEDSend();
         resetWatchdog();
+        debugPrintln("Message segment sent");
         delayMillis(random(5000,10000));
         resetWatchdog();
-        debugPrintln("Message segment sent");
       } else {
         retryCount++;
         GSMReset();
@@ -222,26 +226,35 @@ void sendSMSDump(const char* messageDelimilter, const char* dumpServer) {
         delayMillis(5000);
         if (sendThruGSM(tokenBuffer, dumpServer)) {
           // LEDSend();
+          resetWatchdog();
           debugPrintln("Message segment sent");
         } else {
+          resetWatchdog();
           debugPrintln("Retry failed");
         }
       }
     } else {  // send thru LORA
+      resetWatchdog();
+      // while(rf95.isChannelActive()) {   // blocks transmission until channel becomes clear
+      //   debugPrintln("channel busy..");
+      //   delayMillis(random(50,200));
+      // }
       if (sendThruLoRaWithAck(tokenBuffer,random(1000,3000),3))  {
         resetWatchdog();
         LEDSend();
         debugPrintln("Message segment acknowledged");  // send thru LORA
         resetWatchdog();
-        delayMillis(random(3000,8000));
+        delayMillis(random(1000,5000));
         resetWatchdog();
       }
       else {
+        resetWatchdog();
         debugPrintln("No valid response received");
         debugPrintln("");
       }
     }
     sendToken = strtok(NULL,messageDelimilter);
+    sendCount++;
     resetWatchdog();
   }
   resetWatchdog();
@@ -573,9 +586,8 @@ void addToSMSStack(const char* payloadToAdd) {
   sprintf(stackBuffer, payloadToAdd);
   // stackBuffer[strlen(stackBuffer)] = 0x00;
   
-  // if filters
+  // if filter1
   if (strlen(stackBuffer) == 0) return;                 //  rejects zero-length data
-  if (strstr(_globalSMSDump, stackBuffer)) return;            //  rejects duplicates
 
   // if editors
   if (loggerWithGSM(savedDataLoggerMode.read()) && (strstr(stackBuffer, ">>"))) {            //  offsets/removes the identifier ">>" before adding to stack (sent thru GSM)
@@ -584,6 +596,9 @@ void addToSMSStack(const char* payloadToAdd) {
   if (!loggerWithGSM(savedDataLoggerMode.read()) && !(strstr(stackBuffer, ">>"))) {          //  for routers: adds the identifier ">>" before adding to stack (sent thru LoRa)
     sprintf(stackBuffer, ">>%s",payloadToAdd);
   }
+
+  // if filter2
+  if (inputHas(_globalSMSDump, stackBuffer)) return;            //  rejects duplicates
   
   if (strlen(_globalSMSDump) == 0) {                            //  prevent the delimiters from being added at the beginning of the container
     strcpy(_globalSMSDump, stackBuffer);

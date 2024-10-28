@@ -1,9 +1,13 @@
 void rainInit(int rainINTPin ) {
-  pinMode(rainINTPin, INPUT);
+  pinMode(rainINTPin, INPUT_PULLUP);
+  REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT5;    // clears interrupt flag
   attachInterrupt(digitalPinToInterrupt(rainINTPin), rainISR, FALLING);
 }
 
 void rainISR() {
+  int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
+  // if (!WDT->STATUS.bit.SYNCBUSY)                // Check if the WDT registers are synchronized
+  // WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY;       // Clear the watchdog timer
   LEDOn();
   // const unsigned int DEBOUNCE_TIME = 75;  // 40
   // int collectorType = savedRainCollectorType.read();
