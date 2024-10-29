@@ -2,13 +2,17 @@
 
 /// RTC initialization
 void RTCInit(uint8_t RTCPin) {
-  pinMode(RTCPin, INPUT);
+  pinMode(RTCPin, INPUT_PULLUP);
+  REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT4;    // clears interrupt flag
   attachInterrupt(digitalPinToInterrupt(RTCPin), RTCISR, FALLING);
 }
 
 /// RTC iterrupt service routine function
 void RTCISR() {
-  RTCWakeFlag = true;
+  if (listenMode.read()) {
+    int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
+    operationFlag = true;
+  }
   debugPrintln("RTC interrupt");
 }
 
@@ -136,11 +140,27 @@ void setAlarmInterval() {
   Serial.print("Enter alarm settings: ");
   while (millis() - intervalWait < 60000) {
     if (Serial.available() > 0) {
-    intervalBuffer = Serial.parseInt();
-    savedAlarmInterval.write(intervalBuffer);
-    Serial.print("Updated alarm interval: ");
-    Serial.println(savedAlarmInterval.read());
-    break;
+      intervalBuffer = Serial.parseInt();
+      savedAlarmInterval.write(intervalBuffer);
+      Serial.print("Updated alarm interval: ");
+      Serial.println(savedAlarmInterval.read());
+      break;
+    }
+  }
+  
+}
+
+void setShortSleepInterval() {
+  int sleepIntervalBuffer = 0;
+  unsigned long inputWait = millis();
+  Serial.print("Enter alarm settings: ");
+  while (millis() - inputWait < 60000) {
+    if (Serial.available() > 0) {
+      sleepIntervalBuffer = Serial.parseInt();
+      savedShortSleepInterval.write(sleepIntervalBuffer);
+      Serial.print("Updated short sleep interval: ");
+      Serial.println(savedShortSleepInterval.read());
+      break;
     }
   }
   
@@ -236,6 +256,7 @@ void printDateTime() {
 
 
 // Comapres current [stored] timestamp with newTiemstamp for datetime updating
+// Used when updateing timestamp using GPRS time
 void timestampUpdate(const char* newTimestamp) {
   resetWatchdog();
   bool updateTS = false;
@@ -266,6 +287,28 @@ void timestampUpdate(const char* newTimestamp) {
   // now.year()%1000,now.month(),now.date(),now.hour(),now.minute(),now.second()
 }
 
+// Comapres current [stored] timestamp with newTiemstamp
+bool checkTimeSync(const char* newTimestampReference) {
+  resetWatchdog();
+  bool timeOk = false;
+  debugPrint("Checking time sync..");
+  getTimeStamp(_timestamp, sizeof(_timestamp));
+  long referenceTime = strtol(newTimestampReference,0,10);
+  long currentTime = strtol(_timestamp,0,10);
+  long timeDiffRep = referenceTime - currentTime;
+  // debugPrint("reference: ");
+  // debugPrintln(referenceTime);
+  // debugPrint("current: ");
+  // debugPrintln(currentTime);
+  // debugPrint("time diff: ");
+  // debugPrintln(timeDiffRep);
+  if (timeDiffRep < 200 && timeDiffRep > -200) timeOk = true;    // This is not the actual time diff only representative
+  else timeOk = false;
+  resetWatchdog();
+  return timeOk;
+  // now.year()%1000,now.month(),now.date(),now.hour(),now.minute(),now.second()
+}
+
 /// Updates the device timestamps with the the format 22/09/23,18:38:19+08 from the variable networkTimeString
 /// 
 /// @param networkTimeString - container of timestamp to be used for device ts update 
@@ -290,4 +333,28 @@ void updateTsNetworkFormat(const char * networkTimeString) {
 
   debugPrintln("Timestamp updated!");
   resetWatchdog();
+}
+
+
+/// Updates saved timestamp using parameter.
+/// @param tsDataString - reference timestamp
+void updateTsDataFormat(const char * tsDataString) {
+  char tsDataBuffer[20];
+  char tempHolder[3];
+  byte YY = 0, MM = 0, DD = 0, hh = 0, mm = 0, ss = 0, dd = 0;
+  sprintf(tsDataBuffer, "%s", tsDataString);
+  debugPrint("Updating saved timestamp..");
+  //  convert by brute force
+  tempHolder[0] = tsDataBuffer[0]; tempHolder[1] = tsDataBuffer[1]; tempHolder[2] = 0x00; YY = atoi(tempHolder);
+  tempHolder[0] = tsDataBuffer[2]; tempHolder[1] = tsDataBuffer[3]; tempHolder[2] = 0x00; MM = atoi(tempHolder);
+  tempHolder[0] = tsDataBuffer[4]; tempHolder[1] = tsDataBuffer[5]; tempHolder[2] = 0x00; DD = atoi(tempHolder);
+  tempHolder[0] = tsDataBuffer[6]; tempHolder[1] = tsDataBuffer[7]; tempHolder[2] = 0x00; hh = atoi(tempHolder);
+  tempHolder[0] = tsDataBuffer[8]; tempHolder[1] = tsDataBuffer[9]; tempHolder[2] = 0x00; mm = atoi(tempHolder);
+  tempHolder[0] = tsDataBuffer[10]; tempHolder[1] = tsDataBuffer[11]; tempHolder[2] = 0x00; ss = atoi(tempHolder);
+
+  dd = dayOfWeek((2000+YY),MM,DD);
+  setRTCDateTime(YY, MM, DD, hh, mm, ss, dd);
+  getTimeStamp(_timestamp, sizeof(_timestamp));
+  debugPrint("Timestamp updated: ");
+  debugPrintln(_timestamp);
 }

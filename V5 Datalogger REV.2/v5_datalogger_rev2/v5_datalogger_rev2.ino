@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2409.11
+#define FIRMWAREVERSION 2410.28
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 300000
@@ -38,8 +38,9 @@
 #define RFM95_INT 3
 #define RF95_FREQ 433.0 
 #define INIT_WAIT 10000
-#define MAX_GATWAY_WAIT 300000
+#define MAX_GATEWAY_WAIT 300000
 #define MAX_ROUTER_COUNT 20
+// #define 
 
 // rain
 #define RAININT A4
@@ -53,11 +54,13 @@
 
 // misc macro
 // arrayCount(arr) = number of rows  arrayCount(arr[0]) = number of columns
-#define arrayCount(x) (sizeof(x) / sizeof(x[0]))      
+#define arrayCount(x) (sizeof(x) / sizeof(x[0]))
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 const char ackKey[] = "^REC'D_";
+const char LBTKey[] = "START:";
 char _routerOTA[100];
+char listenKey[50];
 
 bool debugMode = false;
 char _globalSMSDump[3000];
@@ -90,13 +93,14 @@ bool loggerNameChange = false;
 
 // RTC related
 char _timestamp[30];
-bool RTCWakeFlag = false;
+bool operationFlag = false;
 
 // GSM serial hardware port
 Uart Serial2(&sercom1, 11, 10, SERCOM_RX_PAD_0, UART_TX_PAD_2);
 void SERCOM1_Handler() {
   Serial2.IrqHandler();
 }
+
 bool GSMReadyFlag = false;
 volatile bool GSMIntFlag = false;
 char defaultServerNumber[] = "09175388301";   //  GLOBE2
@@ -125,6 +129,8 @@ char routerOTACommand[100];         //  container for OTA command to be passed t
 /**
  * Reserve a portions of flash memory to store parameters
  */
+FlashStorage(listenMode, bool);
+FlashStorage(savedShortSleepInterval, uint8_t);
 FlashStorage(savedAlarmInterval, uint8_t);
 FlashStorage(savedDataLoggerMode, uint8_t);
 FlashStorage(hasSubsurfaceSensorFlag, uint8_t);
@@ -170,7 +176,12 @@ void debugPrint(unsigned long toPrint) {
 void debugPrintln(unsigned long toPrintln) {
   if (debugMode && Serial) Serial.println(toPrintln);
 }
-
+void debugPrint(long toPrint) {
+  if (debugMode && Serial) Serial.print(toPrint);
+}
+void debugPrintln(long toPrintln) {
+  if (debugMode && Serial) Serial.println(toPrintln);
+}
 void setup() {
 
   Serial.begin(BAUDRATE);
@@ -199,7 +210,13 @@ void setup() {
   LEDOn();
   delayMillis(1000);
 
+  // EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN4;  // Set External Interrupt Controller to use channel 4 (pin 6)
+  // EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN5;  // Set External Interrupt Controller to use channel 5 (pin A4)
+  // EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN2;  // Set External Interrupt Controller to use channel 2 (pin A0)
+
+  randomSeed(analogRead(0));
   enableWatchdog();
+  if (listenMode.read()) updateListenKey();
 
    // precursor for entering debug mode
   while (waitDebugMode) {
@@ -256,12 +273,12 @@ void loop() {
       char restMsgBuffer[50];
       resetStatCheck(restMsgBuffer);
       debugPrintln(restMsgBuffer);
+      // if (savedDataLoggerMode.read() == 0)
       if(!debugMode) {
         sprintf(bootMgs,"%s: LOGGER POWER UP\nLast reset cause: %s",flashLoggerName.sensorNameList[0], restMsgBuffer);  // build boot message
         delayMillis(1500);
         if (!(sendThruGSM(bootMgs,flashServerNumber.dataServer))) sendThruGSM(bootMgs,flashServerNumber.dataServer);                         // send boot msg to server
       }
-      // rf95.sleep();
       GSMPowerModeSet(); 
     }
   }
@@ -272,9 +289,18 @@ void loop() {
     debugFunction();
   }
 
+  if (listenMode.read() && savedDataLoggerMode.read() == 2) {
+    // LEDOn();   // LED crasher here??
+    resetWatchdog();
+    scanForCommand(2000, 3000);
+    if(operationFlag) delayMillis(10000); //  add a delay for data collection operation to prevent overlap with initial broadcast
+    // findOTACommand(payloadContainer, "NANEEE", tsBuf);
+    // LEDOff();
+  }
+
   // all routine operation function here
-  if (RTCWakeFlag) {
-    RTCWakeFlag = false;
+  if (operationFlag) {
+    operationFlag = false;
     LEDSleepWake();
     ringCounter = 0;                                    //  resets GSM couter for reset thru calls
     setSelfResetFlag(savedLoggerResetAlarm.read());     //  Sets a flag "selfResetFlag" to trigger self reset segment [below] instead of executing sleep function immediately
@@ -300,16 +326,24 @@ void loop() {
   setNextAlarm(savedAlarmInterval.read());            //  sets next alarm
 
   // point here all function that wants to reset the datalogger, instead of using a separate reset function
-  if (selfResetFlag || ringCounter >= 3) {                           //  perform self reset function if self reset flag is TRUE  
-    selfResetFlag = false;                       //  precaution only in case reset function fails (unlikely); pwede naman kahit wala ito
-    LEDSelfReset();                               //  distinct dapat ito sa regular sleep/wake LED pattern
-    NVIC_SystemReset();                           //  reset
+  if (selfResetFlag || ringCounter >= 3) {            //  perform self reset function if self reset flag is TRUE  
+    LEDReceive();
+    selfResetFlag = false;                            //  precaution only in case reset function fails (unlikely); pwede naman kahit wala ito
+    LEDSelfReset();                                   //  distinct dapat ito sa regular sleep/wake LED pattern
+    NVIC_SystemReset();                               //  reset
+  } else if (listenMode.read()  && savedDataLoggerMode.read() == 2) {
+    resetWatchdog();
+    rf95.sleep();
+    //  defaults to 10s short sleep of short sleep value is not set or exceeds max interval between watchdog reset
+    if (savedShortSleepInterval.read() == 0 || savedShortSleepInterval.read() > 16000) Watchdog.sleep(10000); 
+    else Watchdog.sleep(savedShortSleepInterval.read());   // listen mode uses watchdog to sleep
+
   } else {            
-    LEDOn();                                      //  Pangtest ito ng interrupt [RAININT], pwede tanggalin later
-    delayMillis(300);                             // 
-    LEDOff();                                     //
+    LEDOn();                                          //  Pangtest ito ng interrupt [RAININT], pwede tanggalin later
+    delayMillis(300);                                 // 
+    LEDOff();                                         //
     disableWatchdog();
-    sleepNow(savedDataLoggerMode.read());         // proceed with normal wake sleep cycle
+    sleepNow(savedDataLoggerMode.read());             // proceed with normal wake sleep cycle
   }
   // wdSleepDuration = Watchdog.sleep();  
 }
@@ -323,12 +357,11 @@ void enableWatchdog() {
   Serial.println("");
   Serial.println(F("------------------------------------------------------"));
   int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
-  randomSeed(analogRead(0));
   long yourChances = random(5);                   // 20%ish
   // Serial.print(yourChances);
   if (yourChances == 4) {                    // good luck  
     delay(2000);
-    Serial.println("     |\\_/| ");    // some escape sequence, wag kalimutan
+    Serial.println("     |\\_/| ");    // escape sequence, wag kalimutan
     Serial.println("     | @ @   Woof! Watchdog Enabled!");
     Serial.println("     |   <>              _ ");
     Serial.println("     |  _/\\------____ ((| |))");    // and here

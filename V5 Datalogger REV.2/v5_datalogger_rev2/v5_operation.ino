@@ -1,3 +1,4 @@
+/// 
 void Operation(const char * operationServerNumber) {
 
   resetWatchdog();
@@ -20,7 +21,7 @@ void Operation(const char * operationServerNumber) {
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   // 1.0 / First Part
   // complete data collection tasks according to datalogger requirements
-  // dump everything [delimited] to global SMS dump "_globalSMSDump" then tokenize segments for sending on second part
+  // dump everything [delimited] to global SMS dump "_globalSMSDump"
   if (dataloggerMode == 0 || dataloggerMode == 1){
     debugPrint("ARQ MODE");
     if (hasUbloxRouterFlag.read() == 99) debugPrint("+ UBLOX");
@@ -38,6 +39,8 @@ void Operation(const char * operationServerNumber) {
     debugPrint("ROUTER MODE:");
     if (hasSubsurfaceSensorFlag.read() == 99) debugPrint("SUBSURFACE SENSOR ");
     if (hasUbloxRouterFlag.read() == 99) debugPrint("+ UBLOX");
+    if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) debugPrint("Rain gauge only");
+    if (listenMode.read()) debugPrint(" [LBT]");
     debugPrintln("");
     if (hasUbloxRouterFlag.read() == 99) {
       getGNSSData(smsSegmentContainer, sizeof(smsSegmentContainer));
@@ -53,8 +56,9 @@ void Operation(const char * operationServerNumber) {
     addToSMSStack(infoSMS);
 
   } else if (dataloggerMode == 3) {                                       //   GATEWAY MODE
+    if (listenMode.read()) broadcastLoRaKey(random(100, 500), 12000);
     debugPrintln("Waiting for router data..");
-    waitForLoRaRouterData(MAX_GATWAY_WAIT, savedRouterCount.read(), savedLoraReceiveMode.read());
+    waitForLoRaRouterData(MAX_GATEWAY_WAIT, savedRouterCount.read(), savedLoraReceiveMode.read());
     if (hasUbloxRouterFlag.read() == 99) {
       getGNSSData(smsSegmentContainer, sizeof(smsSegmentContainer));
       addToSMSStack(smsSegmentContainer);
@@ -78,32 +82,29 @@ void Operation(const char * operationServerNumber) {
       generateInfoMessage(infoSMS);
       addToSMSStack(infoSMS);
   } 
+ 
+  resetRainTips();  // reset rain tips after adding stored rain tips to sms stack
 
-  // reset rain tips after adding stored rain tips to sms stack
-  resetRainTips();
-
-  // Additional
-  // insert datalogger self reset indicator
-  if (selfResetFlag && !debugMode) {
+  if (selfResetFlag && !debugMode) {  // Add datalogger self reset indicator to sending stack
     char resetNotif[100];
     sprintf(resetNotif, "Datalogger %s will reset after data collection", flashLoggerName.sensorNameList[0]);
     addToSMSStack(resetNotif);  // notif for interval based reset
   }
 
-  // 2.0 / Part 2
-  // Send everything in global dump
+  // At this point [assuming everything goes well], all needed data would hava been added to the sending stack (_globalSMSDump)
+  // Next step is to send everything to the appropriate channel (thru GSM or LoRa)
 
-  if (loggerWithGSM(savedDataLoggerMode.read())) GSMPowerModeReset();                       //  disable power saving (if any) BEFORE sending data
-  debugPrintln("Sending SMS dump");
-  debugPrintln(_globalSMSDump);
-  sendSMSDump(dumpDelimiter, operationServerNumber);                                        //  sends entire sms stack depending on communication of mode
+  if (loggerWithGSM(savedDataLoggerMode.read())) GSMPowerModeReset();                       //  disable power saving modes (if any is enabled) BEFORE sending data; 
+  debugPrintln("Sending SMS dump");                                                         //  inidcator
+  debugPrintln(_globalSMSDump);                                                             //  In case you want to check manually.. 
+  sendSMSDump(dumpDelimiter, operationServerNumber);                                        //  sends entire sending stack depending on communication mode
   clearGlobalSMSDump();                                                                     //  as the name suggests...
   
-  if (savedGSMPowerMode.read() == 2 && loggerWithGSM(savedDataLoggerMode.read())) {         //  Mode 2: (power saving) GSM module is inactive (turned OFF) except when sending data
+  if (savedGSMPowerMode.read() == 2 && loggerWithGSM(savedDataLoggerMode.read())) {         //  Only used when GSM Power Mode 2 (power saving) is set: When GSM module is inactive (turned OFF) except when sending data
     resetWatchdog();
-    delayMillis(15000);                                                                     //  allow some wait time for some OTA SMS to arrive (if any). Not sure kung reliable yung ganitong process, may instance na hindi na dumadating yung SMS. Pero mas priority ang data avaiilability than OTA capabilities
+    delayMillis(15000);                                                                     //  allow for some wait time for some OTA SMS to arrive (if any). Not sure kung reliable yung ganitong approach, may instance na hindi na dumadating yung SMS. Pero mas priority ang data availability than OTA capabilities
     resetWatchdog();
-    checkForOTAMessages();                                                                  //  check message inbox and execute the first OTA COMMAND found 
+    checkForOTAMessages();                                                                  //  check message inbox and executes ONLY THE FIRST OTA COMMAND found 
     deleteMessageInbox();                                                                   //  deletes ALL messages in SIMCARD                                                      
   }
   
@@ -149,7 +150,12 @@ void Operation(const char * operationServerNumber) {
 
 void initSleepCycle() {
 
+
   // SYSCTRL->VREG.bit.RUNSTDBY = 1;
+  
+  // SYSCTRL->DFLLCTRL.bit.RUNSTDBY = 1;     // allow usb clock source to run aduring sleep
+  // while(!SYSCTRL->PCLKSR.bit.DFLLRDY);
+
   SYSCTRL->XOSC32K.reg |= (SYSCTRL_XOSC32K_RUNSTDBY | SYSCTRL_XOSC32K_ONDEMAND);  // set external 32k oscillator to run when idle or sleep mode is chosen
 
   REG_GCLK_CLKCTRL |= GCLK_CLKCTRL_ID(GCM_EIC) |  // generic clock multiplexer id for the external interrupt controller
@@ -157,9 +163,21 @@ void initSleepCycle() {
                       GCLK_CLKCTRL_CLKEN;         // enable it
   while (GCLK->STATUS.bit.SYNCBUSY);  // write protected, wait for sync
 
+  // NVIC_DisableIRQ(EIC_IRQn);
+  // NVIC_ClearPendingIRQ(EIC_IRQn);
+
+  // NVIC_SetPriority(EIC_IRQn, 0);
+  // NVIC_EnableIRQ(EIC_IRQn);
+  // EIC->INTENSET.reg |= EIC_INTENSET_EXTINT5;
+
   EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN4;  // Set External Interrupt Controller to use channel 4 (pin 6)
   EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN5;  // Set External Interrupt Controller to use channel 5 (pin A4)
   EIC->WAKEUP.reg |= EIC_WAKEUP_WAKEUPEN2;  // Set External Interrupt Controller to use channel 2 (pin A0)
+
+  // REG_EIC_CONFIG1 |= 0xA0000000;
+  // REG_EIC_CTRL |= EIC_CTRL_ENABLE;
+
+  // NVIC_EnableIRQ(EIC_IRQn);
 
   PM->SLEEP.reg |= PM_SLEEP_IDLE_CPU;  // Enable Idle0 mode - sleep CPU clock only
   // PM->SLEEP.reg |= PM_SLEEP_IDLE_AHB; // Idle1 - sleep CPU and AHB clocks
@@ -176,31 +194,22 @@ void initSleepCycle() {
 
 void sleepNow(uint8_t savedLoggerMode) {
 
+  rf95.sleep();
   Serial.println(F("MCU is going to sleep . . ."));
   Serial.println(F(""));
 
-  // SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;  // disable systick interrupt
-  // LowPower.standby();                          // enters sleep mode
-  // LowPower.deepSleep(SLEEP_FOREVER, ADC_OFF, BOD_OFF);
-  // SCB->SCR |= SCB_SCR_SLEEPONEXIT_Msk; 
-  // while (1) {
-  SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;   // Enable systick interrupt
+  // Enable later for testing power draw
+  // NVMCTRL->CTRLB.bit.SLEEPPRM = NVMCTRL_CTRLB_SLEEPPRM_DISABLED_Val;
+  // SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+
+  SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;   // Disable systick interrupt
   __DSB(); // Use of memory barrier is recommended for portability
   __WFI(); // Execute WFI and enter sleep
-  //     };
+  // code resumes here after interrupt
+  SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk; // Enable SysTick interrupts // enable later for testing power draw
 
-  // __DSB();
-  // __WFI();
-
-  // SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
-	// PM->SLEEP.reg = IDLE_2;
-	// __DSB();
-	// __WFI();
   resetWatchdog();
 }
 
-
-void updateGlobals() {
-}
 void resetGlobals() {
 }

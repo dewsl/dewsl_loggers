@@ -24,6 +24,7 @@ void LoRaInit(uint32_t initWaitTime) {
       if (!rf95.setFrequency(RF95_FREQ)) Serial.println("set frequency failed");
       else  {Serial.print("Set Freq to: "); Serial.println(RF95_FREQ); }
       rf95.setTxPower(23, false);
+      rf95.setCADTimeout(5000);
       break;
     }
     else Serial.println("LoRa radio init failed"); 
@@ -55,6 +56,8 @@ void sendThruLoRa(const char *radiopacket) {
 
   debugPrint("Sending to LoRa: ");
   debugPrintln((char *)payload);
+  // check channel activity before sending
+
   if (!rf95.send(payload, sizeof(payload))) debugPrint("packet sending failed");  // sending data to LoRa
   resetWatchdog();
   rf95.waitPacketSent();       // Waiting for packet to complete...
@@ -102,8 +105,9 @@ bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, u
 /// @param receiveContainer - container for the incoming LoRa data
 /// @param receiveContainerSize - size of the data container
 ///
-void receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsigned long waitDuration) {
+bool receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsigned long waitDuration) {
   resetWatchdog();
+  bool receiveStatus = false;
   uint8_t receiveBuffer[RH_RF95_MAX_MESSAGE_LEN];
   uint8_t bufferLength = sizeof(receiveBuffer);
   bool waitDataFlag = true;
@@ -122,10 +126,11 @@ void receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsi
         receiveContainer[l] = 0x00;
       }
     }
-    if (strlen(receiveContainer)) waitDataFlag = false;
+    if (strlen(receiveContainer)) {waitDataFlag = false; receiveStatus=true;}
     resetWatchdog();
   }
   resetWatchdog();
+  return receiveStatus;
 }
 
 /// Waits for LoRa data from router(s) until data sending is ended or timeout is reached.
@@ -137,7 +142,7 @@ void receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsi
 ///
 /// Mode 0: [Normal operation] Received data are filtered and added to SMS stack for sending.
 /// Mode 1: [Testing mode for LoRa send/receive] Data received are filtered but not added to the sending stack.
-/// Mode 2: [Listen mode; LoRa send/receive] Data received displayed but are not filtered and are not added to SMS stack.
+/// Mode 2: [Listen only; LoRa send/receive] Data received displayed but are not filtered and are not added to SMS stack.
 void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, uint8_t receiveMode) {
   resetWatchdog();
   char gatewayDataDump[200];
@@ -148,42 +153,51 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, 
   uint8_t voltCount = 0;
   char sendAck[50];
   int RSSIbuffer = 0;
-  int RSSIContainer[routerCount];
-  float voltContainer[routerCount];  
+  int endCounter[routerCount+1];  // this will not use index zero. the ff can be simplified using multidimensional array, but this is easier to read..
+  int RSSIContainer[routerCount+1];
+  float voltContainer[routerCount+1];
+  int endCount = 0;
 
+  for (int e = 0; e <= routerCount;e++) endCounter[e]=0;
   for (int r = 0; r <= routerCount;r++) RSSIContainer[r]=0;
   for (int v = 0; v <= routerCount;v++) voltContainer[v]=0;
+
   bool voltFlag = false;
 
-  // debugPrint("Router count: ");
-  // debugPrintln(savedRouterCount.read());
+  debugPrint("Router count: ");
+  debugPrintln(savedRouterCount.read());
   debugPrintln("Listed router(s): ");
-  for (int routerPos=1; routerPos<=savedRouterCount.read(); routerPos++) debugPrintln(flashLoggerName.sensorNameList[routerPos]);
+  for (int routerPos=1; routerPos <= savedRouterCount.read(); routerPos++) debugPrintln(flashLoggerName.sensorNameList[routerPos]);
   debugPrintln("");
   debugPrint("Wait time limit: ");
   debugPrint(receiverWaitDuration/1000/60);
   debugPrintln(" minute(s)");
   debugPrintln("Waiting for transmission... ");
-
   unsigned long routerWaitStart = millis();
+
   // Serial.println(routerWaitStart);
 
   while (millis() - routerWaitStart < receiverWaitDuration) {
+    for (int lb = 0; lb < sizeof(loRaBuffer); lb++) loRaBuffer[lb]=0x00;  // clear buffer
     debugPrintln("~");
     resetWatchdog();
     receiveLoRaData(loRaBuffer, sizeof(loRaBuffer), 30000);        // receive instances of lora data here
     debugPrintln("~");                                               // waiting/recieving indicator
 
-    //filters data depending on saved datalogger names
+    // filters data depending on saved datalogger names
     if (receiveMode == 0 || receiveMode == 1) routerNameIndex = loRaFilterPass(loRaBuffer, sizeof(loRaBuffer));
     //  if filter below
     //  0 - 99 indicates list position of saved router name
-    //  100+ it is not incuded in the loggername list as self[0] or routers[1-99]
+    //  0 = self
+    //  1 to 99 are router index on loggernames list () 
+    //  100+ it is not incuded in the loggername list
     if (routerNameIndex > 0 && routerNameIndex < nameIndexLimit ) {   
       //RECEIVE IDENTIFIED HERE
       LEDReceive();
       debugPrint("Received data from ");
       debugPrintln(flashLoggerName.sensorNameList[routerNameIndex]);
+      debugPrint("Router index: ");
+      debugPrintln(routerNameIndex);
       debugPrintln(loRaBuffer);
       RSSIbuffer = rf95.lastRssi();
       if (RSSIbuffer > -100) RSSIContainer[routerNameIndex] = RSSIbuffer;
@@ -199,24 +213,46 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, 
 
         debugPrint("Supply voltage: "); 
         debugPrintln(voltContainer[routerNameIndex]);
-   
-        voltCount++;
+
+        endCounter[routerNameIndex] = 1; // test array for counting "VOLT" string
+
       } else  {
         if (receiveMode == 0) addToSMSStack(loRaBuffer);      // adds data from routers to sending stack
       }
 
       //SEND ACKNOWLEDGMENT RESPONSE HERE
-      char tsNetBuffer[50];
-      getNetworkFormatTimeStamp(tsNetBuffer, sizeof(tsNetBuffer));
-      if (voltFlag && routerOTAflag) sprintf(sendAck, "%s%s~ROUTER~%s~%s", flashLoggerName.sensorNameList[routerNameIndex],ackKey,routerOTACommand,tsNetBuffer); // sample: LTEG^REC'D_~ROUTER~RESET~24/07/08,10:30:00
+      if (voltFlag && routerOTAflag)  {
+        voltFlag = false;
+        char tsNetBuffer[50];
+        getNetworkFormatTimeStamp(tsNetBuffer, sizeof(tsNetBuffer));
+        sprintf(sendAck, "%s%s~ROUTER~%s~%s", flashLoggerName.sensorNameList[routerNameIndex],ackKey,routerOTACommand,tsNetBuffer); // sample: LTEG^REC'D_~ROUTER~RESET~24/07/08,10:30:00
+      } 
       else sprintf(sendAck, "%s%s", flashLoggerName.sensorNameList[routerNameIndex],ackKey);
       sendThruLoRa(sendAck);
 
     } else {
       // ano gusto mo gawin sa rejected na transmissions ?
     }
-    if (voltCount == routerCount) {
-      debugPrint("Router check count complete.."); 
+    endCount = 0;                               // reset coutner 'endCount' before  (re)counting
+    for (int endCheck = 0; endCheck <= routerCount; endCheck++) {
+      endCount = endCount + endCounter[endCheck];
+      // debugPrint("endCount: ");
+      // debugPrintln(endCount);
+      // debugPrintln(endCounter[endCheck]);
+    }
+    // debugPrint("Volt count: ");
+    // debugPrintln(endCount);
+    // debugPrint("Router count: ");
+    // debugPrintln(routerCount);
+
+    if (routerCount == endCount) {
+      debugPrintln("Router check count complete.."); 
+      byte eCount = 0;
+      for (int eIndex = 0; eIndex <= routerCount;eIndex++) endCounter[eIndex]=0;
+      debugPrint("Volt count: ");
+      debugPrintln(endCount);
+      debugPrint("end string count: ");
+      debugPrintln(endCount);
       break;
     }
     // else () {  // deal with junk here
@@ -226,7 +262,7 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, 
   }
 
   routerOTAflag = false;      // reset router OTA flag
-  for (int r=0;r<sizeof(routerOTACommand);r++) routerOTACommand[r]=0x00; // clears global router OTA container
+  for (int rO=0;rO<sizeof(routerOTACommand);rO++) routerOTACommand[rO]=0x00; // clears global router OTA container
   
   if (receiveMode == 0) {
     // build gateway data here
@@ -354,4 +390,107 @@ void generateVoltString (char* stringContainer) {
   delayMillis(1000);
   sprintf(stringContainer, ">>%s*VOLT:%.2f*%s",flashLoggerName.sensorNameList[0], readBatteryVoltage(savedBatteryType.read()),tsbuffer);
   resetWatchdog();
+}
+
+void broadcastLoRaKey(int pingInterval, unsigned long broadcastDuration) {
+      resetWatchdog();
+      int pingCounter = 0;
+      debugPrint("broadcast LoRa key at specified interval (milliseconds):");
+      debugPrint(pingInterval);
+      // pingInterval = Serial.parseInt();
+      Serial.println(pingInterval);
+      char pingMsgBuffer[100];
+      char pingReply[100];
+      unsigned long broadcastStart = millis();
+      sprintf(pingMsgBuffer, "CMD*");                                           // 
+      for (int RCount = 1; RCount <= savedRouterCount.read(); RCount ++ ) {     // iterte through all saved router names
+        strcat(pingMsgBuffer, LBTKey);                                        
+        pingMsgBuffer[strlen(pingMsgBuffer)] = 0x00;
+        strncat(pingMsgBuffer, flashLoggerName.sensorNameList[RCount], strlen(flashLoggerName.sensorNameList[RCount]));
+        pingMsgBuffer[strlen(pingMsgBuffer)] = 0x00;
+        strcat(pingMsgBuffer, ";");                   // sub command delimiter; any symbol can be used except '*'
+        pingMsgBuffer[strlen(pingMsgBuffer)] = 0x00;
+      }
+      strcat(pingMsgBuffer, "*");                     // end delimiter here  
+      pingMsgBuffer[strlen(pingMsgBuffer)] = 0x00;    // term
+      getTimeStamp(_timestamp, sizeof(_timestamp));   // update global timstamp variable holder
+      strcat(pingMsgBuffer, _timestamp);              // include timestamp here for time update for dataloggers
+      pingMsgBuffer[strlen(pingMsgBuffer)] = 0x00;
+
+      while(millis() - broadcastStart < broadcastDuration) {
+        // sprintf(pingMsgBuffer, "START:WEBTA %d", pingCounter);
+        sendThruLoRa(pingMsgBuffer);
+        LEDSend();
+        // delayMillis(pingInterval);
+        // if (receiveLoRaData(pingReply, sizeof(pingReply), pingInterval)) debugPrintln(pingReply);
+        pingCounter++;
+      }
+}
+
+///  Single instance of listem mode scan; this just keep repeating
+///  Should be followed by sleep [shot sleep duation]
+///  Normal sleep should be replaced with watchdog sleep
+///  @param scanDuration scan duration [in milliseconds] for checking channel activity
+///  @param keywordWaitDuation wait duration [in milliseconds] to receive a valid keyword after channel activity has been detected
+void scanForCommand(int scanDuration, int keywordWaitDuration) {  // 1000,2000, 6000
+  resetWatchdog();
+  char receiveBuffer[500];
+  int scanTimeout = scanDuration;
+  unsigned long scanStart = 0;
+  bool channelActivity = false;
+  for (int rb = 0; rb < sizeof(receiveBuffer); rb ++) receiveBuffer[rb] = 0x00;
+  // put your main code here, to run repeatedly:
+  scanStart = millis();
+  // while(millis() - scanStart < scanTimeout && !channelActivity) {  // scan timeout: 2sec
+  while(millis() - scanStart < scanTimeout) {  // scan timeout: 2sec
+    LEDOn();
+    // rf95.init();
+    if (rf95.isChannelActive()) {
+      LEDReceive();
+      channelActivity = true;
+      debugPrintln("Channel activity detected");
+      }
+    // rf95.waitCAD();
+    else debugPrintln("Channel empty.."); // end here if no broadcast detected; then restart scan loop
+    delayMillis(random(50,200));         // add small random delay to break synchronicity
+    // debugPrintln("Channel active");
+      // debugPrintln("False");
+    LEDOff();
+  
+    if (channelActivity) {
+      channelActivity = false;
+      debugPrint("Checking listen key: ");
+      debugPrintln(listenKey);
+
+      receiveLoRaData(receiveBuffer, sizeof(receiveBuffer), keywordWaitDuration);                           //wait for keyword transmission if channel activity is detected 
+      if (inputHas(receiveBuffer,listenKey))  {
+        debugPrint("Router wake command: ");   // continue processing if keyword is found
+        debugPrintln(receiveBuffer); 
+          char *receiveBufferTS = strtok(receiveBuffer, "*");
+          byte receiveTsIndex = 0;
+          while (receiveBufferTS != NULL) {
+            if (receiveTsIndex==2) {              // timestamp should be found on the 3rd segment (index 2) (CMD*START;XXX*000000000000)
+              if (!checkTimeSync(receiveBufferTS)) updateTsDataFormat(receiveBufferTS);     // if this works, save it on a variable instead of executing here
+              else debugPrintln("Time sync OK (±2min)..");
+              break;
+            }
+            receiveBufferTS = strtok(NULL, "*");
+            receiveTsIndex++;
+          }
+        // get timestamp from command string
+        // compare current timestap and ts from cmd string      
+        // update timestamp if neccessary
+        debugPrintln("Operation Start");
+        operationFlag = true;   // trigger operation function
+        break;
+      }
+      else debugPrintln("No valid command found.");                                                         // else gate; if transmission is not relevant return to sleep or scan?          
+    }
+  }
+  resetWatchdog();
+}
+
+void updateListenKey() {
+  flashLoggerName = savedLoggerName.read();
+  sprintf(listenKey, "%s%s",LBTKey, flashLoggerName.sensorNameList[0]);
 }

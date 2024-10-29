@@ -8,7 +8,6 @@ void LEDInit() {
 ///  Turn on LED.
 void LEDOn() {
   digitalWrite(LED_BUILTIN, HIGH);
-
 }
 
 ///  Turn off LED.

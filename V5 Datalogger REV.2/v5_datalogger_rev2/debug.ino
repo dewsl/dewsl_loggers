@@ -1,6 +1,6 @@
 void getSerialInput(char* inputBuffer, int bufferLength, int inputTimeout) {
   resetWatchdog();
-  
+
   int bufferIndex = 0;
   unsigned long readStart = millis();
   char charbuf;
@@ -8,7 +8,7 @@ void getSerialInput(char* inputBuffer, int bufferLength, int inputTimeout) {
   for (int i = 0; i < bufferLength; i++) inputBuffer[i] = 0x00;
   while (millis() - readStart < inputTimeout) {
     resetWatchdog();
-    if (Serial.available() > 0 ) {
+    if (Serial.available() > 0) {
       charbuf = Serial.read();
       // buf = Serial.read();
       if (charbuf == '\n') {
@@ -34,23 +34,23 @@ void debugFunction() {
   bool debugProcess = true;
   unsigned long debugModeStart = millis();
 
-  while (debugProcess) {   
+  while (debugProcess) {
     resetWatchdog();
     for (int i = 0; i < sizeof(serialLineInput); i++) serialLineInput[i] = 0x00;
 
-    getSerialInput(serialLineInput, sizeof(serialLineInput), 60000);           
-    
+    getSerialInput(serialLineInput, sizeof(serialLineInput), 60000);
+
     // updates time-out with every input & resets watchdog.
     if (strlen(serialLineInput) != 0) {
       debugModeStart = millis();
-      resetWatchdog();                               
+      resetWatchdog();
     }
 
     //  processes serial input accordingly
     if (inputIs(serialLineInput, "A")) {
       resetWatchdog();
       Operation(flashServerNumber.dataServer);
-      debugModeStart = millis(); //update start of timeout counter
+      debugModeStart = millis();  //update start of timeout counter
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "B")) {
@@ -58,14 +58,14 @@ void debugFunction() {
       uint8_t RainCollectorType = savedRainCollectorType.read();
       Serial.print("\nCollector type: ");
       char rainMsg[30];
-      if (RainCollectorType == 0) sprintf(rainMsg, "Pronamic (0.5mm/tip)\nRain tips: %0.2f tips\nEquivalent: %0.2fmm",_rainTips,(_rainTips*0.5));
-      else if (RainCollectorType == 1)  sprintf(rainMsg, "Davis (0.2mm/tip)\nRain tips: %0.2f tips\nEquivalent: %0.2fmm",_rainTips,(_rainTips*0.2));
+      if (RainCollectorType == 0) sprintf(rainMsg, "Pronamic (0.5mm/tip)\nRain tips: %0.2f tips\nEquivalent: %0.2fmm", _rainTips, (_rainTips * 0.5));
+      else if (RainCollectorType == 1) sprintf(rainMsg, "Davis (0.2mm/tip)\nRain tips: %0.2f tips\nEquivalent: %0.2fmm", _rainTips, (_rainTips * 0.2));
       Serial.println(rainMsg);
       delayMillis(20);
       resetRainTips();
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
-      
+
     } else if (inputIs(serialLineInput, "C")) {
       resetWatchdog();
       printMenu();
@@ -114,7 +114,7 @@ void debugFunction() {
         debugModeStart = millis();
         Serial.println(F("------------------------------------------------------"));
       } else Serial.println("Can't check network time using ROUTER mode");
-      
+
     } else if (inputIs(serialLineInput, "G")) {
       resetWatchdog();
       flashLoggerName = savedLoggerName.read();
@@ -127,26 +127,26 @@ void debugFunction() {
 
     } else if (inputIs(serialLineInput, "H")) {
       resetWatchdog();
-      char serverBuffer[20];                                                  // container for server number, might be modified
+      char serverBuffer[20];  // container for server number, might be modified
       sprintf(serverBuffer, flashServerNumber.dataServer);
       Serial.print("Saved Server Number: ");
-      if (strlen(serverBuffer) == 0) {                                        //  check for first boot if server number is not yet set
-        Serial.println("[NOT SET]");                                          //   and prints a notice
+      if (strlen(serverBuffer) == 0) {  //  check for first boot if server number is not yet set
+        Serial.println("[NOT SET]");    //   and prints a notice
         Serial.println("## Default server GLOBE2 will be used ## ");
       } else {
-        if (strlen(serverBuffer) == 11 || strlen(serverBuffer) == 13) {       // crude check for 09xx and +639xx based sa length, pwede pa ito palitan ng mas specific approach
-          checkServerNumber(serverBuffer);                                    // replaces number in buffer with name if found
+        if (strlen(serverBuffer) == 11 || strlen(serverBuffer) == 13) {  // crude check for 09xx and +639xx based sa length, pwede pa ito palitan ng mas specific approach
+          checkServerNumber(serverBuffer);                               // replaces number in buffer with name if found
           Serial.println(serverBuffer);
-        // do nothing yet.. pwede i-convert
-        } else Serial.println("## Default server GLOBE2 will be used ## ");   // prints out a notice
+          // do nothing yet.. pwede i-convert
+        } else Serial.println("## Default server GLOBE2 will be used ## ");  // prints out a notice
       }
 
-  
+
       Serial.println("");
       Serial.println("Default server numbers:");
       Serial.println("GLOBE1 - 09175972526 ; GLOBE2 - 09175388301");
       Serial.println("SMART1 - 09088125642 ; SMART2 - 09088125639");
-      
+
       if (changeParameter()) {
         updateServerNumber();
       }
@@ -166,7 +166,7 @@ void debugFunction() {
       Serial.println("[0] Pronamic Rain Collector (0.5mm/tip)");
       Serial.println("[1] DAVIS Rain Collector (0.2mm/tip)");
       Serial.println("[2] Generic Rain Collector (1.0/tip)");
-      if (changeParameter())  {
+      if (changeParameter()) {
         updateRainCollectorType();
       }
       debugModeStart = millis();
@@ -178,7 +178,7 @@ void debugFunction() {
       Serial.println(savedRainCollectorType.read());
       Serial.println("[0] Sends converted \"mm\" equivalent");
       Serial.println("[1] Sends RAW TIP COUNT");
-      if (changeParameter())  {
+      if (changeParameter()) {
         updateRainDataType();
       }
       debugModeStart = millis();
@@ -203,7 +203,7 @@ void debugFunction() {
       Serial.println("[0] 12V Lead Acid battery");
       Serial.println("[1] 4.2V Li-Ion battery");
       if (changeParameter()) {
-      setBatteryType();
+        setBatteryType();
       }
 
 
@@ -227,11 +227,11 @@ void debugFunction() {
       resetWatchdog();
       Serial.print("Saved GSM power mode: ");
       Serial.println(savedGSMPowerMode.read());
-      Serial.println("[0] Always ON");                                                    //  Typically ~9-12mA @ 13v when idle (arQ mode), with short duration spikes up to 25-40mA around every 10-30 seconds (approximate).
-      Serial.println("[1] Low-power Mode (Always ON, but GSM SLEEPS when inactive)");     //  ~0-16mA @ 13v when idle (arQ mode). Typically 0mA, with very shord duration spikes of ~4-7mA around every 3-10 secs (approximate) and 11-17mA spikes around every 30-50sec (approximate). 
-      Serial.println("[2] Power Saving Mode");                                            //  ~0-8mA @ 13V when idle (arQ mode). Initially, around ~7-8mA yung idle, pero after ~1-2hrs ay nagiging 0mA (sabi ni sir Don baka daw µA na yung current draw) yung idle current draw. Either very efficient yung low power mode or napapagod lang yung power supply magdispaly ng mababang values...
+      Serial.println("[0] Always ON");                                                 //  Typically ~9-12mA @ 13v when idle (arQ mode), with short duration spikes up to 25-40mA around every 10-30 seconds (approximate).
+      Serial.println("[1] Low-power Mode (Always ON, but GSM SLEEPS when inactive)");  //  ~0-16mA @ 13v when idle (arQ mode). Typically 0mA, with very shord duration spikes of ~4-7mA around every 3-10 secs (approximate) and 11-17mA spikes around every 30-50sec (approximate).
+      Serial.println("[2] Power Saving Mode");                                         //  ~0-8mA @ 13V when idle (arQ mode). Initially, around ~7-8mA yung idle, pero after ~1-2hrs ay nagiging 0mA (sabi ni sir Don baka daw µA na yung current draw) yung idle current draw. Either very efficient yung low power mode or napapagod lang yung power supply magdispaly ng mababang values...
       if (changeParameter()) {
-      setGSMPowerMode();
+        setGSMPowerMode();
       }
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
@@ -248,7 +248,7 @@ void debugFunction() {
         getSerialInput(manualCommandInput, sizeof(manualCommandInput), DEBUGTIMEOUT);
         if (inputIs(manualCommandInput, "EXIT")) break;
         strcat(manualCommandInput, "\r");
-        manualCommandInput[strlen(manualCommandInput)]=0x00;
+        manualCommandInput[strlen(manualCommandInput)] = 0x00;
         GSMSerial.write(manualCommandInput);
         delayMillis(1000);
         GSMAnswer(GSMResponse, sizeof(GSMResponse));
@@ -259,14 +259,14 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "P")) {
-        resetWatchdog();
-        flashCommands = savedCommands.read();
-        Serial.print("Current sensor command: ");
-        if (strlen(flashCommands.sensorCommand)==0) Serial.println("[NOT SET]");
-        else Serial.println(flashCommands.sensorCommand);
-        if (changeParameter()) {
-          updatSavedCommand();
-        }
+      resetWatchdog();
+      flashCommands = savedCommands.read();
+      Serial.print("Current sensor command: ");
+      if (strlen(flashCommands.sensorCommand) == 0) Serial.println("[NOT SET]");
+      else Serial.println(flashCommands.sensorCommand);
+      if (changeParameter()) {
+        updatSavedCommand();
+      }
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
@@ -289,33 +289,96 @@ void debugFunction() {
       if (savedLoggerResetAlarm.read() == 0 || savedLoggerResetAlarm.read() > 2400) Serial.println("0000");
       else Serial.println(savedLoggerResetAlarm.read());
       if (changeParameter()) {
-      setResetAlarmTime();
+        setResetAlarmTime();
       }
       Serial.println(F("------------------------------------------------------"));
 
 
-    } else if (inputIs(serialLineInput, "X" ) || inputIs(serialLineInput, "EXIT" ) ) {
+    } else if (inputIs(serialLineInput, "X") || inputIs(serialLineInput, "EXIT")) {
       resetWatchdog();
       CheckingSavedParameters();
       Serial.println("Quitting debug mode...");
       if (loggerWithGSM(savedDataLoggerMode.read())) deleteMessageInbox();
-      else digitalWrite(GSMPWR, LOW); //should turn off GSM module
+      else digitalWrite(GSMPWR, LOW);  //should turn off GSM module
       setNextAlarm(savedAlarmInterval.read());
       debugProcess = false;
       debugMode = false;
       // USBDevice.detach();
       Serial.println(F("------------------------------------------------------"));
 
-    } else if (inputIs(serialLineInput, "SKIP_EXIT" ) ) {
+    } else if (inputIs(serialLineInput, "SKIP_EXIT")) {
       resetWatchdog();
       // CheckingSavedParameters();
       Serial.println("Quitting debug mode...");
+      // DELETE all SIM message or turn off GSM module
       if (loggerWithGSM(savedDataLoggerMode.read())) deleteMessageInbox();
-      else digitalWrite(GSMPWR, LOW); //should turn off GSM module
-      setNextAlarm(savedAlarmInterval.read());
+      else digitalWrite(GSMPWR, LOW);
+      // if LBT is used, skip alarm setting
+      if (listenMode.read()) Serial.println("LBT enabled");
+      else {
+        setNextAlarm(savedAlarmInterval.read());
+        rtc.clearINTStatus();
+      }
       debugProcess = false;
       debugMode = false;
       // USBDevice.detach();
+      Serial.println(F("------------------------------------------------------"));
+
+    } else if (inputIs(serialLineInput, "SHORT_SLEEP_INTERVAL")) {
+      resetWatchdog();
+      Serial.print("Saved short sleep interval: ");
+      Serial.println(savedShortSleepInterval.read());
+      if (changeParameter()) {
+        setShortSleepInterval();
+      }
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+
+    } else if (inputIs(serialLineInput, "LBT_TEST")) {
+      operationFlag = false;
+      resetWatchdog();
+      Serial.println("Listen Before Talk test");
+      Serial.print("short sleep duration: ");
+      while (1) {
+        LEDOn();
+        resetWatchdog();
+        scanForCommand(1500, 3000);
+        LEDOff();
+        resetWatchdog();
+        if (operationFlag) {
+          Serial.print("wait before starting...");
+          resetWatchdog();
+          delayMillis(10000);
+          resetWatchdog();}
+        if (operationFlag) {
+          operationFlag = false;
+          Operation(flashServerNumber.dataServer);
+        }
+        Serial.println("sleep... ");
+        resetWatchdog();
+        // Watchdog.sleep(10000);
+        delayMillis(10000);
+        resetWatchdog();
+      }
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+
+    } else if (inputIs(serialLineInput, "LORA_BROADCAST")) {
+      broadcastLoRaKey(random(100, 500), 12000);
+      Operation(flashServerNumber.dataServer);
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+
+    } else if (inputIs(serialLineInput, "LISTEN_TEST")) {
+      resetWatchdog();
+      char payloadContainer[200];
+      Serial.print(F("Simple broadcast thru LoRa"));
+      Serial.print("Input data to send: ");
+      getSerialInput(payloadContainer, sizeof(payloadContainer), 60000);
+      Serial.println(payloadContainer);
+      while (1) {
+      }
+      debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "LORA_SEND_TEST")) {
@@ -345,25 +408,25 @@ void debugFunction() {
       resetWatchdog();
       Serial.println(F("Listens for any broadcasted LoRa data"));
       Serial.print(F("Timeout: "));
-      Serial.print(MAX_GATWAY_WAIT);
+      Serial.print(MAX_GATEWAY_WAIT);
       Serial.println(F("ms"));
       Serial.println("Waiting for LoRa transmission: ");
-      char payloadContainer[RH_RF95_MAX_MESSAGE_LEN+1];
-      receiveLoRaData(payloadContainer, sizeof(payloadContainer), MAX_GATWAY_WAIT);
+      char payloadContainer[RH_RF95_MAX_MESSAGE_LEN + 1];
+      receiveLoRaData(payloadContainer, sizeof(payloadContainer), MAX_GATEWAY_WAIT);
       Serial.println(payloadContainer);
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
-    
+
     } else if (inputIs(serialLineInput, "LORA_WAIT_TEST_2")) {
       resetWatchdog();
       uint8_t receiveType = 99;
       Serial.println(F("Listens for any broadcasted LoRa data from the listed router(s)"));
       Serial.print(F("Timeout: "));
-      Serial.print(MAX_GATWAY_WAIT);
+      Serial.print(MAX_GATEWAY_WAIT);
       Serial.println(F("ms"));
       // Serial.println("Waiting for LoRa transmission from listed router(s): ");
       if (savedRouterCount.read() == 0) Serial.println(F("No listed router(s), this might not work..."));
-      waitForLoRaRouterData(MAX_GATWAY_WAIT,2,1);
+      waitForLoRaRouterData(MAX_GATEWAY_WAIT, 2, 1);
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
@@ -417,7 +480,7 @@ void debugFunction() {
     } else if (inputIs(serialLineInput, "DUE_CONFIG")) {
       resetWatchdog();
       char sdConfigLineBuffer[300];
-      const char * sd_cmd = "ARQCMD6C/121212121212\n";
+      const char* sd_cmd = "ARQCMD6C/121212121212\n";
       Serial.println("Checking DUE config...");
       digitalWrite(DUETRIG, HIGH);
       delayMillis(1000);
@@ -433,10 +496,10 @@ void debugFunction() {
 
         DUESerial.readBytesUntil('\n', sdConfigLineBuffer, sizeof(sdConfigLineBuffer));
 
-        if (strlen(sdConfigLineBuffer) > 0 ) {
+        if (strlen(sdConfigLineBuffer) > 0) {
           Serial.println(sdConfigLineBuffer);
-          if(inputHas(sdConfigLineBuffer, "END OF CONFIG"))
-          sdConfigStart = millis();
+          if (inputHas(sdConfigLineBuffer, "END OF CONFIG"))
+            sdConfigStart = millis();
         }
         resetWatchdog();
       }
@@ -465,10 +528,10 @@ void debugFunction() {
         for (int i = 0; i < sizeof(sdConfigLineBuffer); ++i) sdConfigLineBuffer[i] = 0x00;
         DUESerial.readBytesUntil('\n', sdConfigLineBuffer, sizeof(sdConfigLineBuffer));
 
-        if (strlen(sdConfigLineBuffer) > 0 ) {
+        if (strlen(sdConfigLineBuffer) > 0) {
           Serial.println(sdConfigLineBuffer);
-          if(inputHas(sdConfigLineBuffer, "END OF UPDATE\n"))
-          sdConfigStart = millis();
+          if (inputHas(sdConfigLineBuffer, "END OF UPDATE\n"))
+            sdConfigStart = millis();
         }
         resetWatchdog();
       }
@@ -489,10 +552,10 @@ void debugFunction() {
         getSerialInput(dueCommandInput, sizeof(dueCommandInput), DEBUGTIMEOUT);
         if (inputIs(dueCommandInput, "EXIT_DUE")) break;
         strcat(dueCommandInput, "\n");
-        dueCommandInput[strlen(dueCommandInput)]=0x00;
+        dueCommandInput[strlen(dueCommandInput)] = 0x00;
         DUESerial.write(dueCommandInput);
         // delayMillis(1000);
-        while(DUESerial.available() > 0) {
+        while (DUESerial.available() > 0) {
           DUESerial.readBytesUntil('\n', DUEResponse, sizeof(DUEResponse));
           Serial.println(DUEResponse);
           if (inputIs(DUEResponse, "OK")) break;
@@ -515,7 +578,7 @@ void debugFunction() {
       Serial.println("Generating info strings");
       char infoStrContainer[100];
       generateInfoMessage(infoStrContainer);
-      infoStrContainer[strlen(infoStrContainer)]=0x00;
+      infoStrContainer[strlen(infoStrContainer)] = 0x00;
       Serial.println(infoStrContainer);
       generateVoltString(infoStrContainer);
       Serial.println(infoStrContainer);
@@ -525,17 +588,17 @@ void debugFunction() {
     } else if (inputIs(serialLineInput, "CHECK_OTA")) {
       resetWatchdog();
       checkForOTAMessages();
-        // do nothing
+      // do nothing
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
-    
+
     } else if (inputIs(serialLineInput, "BUILD_PARAM_SMS")) {
       resetWatchdog();
       char paramContainer[1000];
       buidParamSMS(paramContainer);
       Serial.println(paramContainer);
       if (loggerWithGSM(savedDataLoggerMode.read())) {
-        if (sendThruGSM(paramContainer,flashServerNumber.dataServer)) debugPrintln(">> Parameter message sent to server");
+        if (sendThruGSM(paramContainer, flashServerNumber.dataServer)) debugPrintln(">> Parameter message sent to server");
         else debugPrintln(">> Parameter message NOT sent");
       }
       Serial.println(F("------------------------------------------------------"));
@@ -545,12 +608,12 @@ void debugFunction() {
       char beaconMsg[100];
       uint32_t pingCount = 0;
 
-      while(1) {
-        
+      while (1) {
+
         delayMillis(30000);
         sprintf(beaconMsg, "");
         pingCount++;
-      } 
+      }
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "?")) {
@@ -568,7 +631,7 @@ void debugFunction() {
       break;
     }
   }
-  
+
   if (!debugProcess) {
     resetWatchdog();
     debugMode = false;
@@ -578,7 +641,8 @@ void debugFunction() {
     // setNextAlarm(savedAlarmInterval.read());
     delayMillis(75);
     // rtc.clearINTStatus();
-    if (loggerWithGSM(savedDataLoggerMode.read())) if (GSMInit()) Serial.println("GSM READY");
+    if (loggerWithGSM(savedDataLoggerMode.read()))
+      if (GSMInit()) Serial.println("GSM READY");
     GSMPowerModeSet();
     return;
   }
@@ -635,19 +699,19 @@ void printRTCIntervalEquivalent() {
 
 void printLoggerModes() {
   resetWatchdog();
-  Serial.println("[0] arQ mode - Standalone Datalogger");           // arQ like function only
-  Serial.println("[1] arQ mode + UBLOX Module");                    // arQ like + Ublox module
-  Serial.println("[2] Router mode");                                // anything that send data through LoRa
-  Serial.println("[3] Gateway mode");                               // anything that recevies LoRa data
-  Serial.println("[4] Rain gauge sensor only - GSM");               // same as gateway mode with no routers, sensor, or ublox module
-  Serial.println("[5] Rain gauge sensor only - Router");            // same with [2] but no sensors or ublox
+  Serial.println("[0] arQ mode - Standalone Datalogger");  // arQ like function only
+  Serial.println("[1] arQ mode + UBLOX Module");           // arQ like + Ublox module
+  Serial.println("[2] Router mode");                       // anything that send data through LoRa
+  Serial.println("[3] Gateway mode");                      // anything that recevies LoRa data
+  Serial.println("[4] Rain gauge sensor only - GSM");      // same as gateway mode with no routers, sensor, or ublox module
+  Serial.println("[5] Rain gauge sensor only - Router");   // same with [2] but no sensors or ublox
   resetWatchdog();
 }
 
 void printExtraCommands() {
   resetWatchdog();
 
-  Serial.println(F("RAIN_DATA           Change Rain data type to send"));      // 
+  Serial.println(F("RAIN_DATA           Change Rain data type to send"));  //
   Serial.println(F("CHECK_OTA           Check and execute [the first] OTA command in SIM inbox"));
   Serial.println(F("OTA_COMMANDS        Display accepted OTA commands"));
   Serial.println(F("OTA_TEST            Manual input of OTA command"));
@@ -673,57 +737,74 @@ void updateLoggerMode() {
   char addOnBuffer[10];
   uint8_t initialLoggerMode = savedDataLoggerMode.read();
   uint8_t initialRouterCount = savedRouterCount.read();
-  
+
   // printLoggerModes();
   Serial.print("Enter datalogger mode: ");
   getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
   loggerModeBuffer = atoi(addOnBuffer);
-  
+
   Serial.println(loggerModeBuffer);
 
-  if (loggerModeBuffer > 6) {        //rejects values above 5
+  if (loggerModeBuffer > 6) {  //rejects values above 5
     Serial.println("Unchanged: Invalid datalogger mode value");
     return;
   }
 
-  if (loggerModeBuffer == 3) {    // gateways and routers
+  if (loggerModeBuffer == 3) {  // gateways and routers
     Serial.print("   Gateway with subsurface sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
-    if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasSubsurfaceSensorFlag.write(99);
+    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasSubsurfaceSensorFlag.write(99);
     Serial.print("   Gateway with UBLOX module? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
-    if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasUbloxRouterFlag.write(99);
+    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasUbloxRouterFlag.write(99);
+    Serial.print("   Gateway broadcast command* [for LBT router(s)] [Y/N] ");
+    getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
+    Serial.println(addOnBuffer);
+    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) {
+      listenMode.write(true);
+      Serial.println("      *Listen-Before-Talk [LBT] should be enabled on ROUTER(S)");
+    }  
+    else listenMode.write(false);
     Serial.print("   Input router count: ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     uint8_t inputCount = atoi(addOnBuffer);
-    if (inputCount == 0) inputCount = 1;  // should not accept ZERO as router count
-    if (inputCount > (arrayCount(flashLoggerName.sensorNameList)-1)) inputCount = (arrayCount(flashLoggerName.sensorNameList)-1);   // limited to the number of rows to array holder max usable index
+    if (inputCount == 0) inputCount = 1;                                                                                               // should not accept ZERO as router count
+    if (inputCount > (arrayCount(flashLoggerName.sensorNameList) - 1)) inputCount = (arrayCount(flashLoggerName.sensorNameList) - 1);  // limited to the number of rows to array holder max usable index
     savedRouterCount.write(inputCount);
     Serial.println(inputCount);
-  
+
   } else if (loggerModeBuffer == 2) {
-    if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
+    if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count
     Serial.print("   Router with Subsurface Sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
-    if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasSubsurfaceSensorFlag.write(99);
+    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasSubsurfaceSensorFlag.write(99);
     else hasSubsurfaceSensorFlag.write(0);
     Serial.print("   Router with UBLOX module? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
-    if ((inputIs(addOnBuffer,"Y")) || (inputIs(addOnBuffer,"y"))) hasUbloxRouterFlag.write(99);
+    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasUbloxRouterFlag.write(99);
     else hasUbloxRouterFlag.write(0);
+    Serial.print("   Router mode LISTEN-BEFORE-TALK*? [Y/N] ");
+    getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
+    Serial.println(addOnBuffer);
+    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) {
+      listenMode.write(true);
+      Serial.println("      *BROADCAST COMMAND should be enabled on GATEWAY*");
+    }
+    else listenMode.write(false);
 
-  } else if (loggerModeBuffer == 1) {     // arQ mode + UBLOX module
-    if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
+  } else if (loggerModeBuffer == 1) {                             // arQ mode + UBLOX module
+    if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count
     hasUbloxRouterFlag.write(99);
-  }
-  else {   // other non-gateway and non router datalogger; currently: rain gauge only
-    if (savedRouterCount.read() != 0) savedRouterCount.write(0);                                // resets router count
-    hasSubsurfaceSensorFlag.write(0);      // 
+    listenMode.write(false);
+  } else {                                                        // other non-gateway and non router datalogger; currently: rain gauge only
+    if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count
+    hasSubsurfaceSensorFlag.write(0);                             //
     hasUbloxRouterFlag.write(0);
+    listenMode.write(false);
   }
   Serial.println("Datalogger mode updated");
   Serial.println("");
@@ -731,38 +812,40 @@ void updateLoggerMode() {
   savedDataLoggerMode.write(loggerModeBuffer);
 
   // prompts a change of names if datalogger modes are changed
-  if ((initialLoggerMode != 3 && savedDataLoggerMode.read() == 3) ||     // if initally non-gateway to gateway type
-  (initialLoggerMode == 3 && savedDataLoggerMode.read() != 3) ||         // if initially gateway type to non-gateway type
-  (initialRouterCount != savedRouterCount.read())) {                     // if router count was changed
-    for (byte rPos = 0; rPos < initialRouterCount; rPos++) flashLoggerName.sensorNameList[rPos][0] = 0x00;  // obscure previous name list 
-    loggerNameChange = true;  // starts name change function after function end
+  if ((initialLoggerMode != 3 && savedDataLoggerMode.read() == 3) ||                                        // if initally non-gateway to gateway type
+      (initialLoggerMode == 3 && savedDataLoggerMode.read() != 3) ||                                        // if initially gateway type to non-gateway type
+      (initialRouterCount != savedRouterCount.read())) {                                                    // if router count was changed
+    for (byte rPos = 0; rPos < initialRouterCount; rPos++) flashLoggerName.sensorNameList[rPos][0] = 0x00;  // obscure previous name list
+    loggerNameChange = true;                                                                                // starts name change function after function end
   }
   if (!loggerWithGSM(savedDataLoggerMode.read())) GSMOff();
   resetWatchdog();
 }
 
-bool inputIs(const char *inputFromSerial, const char* expectedInput) {
+bool inputIs(const char* inputFromSerial, const char* expectedInput) {
   resetWatchdog();
   bool correctInput = false;
-  if ((strstr(inputFromSerial,expectedInput)) && (strlen(expectedInput) == strlen (inputFromSerial))) {
+  if ((strstr(inputFromSerial, expectedInput)) && (strlen(expectedInput) == strlen(inputFromSerial))) {
     correctInput = true;
   }
   return correctInput;
   resetWatchdog();
 }
 
-bool inputHas(const char *inputToCheck, const char* expectedInputSegment) {
+bool inputHas(const char* inputToCheck, const char* expectedInputSegment) {
   resetWatchdog();
   bool correctInput = false;
-  if (strstr(inputToCheck,expectedInputSegment)) correctInput = true;
-  return correctInput;
+  char * pointerResult = strstr(inputToCheck, expectedInputSegment);
+  if (pointerResult != NULL) correctInput = true;
+  else (correctInput = false);
   resetWatchdog();
+  return correctInput;
 }
 
 
 void delayMillis(int delayDuration) {
   resetWatchdog();
-  int maxDelayDuration = 15000; //15sec
+  int maxDelayDuration = 15000;  //15sec
   bool maxDurationReached = false;
   unsigned long timeStart = millis();
   while (!maxDurationReached) {
@@ -774,7 +857,7 @@ void delayMillis(int delayDuration) {
     if ((millis() - timeStart) > delayDuration) {
       return;
     }
-    
+
     //
   }
   resetWatchdog();
@@ -813,45 +896,51 @@ void savedParameters() {
   flashCommands = savedCommands.read();
 
   // compute next alarm
-  DateTime now = rtc.now();   
-  uint8_t nextAlarmMinuteBuffer = nextAlarm((int)(now.minute()),savedAlarmInterval.read());
+  DateTime now = rtc.now();
+  uint8_t nextAlarmMinuteBuffer = nextAlarm((int)(now.minute()), savedAlarmInterval.read());
   uint8_t nextAlarmHourBuffer = now.hour();
   uint8_t timeOfDayIndex2 = 0;
-  const char * timeOfDayEq[3] = {"AM", "PM"};                                                                        //  default identifier is AM            
-  if (now.minute() > nextAlarmMinuteBuffer) nextAlarmHourBuffer++;                                                   //  indicates next hour for alarm
-  if (nextAlarmHourBuffer > 11 && nextAlarmHourBuffer < 24) timeOfDayIndex2 = 1;                                     //  change daytime identifier to PM if true
-  if (nextAlarmHourBuffer > 12 && nextAlarmHourBuffer <= 24) nextAlarmHourBuffer = nextAlarmHourBuffer - 12;         //  subtract 12 from 24hr format to get 12hr format
-  
+  const char* timeOfDayEq[3] = { "AM", "PM" };                                                                //  default identifier is AM
+  if (now.minute() > nextAlarmMinuteBuffer) nextAlarmHourBuffer++;                                            //  indicates next hour for alarm
+  if (nextAlarmHourBuffer > 11 && nextAlarmHourBuffer < 24) timeOfDayIndex2 = 1;                              //  change daytime identifier to PM if true
+  if (nextAlarmHourBuffer > 12 && nextAlarmHourBuffer <= 24) nextAlarmHourBuffer = nextAlarmHourBuffer - 12;  //  subtract 12 from 24hr format to get 12hr format
+
 
   Serial.println(F("------------      STORED  PARAMETERS      ------------"));
   Serial.println(F("------------------------------------------------------"));
   Serial.println("");
   Serial.print(">>>>> ");
   getLoggerModeAndName();
+  if (listenMode.read()) {
+    Serial.println("[Listen Mode Enabled]");
+    // Serial.print("Listen key: ");
+    // Serial.println(listenKey);  
+  }
   Serial.println("");
-  printDateTime();                      //  Shows an easily readable datetime format                                           
-  Serial.print("Next alarm\t ");
+  printDateTime();  //  Shows an easily readable datetime format
+  Serial.print("Next alarm:\t ");
   char nextAlarmBuffer[20];
-  
-  // Serial.print(nextAlarmHourBuffer);
-  // Serial.print(":");
-  // Serial.print(nextAlarmMinuteBuffer);                   //  Shows next computed alarm based on the alamr interval and current time
-  // Serial.println(timeOfDayEq[timeOfDayIndex2]);
-  if (nextAlarmMinuteBuffer != 0) sprintf(nextAlarmBuffer, "%d:%02d %s", nextAlarmHourBuffer,nextAlarmMinuteBuffer, timeOfDayEq[timeOfDayIndex2]); //  Shows next computed alarm based on the alamr interval and current time
-  else sprintf(nextAlarmBuffer, "%d:00 %s", nextAlarmHourBuffer, timeOfDayEq[timeOfDayIndex2]);                                                     // do ko sure kung paano gawing zero padded yung zero na hindi ginagawang char
-  Serial.println(nextAlarmBuffer);
-  // Serial.print("Timestamp:\t ");                                                
-  // Serial.println(_timestamp);                                                               //  Shows the timestamp format appended to data
-  Serial.print("Wake interval:\t "); 
-  int alarmInterval = savedAlarmInterval.read();                                            //  Shows periodic alarm interval
-  if (alarmInterval == 0)       Serial.println("30 minutes (hh:00 & hh:30)");               //
-  else if (alarmInterval == 1)  Serial.println("15 minutes (hh:00, hh:15, hh:30, hh:45)");
-  else if (alarmInterval == 2)  Serial.println("10 minutes (hh:00, hh:10, hh:20, ... )");
-  else if (alarmInterval == 3)  Serial.println("5 minutes (hh:00, hh:05, hh:10, ... )");
-  else if (alarmInterval == 4)  Serial.println("3 minutes (hh:00, hh:03, hh:06, ... )");
-  else if (alarmInterval == 5)  Serial.println("30 minutes (hh:15 & hh:45)");
-  else                          Serial.println("Default 30 minutes (hh:00 & hh:30)");
-  
+
+  if (nextAlarmMinuteBuffer != 0) sprintf(nextAlarmBuffer, "%d:%02d %s", nextAlarmHourBuffer, nextAlarmMinuteBuffer, timeOfDayEq[timeOfDayIndex2]);  //  Shows next computed alarm based on the alamr interval and current time
+  else sprintf(nextAlarmBuffer, "%d:00 %s", nextAlarmHourBuffer, timeOfDayEq[timeOfDayIndex2]);                                                      // do ko sure kung paano gawing zero padded yung zero na hindi ginagawang char
+  Serial.print(nextAlarmBuffer);
+  if (listenMode.read()) Serial.print(" [disabled]");
+  Serial.println("");
+
+
+  Serial.print("Wake interval:\t ");
+  int alarmInterval = savedAlarmInterval.read();                         //  Shows periodic alarm interval
+  if (savedDataLoggerMode.read() == 3 || listenMode.read() == false) {  // should update this later; consider..
+    if (alarmInterval == 0) Serial.println("30 minutes (hh:00 & hh:30)");  //
+    else if (alarmInterval == 1) Serial.println("15 minutes (hh:00, hh:15, hh:30, hh:45)");
+    else if (alarmInterval == 2) Serial.println("10 minutes (hh:00, hh:10, hh:20, ... )");
+    else if (alarmInterval == 3) Serial.println("5 minutes (hh:00, hh:05, hh:10, ... )");
+    else if (alarmInterval == 4) Serial.println("3 minutes (hh:00, hh:03, hh:06, ... )");
+    else if (alarmInterval == 5) Serial.println("30 minutes (hh:15 & hh:45)");
+    else Serial.println("Default 30 minutes (hh:00 & hh:30)");
+  } else {
+    if (savedDataLoggerMode.read() == 2) Serial.println("Wakes on gateway command");
+  }
   if (hasSubsurfaceSensorFlag.read() == 99) {
     Serial.print("Sensor command:\t ");
     if (strlen(flashCommands.sensorCommand) == 0) Serial.println("[NOT SET] Default - ARQCM6T");
@@ -859,16 +948,16 @@ void savedParameters() {
   }
 
   Serial.print("Rain collector:\t ");
-  if (savedRainCollectorType.read() == 0)       Serial.println("Pronamic (0.5mm/tip)");
-  else if (savedRainCollectorType.read() == 1)  Serial.println("DAVIS (0.2mm/tip)");
-  
+  if (savedRainCollectorType.read() == 0) Serial.println("Pronamic (0.5mm/tip)");
+  else if (savedRainCollectorType.read() == 1) Serial.println("DAVIS (0.2mm/tip)");
+
   Serial.print("Rain data type:\t ");
-  if (savedRainSendType.read()==0)  Serial.println("Sends converted \"mm\" equivalent");
-  else                              Serial.println("Sends RAW TIP COUNT");
+  if (savedRainSendType.read() == 0) Serial.println("Sends converted \"mm\" equivalent");
+  else Serial.println("Sends RAW TIP COUNT");
 
   Serial.print("Battery type:\t ");
   if (savedBatteryType.read() == 1) Serial.println("Li-ion");
-  else  Serial.println("Lead acid");
+  else Serial.println("Lead acid");
   Serial.print("Input Voltage:\t ");
   Serial.print(readBatteryVoltage(savedBatteryType.read()));
   Serial.println("V");
@@ -879,14 +968,14 @@ void savedParameters() {
     Serial.print(readRTCTemp());
     Serial.println("°C");
   }
-  
+
   if (savedDataLoggerMode.read() != 2) {
-    
+
     Serial.print("Gsm power mode:\t ");
     if (savedGSMPowerMode.read() == 1) Serial.println("Low-power Mode (Always ON, but SLEEPS when inactive)");
     else if (savedGSMPowerMode.read() == 2) Serial.println("Power-saving mode");  // GSM module is ACTIVE when sending data, otherwise GSM module is turned OFF.
     else Serial.println("Always ON");
-    
+
     Serial.print("Server number:\t ");
     if (strlen(flashServerNumber.dataServer) == 0) {
       Serial.print(defaultServerNumber);
@@ -896,13 +985,13 @@ void savedParameters() {
       sprintf(serverNameBuf, flashServerNumber.dataServer);
       Serial.print(serverNameBuf);
       checkSender(serverNameBuf);
-      if (strlen(serverNameBuf) != strlen(flashServerNumber.dataServer)){
+      if (strlen(serverNameBuf) != strlen(flashServerNumber.dataServer)) {
         Serial.print(" [");
         Serial.print(serverNameBuf);
         Serial.println("]");
       }
-    } 
-    
+    }
+
     char gsmCSQResponse[200];
     GSMSerial.write("AT+CSQ\r");
     delayMillis(1000);
@@ -917,21 +1006,23 @@ void savedParameters() {
         }
       }
     }
-    for (int c = 0; c < sizeof(gsmCSQResponse); c++) gsmCSQResponse[c] = 0x00; 
+    for (int c = 0; c < sizeof(gsmCSQResponse); c++) gsmCSQResponse[c] = 0x00;
     GSMSerial.write("AT+COPS?\r");
     delayMillis(1000);
     while (GSMSerial.available() > 0) {
       if (GSMGetResponse(gsmCSQResponse, sizeof(gsmCSQResponse), "+COPS: 0,1,\"", 1000)) {
         uint8_t netIndex = 0;
-        char * _netInfo = strtok(gsmCSQResponse, "\"");
+        char* _netInfo = strtok(gsmCSQResponse, "\"");
         while (_netInfo != NULL) {
-          if  (netIndex == 1) { debugPrint("Network registered: "); debugPrintln(_netInfo);}
+          if (netIndex == 1) {
+            debugPrint("Network registered: ");
+            debugPrintln(_netInfo);
+          }
           netIndex++;
-          _netInfo= strtok(NULL, "\"");
+          _netInfo = strtok(NULL, "\"");
         }
       }
     }
-
   }
   debugPrintln("");
   resetWatchdog();
@@ -950,30 +1041,31 @@ void scalableUpdateSensorNames() {
   // if gateway. ask for router count input
   // loop through router allocated index (index 1 and above for router list) of array until router count input is reached
 
-  if (currentLoggerMode == 3)  {               // gateways
+  if (currentLoggerMode == 3) {  // gateways
     Serial.print("Input GATEWAY name: ");
     getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
-    if (strlen(nameBuffer) == 0) sprintf(nameBuffer,"TESG");
+    if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESG");
     Serial.println(nameBuffer);
     sprintf(flashLoggerName.sensorNameList[0], nameBuffer);
-    for (byte listPos = 1; listPos <= savedRouterCount.read(); listPos++) {   // router name positioning starts at index 1, 0 is self
+    for (byte listPos = 1; listPos <= savedRouterCount.read(); listPos++) {  // router name positioning starts at index 1, 0 is self
       Serial.print("Input name of ROUTER ");
       Serial.print(listPos);
       Serial.print(": ");
       getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
-      if (strlen(nameBuffer) == 0) sprintf(nameBuffer,"TEST%d",listPos);
+      if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TEST%d", listPos);
       Serial.println(nameBuffer);
       sprintf(flashLoggerName.sensorNameList[listPos], nameBuffer);
     }
   } else {
     Serial.print("Input DATALOGGER name: ");
     getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
-    if (strlen(nameBuffer) == 0) sprintf(nameBuffer,"TESTA");
+    if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESTA");
     Serial.println(nameBuffer);
     sprintf(flashLoggerName.sensorNameList[0], nameBuffer);
-  }   // other standalone routers
-  
+  }  // other standalone routers
+
   savedLoggerName.write(flashLoggerName);
+  updateListenKey();
   resetWatchdog();
 }
 
@@ -982,24 +1074,23 @@ void getLoggerModeAndName() {
   uint8_t mode = savedDataLoggerMode.read();
   char printBuffer[50];
 
-  if (mode == 3) {      //gateways
-    Serial.print("Gateway name ");
-    Serial.println(flashLoggerName.sensorNameList[0]);
-    for (byte rCount = 1; rCount <= savedRouterCount.read(); rCount++){
-      sprintf(printBuffer, "Router %d: %s", rCount, flashLoggerName.sensorNameList[rCount]);
-      Serial.println(printBuffer);
-    } 
+  if (mode == 3) {  //gateways
     Serial.print("GATEWAY MODE ");
-    
     if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
     if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
-    if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("Rain gauge only");
+    if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("(Rain gauge only) ");
     Serial.print("with ");
     Serial.print(savedRouterCount.read());
-    Serial.println(" Router(s)"); 
-  } else {      // other standalone dataloggers
-    Serial.print("Datalogger name: ");
+    Serial.println(" Router(s) ");
+    // Serial.println("");
+    Serial.print("Gateway name ");
     Serial.println(flashLoggerName.sensorNameList[0]);
+    for (byte rCount = 1; rCount <= savedRouterCount.read(); rCount++) {
+      sprintf(printBuffer, "Router %d: %s", rCount, flashLoggerName.sensorNameList[rCount]);
+      Serial.println(printBuffer);
+    }
+
+  } else {  // other standalone dataloggers
     if (mode == 0) {
       Serial.println("ARQ MODE");
     } else if (mode == 1) {
@@ -1008,13 +1099,16 @@ void getLoggerModeAndName() {
       Serial.print("ROUTER MODE ");
       if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
       if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
-      if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("Rain gauge only");
-      Serial.println("");
-    }  else if (mode == 4) {
-      Serial.println("Rain gauge only (GSM)");
-    } else if (mode == 5) {         // arQ mode GNSS sensor
-      Serial.println("Rain gauge only (Router)");  
+      if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.println("(Rain gauge only)");
+      // Serial.println("");
+    } else if (mode == 4) {       // should remove this later...
+      Serial.println("RAIN GAUGE ONLY (GSM)");
+    } else if (mode == 5) {       // arQ mode GNSS sensor
+      Serial.println("RAIN GAUGE ONLY (Router)");
     }
+    Serial.print("");
+    Serial.print("Datalogger name: ");
+    Serial.println(flashLoggerName.sensorNameList[0]);
   }
   resetWatchdog();
 }
@@ -1035,7 +1129,7 @@ void updateBatteryType() {
   Serial.println(batteryTypeBuf);
   if (batteryTypeBuf > 1) {
     Serial.print("Invalid value [>1], current battery type unchanged");
-  } else if (batteryTypeBuf == currentType){
+  } else if (batteryTypeBuf == currentType) {
     Serial.println("Battrey type unchanged");
   } else {
     savedBatteryType.write(batteryTypeBuf);
@@ -1074,16 +1168,16 @@ void setBatteryType() {
   Serial.print("Enter battery type: ");
   while (millis() - intervalWait < 60000) {
     if (Serial.available() > 0) {
-    intervalBuffer = Serial.parseInt();
-    if (intervalBuffer > 1) {
-      Serial.println("Invalid value, battery type unchanged.");
-      resetWatchdog();
-      return;
-    }
-    savedBatteryType.write(intervalBuffer);
-    Serial.print("Updated battery type: ");
-    Serial.println(savedBatteryType.read());
-    break;
+      intervalBuffer = Serial.parseInt();
+      if (intervalBuffer > 1) {
+        Serial.println("Invalid value, battery type unchanged.");
+        resetWatchdog();
+        return;
+      }
+      savedBatteryType.write(intervalBuffer);
+      Serial.print("Updated battery type: ");
+      Serial.println(savedBatteryType.read());
+      break;
     }
   }
   resetWatchdog();
@@ -1099,24 +1193,24 @@ void buidParamSMS(char* paramSMSContainer) {
   flashLoggerName = savedLoggerName.read();
   flashServerNumber = savedServerNumber.read();
   flashCommands = savedCommands.read();
-  char  routerNames[100],
-        hasSubSensor[5],
-        hasUblox[5],
-        arQCommand[20],
-        alarmIntervalDef[30],
-        rainCollector[30],
-        rainData[20],
-        batteryType[10],
-        powerMode[20],
-        serverNumber[30];
+  char routerNames[100],
+    hasSubSensor[5],
+    hasUblox[5],
+    arQCommand[20],
+    alarmIntervalDef[30],
+    rainCollector[30],
+    rainData[20],
+    batteryType[10],
+    powerMode[20],
+    serverNumber[30];
 
-  strcpy(routerNames,""); // preload
+  strcpy(routerNames, "");  // preload
   if (savedRouterCount.read() > 0) {
-    for (int r=0; r < savedRouterCount.read(); r++) {
-      strcat(routerNames,flashLoggerName.sensorNameList[r+1]);
-      strcat(routerNames,"  ");
+    for (int r = 0; r < savedRouterCount.read(); r++) {
+      strcat(routerNames, flashLoggerName.sensorNameList[r + 1]);
+      strcat(routerNames, "  ");
     }
-  } else strcpy(routerNames,"N/A"); 
+  } else strcpy(routerNames, "N/A");
   debugPrintln("Fetching timestamp..");
   getTimeStamp(_timestamp, sizeof(_timestamp));
   debugPrintln("Fetching sensors flag..");
@@ -1129,37 +1223,36 @@ void buidParamSMS(char* paramSMSContainer) {
   else strcpy(arQCommand, flashCommands.sensorCommand);
   debugPrintln("Fetching alarm interval..");
   int alarmInterval = savedAlarmInterval.read();
-  if (alarmInterval == 0)       strcpy(alarmIntervalDef,"every 30 minutes");
-  else if (alarmInterval == 1)  strcpy(alarmIntervalDef,"every 15 minutes");
-  else if (alarmInterval == 2)  strcpy(alarmIntervalDef,"every 10 minutes");
-  else if (alarmInterval == 3)  strcpy(alarmIntervalDef,"every 5 minutes");
-  else if (alarmInterval == 4)  strcpy(alarmIntervalDef,"every 3 minutes");
-  else if (alarmInterval == 5)  strcpy(alarmIntervalDef,"every 30 minutes (15&45)");
-  else                          strcpy(alarmIntervalDef,"Default 30 minutes");
+  if (alarmInterval == 0) strcpy(alarmIntervalDef, "every 30 minutes");
+  else if (alarmInterval == 1) strcpy(alarmIntervalDef, "every 15 minutes");
+  else if (alarmInterval == 2) strcpy(alarmIntervalDef, "every 10 minutes");
+  else if (alarmInterval == 3) strcpy(alarmIntervalDef, "every 5 minutes");
+  else if (alarmInterval == 4) strcpy(alarmIntervalDef, "every 3 minutes");
+  else if (alarmInterval == 5) strcpy(alarmIntervalDef, "every 30 minutes (15&45)");
+  else strcpy(alarmIntervalDef, "Default 30 minutes");
   debugPrintln("Fetching rain-gauge-related things...");
-  if (savedRainCollectorType.read() == 0)       strcpy(rainCollector,"Pronamic (0.5mm/tip)");
-  else if (savedRainCollectorType.read() == 1)  strcpy(rainCollector,"DAVIS (0.2mm/tip)");
-  if (savedRainSendType.read() == 0)  strcpy(rainData,"Converted \"mm\"");
-  else                                strcpy(rainData,"RAW TIP COUNT");
-  if (savedBatteryType.read() == 1) strcpy(batteryType,"Li-ion");
-  else                              strcpy(batteryType,"Lead acid");
+  if (savedRainCollectorType.read() == 0) strcpy(rainCollector, "Pronamic (0.5mm/tip)");
+  else if (savedRainCollectorType.read() == 1) strcpy(rainCollector, "DAVIS (0.2mm/tip)");
+  if (savedRainSendType.read() == 0) strcpy(rainData, "Converted \"mm\"");
+  else strcpy(rainData, "RAW TIP COUNT");
+  if (savedBatteryType.read() == 1) strcpy(batteryType, "Li-ion");
+  else strcpy(batteryType, "Lead acid");
   debugPrintln("Computing input voltage..");
   float inputVoltage = readBatteryVoltage(savedBatteryType.read());
   debugPrintln("Fetching GSM power mode..");
-  if (savedGSMPowerMode.read() == 1)      strcpy(powerMode,"Low-power Mode");
-  else if (savedGSMPowerMode.read() == 2) strcpy(powerMode,"Power-saving Mode");  // GSM module is ACTIVE when sending data, otherwise GSM module is turned OFF.
-  else                                    strcpy(powerMode,"Always ON");
+  if (savedGSMPowerMode.read() == 1) strcpy(powerMode, "Low-power Mode");
+  else if (savedGSMPowerMode.read() == 2) strcpy(powerMode, "Power-saving Mode");  // GSM module is ACTIVE when sending data, otherwise GSM module is turned OFF.
+  else strcpy(powerMode, "Always ON");
   debugPrintln("Fetching server number..");
-  if (strlen(flashServerNumber.dataServer) == 0) strcpy(serverNumber,"Default - 09175972526");
-  else                                           strcpy(serverNumber,flashServerNumber.dataServer);
+  if (strlen(flashServerNumber.dataServer) == 0) strcpy(serverNumber, "Default - 09175972526");
+  else strcpy(serverNumber, flashServerNumber.dataServer);
 
   debugPrintln("Building parameter SMS...");
   debugPrintln("");
   // this will be long..
   sprintf(paramSMSContainer,
           "Saved Timetstamp: %s\nDatalogger Name: %s\nDatalogger Mode: %d\nSubsurface Sensor: %s\nHas UBLOX module: %s\nRouter Name(s): %s\nSensor command: %s\nWake Interval: %s\nRain Collector: %s\nRain Data: %s\nBattery Type: %s\nInput Voltage: %0.2fV\nGSM Power Mode: %s\nServer Number: %s",
-          _timestamp,flashLoggerName.sensorNameList[0],savedDataLoggerMode.read(),hasSubSensor,hasUblox,routerNames,arQCommand,alarmIntervalDef,rainCollector,rainData,batteryType,inputVoltage,powerMode,serverNumber
-          );
+          _timestamp, flashLoggerName.sensorNameList[0], savedDataLoggerMode.read(), hasSubSensor, hasUblox, routerNames, arQCommand, alarmIntervalDef, rainCollector, rainData, batteryType, inputVoltage, powerMode, serverNumber);
   resetWatchdog();
 }
 
@@ -1169,7 +1262,7 @@ void buidParamSMS(char* paramSMSContainer) {
 /// Masyado lang mahaba kung buong "Dynaslope" name ang ilalagay.. pero pwede naman...
 void introMSG() {
   resetWatchdog();
-  // Serial.println("");  
+  // Serial.println("");
   Serial.println(" ██████████   █████ █████ ██████   █████   █████████  ");
   delayMillis(350);
   Serial.println("░░███░░░░███ ░░███ ░░███ ░░██████ ░░███   ███░░░░░███ ");
@@ -1183,7 +1276,7 @@ void introMSG() {
   Serial.println(" ░███    ███     ░███     ░███  ░░█████  ░███    ░███ ");
   delayMillis(10);
   Serial.println(" ██████████      █████    █████  ░░█████ █████   █████");
-  Serial.println("░░░░░░░░░░      ░░░░░    ░░░░░    ░░░░░ ░░░░░   ░░░░░ ");                                                  
+  Serial.println("░░░░░░░░░░      ░░░░░    ░░░░░    ░░░░░ ░░░░░   ░░░░░ ");
   delayMillis(1000);
   delayMillis(750);
   delayMillis(500);
@@ -1209,13 +1302,13 @@ void CheckingSavedParameters() {
     while (true) {
       Serial.print("Saved data logger mode: ");
       char savedDataLoggerModeChar = savedDataLoggerMode.read();
-      int savedDataLoggerMode = savedDataLoggerModeChar; 
+      int savedDataLoggerMode = savedDataLoggerModeChar;
       Serial.print(savedDataLoggerMode);
       Serial.println(" ");
-      
+
 
       // Integrated printDataLoggerDescription function
-      switch(savedDataLoggerMode) {
+      switch (savedDataLoggerMode) {
         case 0:
           Serial.println("arQ mode - Standalone Datalogger");
           break;
@@ -1329,8 +1422,8 @@ void CheckingSavedParameters() {
     while (true) {
       Serial.print("Saved alarm interval: ");
       char savedAlarmIntervalChar = savedAlarmInterval.read();
-      int savedAlarmInterval = savedAlarmIntervalChar; 
-      switch(savedAlarmInterval) {
+      int savedAlarmInterval = savedAlarmIntervalChar;
+      switch (savedAlarmInterval) {
         case 0:
           Serial.println("30-minutes from 0th minute (0,30)");
           break;
@@ -1395,8 +1488,8 @@ void CheckingSavedParameters() {
     while (true) {
       Serial.print("Saved Rain Collector Type: ");
       char savedRainCollectorTypeChar = savedRainCollectorType.read();
-      int savedRainCollectorType = savedRainCollectorTypeChar; 
-      switch(savedRainCollectorType) {
+      int savedRainCollectorType = savedRainCollectorTypeChar;
+      switch (savedRainCollectorType) {
         case 0:
           Serial.println("Pronamic Rain Collector (0.5mm/tip)");
           break;
@@ -1433,8 +1526,8 @@ void CheckingSavedParameters() {
     while (true) {
       Serial.print("Saved battery type: ");
       char savedBatteryTypeChar = savedBatteryType.read();
-      int savedBatteryType = savedBatteryTypeChar; 
-      switch(savedBatteryType) {
+      int savedBatteryType = savedBatteryTypeChar;
+      switch (savedBatteryType) {
         case 0:
           Serial.println("12V Lead Acid battery");
           break;
@@ -1465,26 +1558,25 @@ void CheckingSavedParameters() {
     }
 
     if (currentDataLoggerMode == 0 || currentDataLoggerMode == 1 || currentDataLoggerMode == 3 || currentDataLoggerMode == 4 || currentDataLoggerMode == 5) {
-    Serial.print("Enter maintenance staff's initials: ");
-    getSerialInput(staff, sizeof(staff), 60000);   
-    buidParamSMS(Params); 
-    strcat(Params, " - ");
-    strcat(Params, staff);
-    sendThruGSM(Params,rcvr); 
-    delay(2000);
+      Serial.print("Enter maintenance staff's initials: ");
+      getSerialInput(staff, sizeof(staff), 60000);
+      buidParamSMS(Params);
+      strcat(Params, " - ");
+      strcat(Params, staff);
+      sendThruGSM(Params, rcvr);
+      delay(2000);
 
-    Serial.println("Exit debug mode");
-    debugProcess = false;
-    debugMode = false;
-    deleteMessageInbox();
-    Serial.println(F("----------------------------------------------"));
-  }
-  else {
-    Serial.println("Exit debug mode");
-    debugProcess = false;
-    debugMode = false;
-    deleteMessageInbox();
-    Serial.println(F("----------------------------------------------"));
-  }
+      Serial.println("Exit debug mode");
+      debugProcess = false;
+      debugMode = false;
+      deleteMessageInbox();
+      Serial.println(F("----------------------------------------------"));
+    } else {
+      Serial.println("Exit debug mode");
+      debugProcess = false;
+      debugMode = false;
+      deleteMessageInbox();
+      Serial.println(F("----------------------------------------------"));
+    }
   }
 }
