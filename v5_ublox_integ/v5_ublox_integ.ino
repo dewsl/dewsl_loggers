@@ -252,6 +252,7 @@ FlashStorage(allow_unlisted_flag, int);
 //When disabled[0]: adds all valid received data units to sending stack
 FlashStorage(ack_filter, int);
 
+#define UBXPWR 5 // ubx power pin
 void setup() {
   Serial.begin(BAUDRATE);
   DUESerial.begin(DUEBAUD);
@@ -270,12 +271,16 @@ void setup() {
   pinMode(GSMPWR, OUTPUT);
   pinMode(GSMRST, OUTPUT);
   pinMode(IMU_POWER, OUTPUT);
+  pinMode(UBXPWR, OUTPUT);
+
+  delay(500);
 
   digitalWrite(LED_BUILTIN, LOW);
   digitalWrite(DUETRIG, LOW);
   digitalWrite(GSMPWR, LOW);
   digitalWrite(GSMRST, HIGH);
   digitalWrite(IMU_POWER, LOW);
+  digitalWrite(UBXPWR, LOW);
 
   /* rain gauge interrupt */
   attachInterrupt(digitalPinToInterrupt(RAININT), rainISR, FALLING);
@@ -341,7 +346,7 @@ void setup() {
 
 void loop() {
 
-  if (runGSMInit && (get_logger_mode() != 2)) {  // single instance run to initiate gsm module
+  if (runGSMInit && ((get_logger_mode() != 2) || (get_logger_mode() != 8))) {  // single instance run to initiate gsm module
     runGSMInit = false;
     delay_millis(500);
     resetGSM();
