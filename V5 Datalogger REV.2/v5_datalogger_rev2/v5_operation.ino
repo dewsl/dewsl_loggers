@@ -2,24 +2,24 @@
 void Operation(const char * operationServerNumber) {
 
   resetWatchdog();
-
   char smsSegmentContainer[500];
   char infoSMS[100];
-  // char routerEndIdentifier[100];     // "volt" string
-  uint8_t dataloggerMode = savedDataLoggerMode.read();
-  // LEDOn();
+  
   
   clearGlobalSMSDump();
 
+  // SAVED PARAMETERS & VARIABLES
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   // reload global variables (parameters) here
+  uint8_t dataloggerMode = savedDataLoggerMode.read();
   flashLoggerName = savedLoggerName.read();
   flashServerNumber = savedServerNumber.read();
   flashCommands = savedCommands.read();
   getTimeStamp(_timestamp, sizeof(_timestamp));
   resetWatchdog();
+
+  // SENSOR DATA COLLECTION
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  // 1.0 / First Part
   // complete data collection tasks according to datalogger requirements
   // dump everything [delimited] to global SMS dump "_globalSMSDump"
   if (dataloggerMode == 0 || dataloggerMode == 1){
@@ -82,8 +82,12 @@ void Operation(const char * operationServerNumber) {
       generateInfoMessage(infoSMS);
       addToSMSStack(infoSMS);
   } 
- 
-  resetRainTips();  // reset rain tips after adding stored rain tips to sms stack
+  // END OF SENSOR DATA COLLECTION
+  
+
+  // SOME EXTRA STEPS
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  resetRainTips();  // reset rain tips after accumulated rain tips value was added to sms stack
 
   if (selfResetFlag && !debugMode) {  // Add datalogger self reset indicator to sending stack
     char resetNotif[100];
@@ -91,6 +95,8 @@ void Operation(const char * operationServerNumber) {
     addToSMSStack(resetNotif);  // notif for interval based reset
   }
 
+  // DATA SENDING
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   // At this point [assuming everything goes well], all needed data would hava been added to the sending stack (_globalSMSDump)
   // Next step is to send everything to the appropriate channel (thru GSM or LoRa)
 
@@ -107,8 +113,12 @@ void Operation(const char * operationServerNumber) {
     checkForOTAMessages();                                                                  //  check message inbox and executes ONLY THE FIRST OTA COMMAND found 
     deleteMessageInbox();                                                                   //  deletes ALL messages in SIMCARD                                                      
   }
+  // END OF DATA SENDING
+
   
-  // checks supply voltage after data sending
+  // PREPATIONS BEORE SLEEPING
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  // checks supply voltage after data sending [this part is still experimental]
   if (savedBatteryType.read() ==  0 && autoPowerSaving.read() == 99) {
     // swtiches to power saving mode (if not already) if battery dips below threshold
     if (readBatteryVoltage(savedBatteryType.read()) < 12.5 && savedGSMPowerMode.read() == 0) if (savedGSMPowerMode.read() != 2) savedGSMPowerMode.write(2);  
@@ -127,9 +137,9 @@ void Operation(const char * operationServerNumber) {
 
   //  router use only
   //  flag is set by the sendThruLoraWithAck function
-  //  kung magawa nang always listening ang mga routers, pwede na ito gamitin  directly to immediately process broadcasted commands
+  //  For LISTEN MODE routes, pwede na ito gamitin  directly to immediately process broadcasted commands
   if (routerProcessOTAflag) {
-    routerProcessOTAflag = false;     // failsafe
+    routerProcessOTAflag = false;     // failsafe. meh
     // sample: LTEG^REC'D_~ROUTER~RESET~24/07/08,10:30:00
 
     char * ackResponse = strtok(routerOTACommand, dumpDelimiter);
@@ -146,15 +156,20 @@ void Operation(const char * operationServerNumber) {
     debugPrintln(routerOTAbuf);
     if (strlen(routerOTAbuf) > 0) findOTACommand(routerOTAbuf, "NANEEE", routerOTAts);               // CAUTION Experimental function only
   }
+
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  // END OF OPERATION
+  // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
 }
-
 void initSleepCycle() {
-
 
   // SYSCTRL->VREG.bit.RUNSTDBY = 1;
   
-  // SYSCTRL->DFLLCTRL.bit.RUNSTDBY = 1;     // allow usb clock source to run aduring sleep
-  // while(!SYSCTRL->PCLKSR.bit.DFLLRDY);
+  // do not remove this segment; baka makalimutan ko..
+  // used to allow usb clock source to run aduring sleep
+  // SYSCTRL->DFLLCTRL.bit.RUNSTDBY = 1;     
+  // while(!SYSCTRL->PCLKSR.bit.DFLLRDY);    
 
   SYSCTRL->XOSC32K.reg |= (SYSCTRL_XOSC32K_RUNSTDBY | SYSCTRL_XOSC32K_ONDEMAND);  // set external 32k oscillator to run when idle or sleep mode is chosen
 
@@ -203,13 +218,14 @@ void sleepNow(uint8_t savedLoggerMode) {
   // SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
 
   SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;   // Disable systick interrupt
-  __DSB(); // Use of memory barrier is recommended for portability
-  __WFI(); // Execute WFI and enter sleep
-  // code resumes here after interrupt
-  SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk; // Enable SysTick interrupts // enable later for testing power draw
+  __DSB();                                      // Use of memory barrier is recommended for portability
+  __WFI();                                      // Execute WFI and enter sleep
+                                                // code resumes here after any interrupt
+  SysTick->CTRL |= SysTick_CTRL_TICKINT_Msk;    // Enable SysTick interrupts
 
   resetWatchdog();
 }
 
 void resetGlobals() {
+  // do something here
 }

@@ -168,9 +168,18 @@ void setShortSleepInterval() {
 
 float readRTCTemp() {
   resetWatchdog();
-  float temp;
-  rtc.convertTemperature();
-  temp = rtc.getTemperature();
+  getTimeStamp(_timestamp, sizeof(_timestamp));
+  float temp = 0;
+  
+  //  prevents the code from being stuck when no rtc is not connected or unusable
+  //  temporay check for timestamp validity;
+  //  checks for the current decade of the year in the timestamp
+  //  this should work until 2029..
+  //  ..change it to == '3' afterwards
+  if (_timestamp[0] == '2') {
+    rtc.convertTemperature();
+    temp = rtc.getTemperature();
+  }
   return temp;
 }
 
@@ -248,14 +257,15 @@ void printDateTime() {
   if (now.month()-1 <= 12) sprintf(timestring, "%s %s %d, %d", daysEq[now.dayOfWeek()-1],monthsEq[now.month()-1],now.date(),now.year());  //  generate day and data string
   debugPrint("Current date:\t ");
   debugPrintln(timestring);
-  sprintf(timestring, "%d:%02d:%02d %s" ,hourBuffer,now.minute(),now.second(),timeOfDayEq[timeOfDayIndex]);                             // generte timestring & daytime indicator
+  if (inputIs(timestring, "INVALID")) sprintf(timestring, "%d:%02d:%02d %s [RTC_ERR]" ,hourBuffer,now.minute(),now.second(),timeOfDayEq[timeOfDayIndex]);
+  else sprintf(timestring, "%d:%02d:%02d %s" ,hourBuffer,now.minute(),now.second(),timeOfDayEq[timeOfDayIndex]);                             // generte timestring & daytime indicator
   debugPrint("Current time:\t ");
   debugPrintln(timestring);
   resetWatchdog();
 }
 
 
-// Comapres current [stored] timestamp with newTiemstamp for datetime updating
+// Compares current [stored] timestamp with newTiemstamp for datetime updating
 // Used when updateing timestamp using GPRS time
 void timestampUpdate(const char* newTimestamp) {
   resetWatchdog();
@@ -287,7 +297,10 @@ void timestampUpdate(const char* newTimestamp) {
   // now.year()%1000,now.month(),now.date(),now.hour(),now.minute(),now.second()
 }
 
-// Comapres current [stored] timestamp with newTiemstamp
+/// Return true if current [stored] timestamp is within +-2 min (approx) of the parameter newTiemstampReference
+/// Otherwise, returns false
+/// @param newTimestampReference refetence timestamp for comparison
+/// 
 bool checkTimeSync(const char* newTimestampReference) {
   resetWatchdog();
   bool timeOk = false;

@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2410.28
+#define FIRMWAREVERSION 2411.11
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 300000
@@ -130,7 +130,7 @@ char routerOTACommand[100];         //  container for OTA command to be passed t
  * Reserve a portions of flash memory to store parameters
  */
 FlashStorage(listenMode, bool);
-FlashStorage(savedShortSleepInterval, uint8_t);
+FlashStorage(savedShortSleepInterval, uint8_t);       // scanning/listeting interval for Listen Mode
 FlashStorage(savedAlarmInterval, uint8_t);
 FlashStorage(savedDataLoggerMode, uint8_t);
 FlashStorage(hasSubsurfaceSensorFlag, uint8_t);
@@ -244,7 +244,7 @@ void setup() {
 
 void loop() {
 
-  // for testing use, tanggalin sa final version
+  // Last reset cause message
   char restMsg[30];
   resetStatCheck(restMsg);
   Serial.println(F("------------------------------------------------------"));

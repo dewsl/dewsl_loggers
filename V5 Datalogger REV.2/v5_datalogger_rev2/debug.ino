@@ -918,15 +918,18 @@ void savedParameters() {
   }
   Serial.println("");
   printDateTime();  //  Shows an easily readable datetime format
-  Serial.print("Next alarm:\t ");
-  char nextAlarmBuffer[20];
 
-  if (nextAlarmMinuteBuffer != 0) sprintf(nextAlarmBuffer, "%d:%02d %s", nextAlarmHourBuffer, nextAlarmMinuteBuffer, timeOfDayEq[timeOfDayIndex2]);  //  Shows next computed alarm based on the alamr interval and current time
-  else sprintf(nextAlarmBuffer, "%d:00 %s", nextAlarmHourBuffer, timeOfDayEq[timeOfDayIndex2]);                                                      // do ko sure kung paano gawing zero padded yung zero na hindi ginagawang char
-  Serial.print(nextAlarmBuffer);
-  if (listenMode.read()) Serial.print(" [disabled]");
-  Serial.println("");
-
+  // Serial.println(now.year());
+  if (now.year()%1000 < 30) { // assumes that you're not a time traveler. This should work until 2030
+    Serial.print("Next alarm:\t ");
+    char nextAlarmBuffer[20];
+    if (nextAlarmMinuteBuffer != 0) sprintf(nextAlarmBuffer, "%d:%02d %s", nextAlarmHourBuffer, nextAlarmMinuteBuffer, timeOfDayEq[timeOfDayIndex2]);  //  Shows next computed alarm based on the alamr interval and current time
+    else sprintf(nextAlarmBuffer, "%d:00 %s", nextAlarmHourBuffer, timeOfDayEq[timeOfDayIndex2]);                                                      // do ko sure kung paano gawing zero padded yung zero na hindi ginagawang char
+    Serial.print(nextAlarmBuffer);
+    if (listenMode.read()) Serial.print(" [DISABLED]");
+    Serial.println("");
+  }
+  
 
   Serial.print("Wake interval:\t ");
   int alarmInterval = savedAlarmInterval.read();                         //  Shows periodic alarm interval
@@ -962,12 +965,10 @@ void savedParameters() {
   Serial.print(readBatteryVoltage(savedBatteryType.read()));
   Serial.println("V");
 
-
-  if (_timestamp[0] == '2') {  // temporay check for timestamp validity
-    Serial.print("RTC temperature: ");
-    Serial.print(readRTCTemp());
-    Serial.println("°C");
-  }
+  
+  Serial.print("RTC temperature: ");
+  Serial.print(readRTCTemp());
+  Serial.println("°C");
 
   if (savedDataLoggerMode.read() != 2) {
 
