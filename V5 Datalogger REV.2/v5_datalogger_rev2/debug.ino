@@ -749,14 +749,14 @@ void updateLoggerMode() {
     
     // promt when defaulted to stand-alone mode for invalid inputs
     if (loggerModeBuffer > 2) Serial.println("Invalid datalogger mode value; Defaulted to Stand-alone datalogger");  
-    
+
     if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count to prevent values from being carried over in case of mode change
-    Serial.print("   Router with Subsurface Sensor? [Y/N] ");
+    Serial.print("   Datalogger with Subsurface Sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasSubsurfaceSensorFlag.write(99);
     else hasSubsurfaceSensorFlag.write(0);
-    Serial.print("   Router with UBLOX module? [Y/N] ");
+    Serial.print("   Datalogger with UBLOX module? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasUbloxRouterFlag.write(99);
