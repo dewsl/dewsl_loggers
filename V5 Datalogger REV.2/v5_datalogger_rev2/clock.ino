@@ -9,7 +9,7 @@ void RTCInit(uint8_t RTCPin) {
 
 /// RTC iterrupt service routine function
 void RTCISR() {
-  if (listenMode.read() == false) {
+  if (listenMode.read() == false || (listenMode.read() == true && savedDataLoggerMode.read() == GATEWAYMODE)) {
     int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
     operationFlag = true;
     debugPrintln("RTC interrupt");
