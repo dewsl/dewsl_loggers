@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2411.11
+#define FIRMWAREVERSION 2411.18
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 300000
@@ -55,6 +55,11 @@
 // misc macro
 // arrayCount(arr) = number of rows  arrayCount(arr[0]) = number of columns
 #define arrayCount(x) (sizeof(x) / sizeof(x[0]))
+
+// for indexing & debugging
+#define ARQMODE 0
+#define GATEWAYMODE 1
+#define ROUTERMODE 2
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 const char ackKey[] = "^REC'D_";
@@ -277,7 +282,7 @@ void loop() {
       if(!debugMode) {
         sprintf(bootMgs,"%s: LOGGER POWER UP\nLast reset cause: %s",flashLoggerName.sensorNameList[0], restMsgBuffer);  // build boot message
         delayMillis(1500);
-        if (!(sendThruGSM(bootMgs,flashServerNumber.dataServer))) sendThruGSM(bootMgs,flashServerNumber.dataServer);                         // send boot msg to server
+        if (!(sendThruGSM(bootMgs,flashServerNumber.dataServer))) sendThruGSM(bootMgs,flashServerNumber.dataServer);    // send boot msg to server
       }
       GSMPowerModeSet(); 
     }
@@ -289,8 +294,8 @@ void loop() {
     debugFunction();
   }
 
-  if (listenMode.read() && savedDataLoggerMode.read() == 2) {
-    // LEDOn();   // LED crasher here??
+  // This section is used when LISTEN MODE is enabled; this replaces the periodic operation below
+  if (listenMode.read() && savedDataLoggerMode.read() == ROUTERMODE) {
     resetWatchdog();
     scanForCommand(2000, 3000);
     if(operationFlag) delayMillis(10000); //  add a delay for data collection operation to prevent overlap with initial broadcast
@@ -298,11 +303,11 @@ void loop() {
     // LEDOff();
   }
 
-  // all routine operation function here
+  // PERIODIC [RTC-triggered] operation functions run here
   if (operationFlag) {
     operationFlag = false;
     LEDSleepWake();
-    ringCounter = 0;                                    //  resets GSM couter for reset thru calls
+    ringCounter = 0;                                    //  resets GSM call couter for reset thru calls
     setSelfResetFlag(savedLoggerResetAlarm.read());     //  Sets a flag "selfResetFlag" to trigger self reset segment [below] instead of executing sleep function immediately
     Operation(flashServerNumber.dataServer);            //  main operation function for data collection and sending
     LEDSleepWake();
@@ -331,7 +336,7 @@ void loop() {
     selfResetFlag = false;                            //  precaution only in case reset function fails (unlikely); pwede naman kahit wala ito
     LEDSelfReset();                                   //  distinct dapat ito sa regular sleep/wake LED pattern
     NVIC_SystemReset();                               //  reset
-  } else if (listenMode.read()  && savedDataLoggerMode.read() == 2) {
+  } else if (listenMode.read()  && savedDataLoggerMode.read() == ROUTERMODE) {
     resetWatchdog();
     rf95.sleep();
     //  defaults to 10s short sleep of short sleep value is not set or exceeds max interval between watchdog reset
@@ -382,14 +387,15 @@ void resetWatchdog() {
   Watchdog.reset();
 }
 
+/// Simple check
+/// @param {dMode} datalogger mode.
+/// @return {boolean} True if datalogger mode parameter should have had a GSM modula
 bool loggerWithGSM(uint8_t dMode) {
-  if (dMode == 2 ||
-      dMode == 7 )
-      return false;
-  else return true;
+  if (dMode == ARQMODE || dMode == GATEWAYMODE ) return true;  // list here modes with GSM module
+  else return false;
 }
 
-// add
+
 void resetStatCheck(char* resetCauseMsg) {
   if (REG_PM_RCAUSE == PM_RCAUSE_SYST) sprintf(resetCauseMsg, "Reset by system");                 // sotware equivalent of reset button
   else if (REG_PM_RCAUSE == PM_RCAUSE_WDT) sprintf(resetCauseMsg, "Reset by Watchdog");           //

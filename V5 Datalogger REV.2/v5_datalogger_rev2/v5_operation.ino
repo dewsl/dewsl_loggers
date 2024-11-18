@@ -18,31 +18,31 @@ void Operation(const char * operationServerNumber) {
   getTimeStamp(_timestamp, sizeof(_timestamp));
   resetWatchdog();
 
+
   // SENSOR DATA COLLECTION
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   // complete data collection tasks according to datalogger requirements
   // dump everything [delimited] to global SMS dump "_globalSMSDump"
-  if (dataloggerMode == 0 || dataloggerMode == 1){
-    debugPrint("ARQ MODE");
-    if (hasUbloxRouterFlag.read() == 99) debugPrint("+ UBLOX");
-    debugPrintln("");
-
+  if (dataloggerMode == ARQMODE){
+    // ARQ MODE
+    getLoggerModeAndName();
     if (hasUbloxRouterFlag.read() == 99) {                                //  process for UBLOX additional 
+      debugPrintln("Collecting GNSS data..");
       getGNSSData(smsSegmentContainer, sizeof(smsSegmentContainer));      //  get UBLOX data..
       addToSMSStack(smsSegmentContainer);                                 //  add UBLOX data to global sms stack..
     }
-    dueDataCollection(SAMPLINGTIMEOUT);                                   //  get data from sensor column and adds received data to smsStack
+    if (hasSubsurfaceSensorFlag.read() == 99) {                           //  get data from sensor column
+      debugPrintln("Collecting sensor column data..");
+      dueDataCollection(SAMPLINGTIMEOUT);                                 // adding data to sms stack is done inside the function..
+    }                                   
     generateInfoMessage(infoSMS);                                         //  similar to old send_rain_data(); holds rain info and some diagnostics    
     addToSMSStack(infoSMS);                                               //  adds info sms to global sms stack
-  }
- else if (dataloggerMode == 2) {                                          // routine is almost the same as above, pwede pa ito (lahat ng modes) ma-consolidate sa mas simple na process
-    debugPrint("ROUTER MODE:");
-    if (hasSubsurfaceSensorFlag.read() == 99) debugPrint("SUBSURFACE SENSOR ");
-    if (hasUbloxRouterFlag.read() == 99) debugPrint("+ UBLOX");
-    if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) debugPrint("Rain gauge only");
-    if (listenMode.read()) debugPrint(" [LBT]");
-    debugPrintln("");
+  
+ } else if (dataloggerMode == ROUTERMODE) {                               // this ROUTER routine is almost same as above except the added terminations segments for LoRa
+    // ROUTER MODE
+    getLoggerModeAndName();
     if (hasUbloxRouterFlag.read() == 99) {
+      debugPrintln("Collecting GNSS data..");
       getGNSSData(smsSegmentContainer, sizeof(smsSegmentContainer));
       addToSMSStack(smsSegmentContainer);
     }
@@ -55,11 +55,14 @@ void Operation(const char * operationServerNumber) {
     generateVoltString(infoSMS);                                          // volt data for terminating gateway wait time and couting data sets from routers
     addToSMSStack(infoSMS);
 
-  } else if (dataloggerMode == 3) {                                       //   GATEWAY MODE
-    if (listenMode.read()) broadcastLoRaKey(random(100, 500), 12000);
-    debugPrintln("Waiting for router data..");
+  } else if (dataloggerMode == GATEWAYMODE) {                             //  GATEWAY MODE
+    // GATEWAY MODE
+    if (listenMode.read()) broadcastLoRaKey(random(100, 500), 12000);     
+    debugPrintln("Waiting for router data..");                            //  This is not conditional: We'd assume that if its a gateway, there should be a router
     waitForLoRaRouterData(MAX_GATEWAY_WAIT, savedRouterCount.read(), savedLoraReceiveMode.read());
+    
     if (hasUbloxRouterFlag.read() == 99) {
+      debugPrintln("Collecting GNSS data..");
       getGNSSData(smsSegmentContainer, sizeof(smsSegmentContainer));
       addToSMSStack(smsSegmentContainer);
     }
@@ -69,19 +72,7 @@ void Operation(const char * operationServerNumber) {
     }
     generateInfoMessage(infoSMS);                                         // if rain data / datalogger info string is needed
     addToSMSStack(infoSMS);
-    
-  } else if (dataloggerMode == 4) {                                       //   RAIN GAUGE ONLY - GSM
-    generateInfoMessage(infoSMS);
-    addToSMSStack(infoSMS);
-
-  } else if (dataloggerMode == 5) {
-  //   RAIN GAUGE ONLY - LoRA
-  //   Pwede din ito maacheive kung gagawa ka ng router na walang ubox and subsurface sensor
-  //   pero ganito na lang setup para mas madali makita or kung may kailangan pa i-add sa process flow
-  //   same lang sa mode 4, nka separate lang, baka may kailangan idagdag
-      generateInfoMessage(infoSMS);
-      addToSMSStack(infoSMS);
-  } 
+  }
   // END OF SENSOR DATA COLLECTION
   
 

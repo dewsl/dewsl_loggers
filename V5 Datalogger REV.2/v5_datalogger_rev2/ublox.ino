@@ -148,7 +148,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     strncat(dataBuffer, _timestamp, strlen(_timestamp));
     resetWatchdog();
 
-    if ((savedDataLoggerMode.read() == 7) || (savedDataLoggerMode.read() == 9)) { //GSM Modes
+    if (loggerWithGSM(savedDataLoggerMode.read())) {       //GSM Modes
       //If string start '>>', remove 1st and 2nd character data in string. Not needed in GSM mode
       if (strstr(dataBuffer, ">>")) {
         for (byte i = 0; i < strlen(dataBuffer); i++) {
@@ -290,7 +290,7 @@ void noGNSSDataAcquired(char* msgContainer, int containerSize, char* sitecode) {
 }
 
 void initialize_sitecode(char* siteCodeContainer) {
-  if ((savedDataLoggerMode.read() == 1) || (savedDataLoggerMode.read() == 9)) { //Gateway with sensor and 1 lora tx (if gnss) ; Gateway rain gauge with gnss
+  if (savedDataLoggerMode.read() == GATEWAYMODE) { //Gateway with sensor and 1 lora tx (if gnss) ; Gateway rain gauge with gnss
     sprintf(siteCodeContainer, flashLoggerName.sensorNameList[1]);
   } else {
     sprintf(siteCodeContainer, flashLoggerName.sensorNameList[0]);

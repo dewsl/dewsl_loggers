@@ -328,7 +328,7 @@ void key_gen(char *keyContainer, char *referenceString) {
   char keyBuffer[20];
   // strncpy(toFind, ">>", 2);
   
-  if (savedDataLoggerMode.read() == 2) {  //  add other router modes here
+  if (savedDataLoggerMode.read() == ROUTERMODE) {  //  add other router modes here
     //  gets first charaters (depending on router char length) from reference to generate acknowledgement key
     strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorNameList[0])));   
   } else {  // gateway modes

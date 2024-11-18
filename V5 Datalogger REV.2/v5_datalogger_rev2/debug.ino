@@ -108,7 +108,7 @@ void debugFunction() {
 
     } else if (inputIs(serialLineInput, "F")) {
       resetWatchdog();
-      if (savedDataLoggerMode.read() != 2) {
+      if (savedDataLoggerMode.read() != ROUTERMODE) {
         Serial.println("Checking network time..");
         updateTimeWithGPRS();
         debugModeStart = millis();
@@ -699,12 +699,11 @@ void printRTCIntervalEquivalent() {
 
 void printLoggerModes() {
   resetWatchdog();
-  Serial.println("[0] arQ mode - Standalone Datalogger");  // arQ like function only
-  Serial.println("[1] arQ mode + UBLOX Module");           // arQ like + Ublox module
-  Serial.println("[2] Router mode");                       // anything that send data through LoRa
-  Serial.println("[3] Gateway mode");                      // anything that recevies LoRa data
-  Serial.println("[4] Rain gauge sensor only - GSM");      // same as gateway mode with no routers, sensor, or ublox module
-  Serial.println("[5] Rain gauge sensor only - Router");   // same with [2] but no sensors or ublox
+  Serial.println("[0] Stand-alone Datalogger (arQ mode)");  // arQ like function only: Includes rain gauge only (GSM), sa ngayon kasama yung mgay UBLOX dito, technicall sa gateway dapat sya..
+  Serial.println("[1] Router mode");                       // anything that send data to other datalogger through LoRa; Includes rain gauge only (LoRa)
+  Serial.println("[2] Gateway mode");                      // anything that wait for other datalogger LoRa data
+  // Serial.println("[4] Rain gauge sensor only - GSM");      // same as gateway mode with no routers, sensor, or ublox module
+  // Serial.println("[5] Rain gauge sensor only - Router");   // same with [2] but no sensors or ublox
   resetWatchdog();
 }
 
@@ -745,12 +744,27 @@ void updateLoggerMode() {
 
   Serial.println(loggerModeBuffer);
 
-  if (loggerModeBuffer > 6) {  //rejects values above 5
-    Serial.println("Unchanged: Invalid datalogger mode value");
-    return;
+
+  if (loggerModeBuffer == ARQMODE || loggerModeBuffer > 2) {      // arQ modes and false inputs
+    
+    // promt when defaulted to stand-alone mode for invalid inputs
+    if (loggerModeBuffer > 2) Serial.println("Invalid datalogger mode value; Defaulted to Stand-alone datalogger");  
+    
+    if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count to prevent values from being carried over in case of mode change
+    Serial.print("   Router with Subsurface Sensor? [Y/N] ");
+    getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
+    Serial.println(addOnBuffer);
+    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasSubsurfaceSensorFlag.write(99);
+    else hasSubsurfaceSensorFlag.write(0);
+    Serial.print("   Router with UBLOX module? [Y/N] ");
+    getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
+    Serial.println(addOnBuffer);
+    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasUbloxRouterFlag.write(99);
+    else hasUbloxRouterFlag.write(0);
+    listenMode.write(false);        // prevents LBT mode from being carried over after a mode change
   }
 
-  if (loggerModeBuffer == 3) {  // gateways and routers
+  else if (loggerModeBuffer == GATEWAYMODE) {  // gateways and routers
     Serial.print("   Gateway with subsurface sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
@@ -770,13 +784,14 @@ void updateLoggerMode() {
     Serial.print("   Input router count: ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     uint8_t inputCount = atoi(addOnBuffer);
+    if (inputCount > 7) Serial.println(" Hehe ");
     if (inputCount == 0) inputCount = 1;                                                                                               // should not accept ZERO as router count
     if (inputCount > (arrayCount(flashLoggerName.sensorNameList) - 1)) inputCount = (arrayCount(flashLoggerName.sensorNameList) - 1);  // limited to the number of rows to array holder max usable index
     savedRouterCount.write(inputCount);
     Serial.println(inputCount);
 
-  } else if (loggerModeBuffer == 2) {
-    if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count
+  } else if (loggerModeBuffer == ROUTERMODE) {
+    if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count to prevent values from being carried over in case of mode change
     Serial.print("   Router with Subsurface Sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
@@ -794,26 +809,17 @@ void updateLoggerMode() {
       listenMode.write(true);
       Serial.println("      *BROADCAST COMMAND should be enabled on GATEWAY*");
     }
-    else listenMode.write(false);
-
-  } else if (loggerModeBuffer == 1) {                             // arQ mode + UBLOX module
-    if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count
-    hasUbloxRouterFlag.write(99);
-    listenMode.write(false);
-  } else {                                                        // other non-gateway and non router datalogger; currently: rain gauge only
-    if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count
-    hasSubsurfaceSensorFlag.write(0);                             //
-    hasUbloxRouterFlag.write(0);
-    listenMode.write(false);
+    else listenMode.write(false);     
   }
+
   Serial.println("Datalogger mode updated");
   Serial.println("");
 
   savedDataLoggerMode.write(loggerModeBuffer);
 
   // prompts a change of names if datalogger modes are changed
-  if ((initialLoggerMode != 3 && savedDataLoggerMode.read() == 3) ||                                        // if initally non-gateway to gateway type
-      (initialLoggerMode == 3 && savedDataLoggerMode.read() != 3) ||                                        // if initially gateway type to non-gateway type
+  if ((initialLoggerMode != GATEWAYMODE && savedDataLoggerMode.read() == GATEWAYMODE) ||                    // if initally non-gateway to gateway type
+      (initialLoggerMode == GATEWAYMODE && savedDataLoggerMode.read() != GATEWAYMODE) ||                    // if initially gateway type to non-gateway type
       (initialRouterCount != savedRouterCount.read())) {                                                    // if router count was changed
     for (byte rPos = 0; rPos < initialRouterCount; rPos++) flashLoggerName.sensorNameList[rPos][0] = 0x00;  // obscure previous name list
     loggerNameChange = true;                                                                                // starts name change function after function end
@@ -933,7 +939,7 @@ void savedParameters() {
 
   Serial.print("Wake interval:\t ");
   int alarmInterval = savedAlarmInterval.read();                         //  Shows periodic alarm interval
-  if (savedDataLoggerMode.read() == 3 || listenMode.read() == false) {  // should update this later; consider..
+  if (savedDataLoggerMode.read() == GATEWAYMODE || listenMode.read() == false) {  // should update this later; consider..
     if (alarmInterval == 0) Serial.println("30 minutes (hh:00 & hh:30)");  //
     else if (alarmInterval == 1) Serial.println("15 minutes (hh:00, hh:15, hh:30, hh:45)");
     else if (alarmInterval == 2) Serial.println("10 minutes (hh:00, hh:10, hh:20, ... )");
@@ -942,7 +948,7 @@ void savedParameters() {
     else if (alarmInterval == 5) Serial.println("30 minutes (hh:15 & hh:45)");
     else Serial.println("Default 30 minutes (hh:00 & hh:30)");
   } else {
-    if (savedDataLoggerMode.read() == 2) Serial.println("Wakes on gateway command");
+    if (savedDataLoggerMode.read() == ROUTERMODE) Serial.println("Wakes on gateway command");
   }
   if (hasSubsurfaceSensorFlag.read() == 99) {
     Serial.print("Sensor command:\t ");
@@ -1042,7 +1048,7 @@ void scalableUpdateSensorNames() {
   // if gateway. ask for router count input
   // loop through router allocated index (index 1 and above for router list) of array until router count input is reached
 
-  if (currentLoggerMode == 3) {  // gateways
+  if (currentLoggerMode == GATEWAYMODE) {  // gateways
     Serial.print("Input GATEWAY name: ");
     getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
     if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESG");
@@ -1057,7 +1063,7 @@ void scalableUpdateSensorNames() {
       Serial.println(nameBuffer);
       sprintf(flashLoggerName.sensorNameList[listPos], nameBuffer);
     }
-  } else {
+  } else {  // stand-alone mode or router modes
     Serial.print("Input DATALOGGER name: ");
     getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
     if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESTA");
@@ -1069,13 +1075,14 @@ void scalableUpdateSensorNames() {
   updateListenKey();
   resetWatchdog();
 }
-
+///
+/// 
 void getLoggerModeAndName() {
   resetWatchdog();
   uint8_t mode = savedDataLoggerMode.read();
   char printBuffer[50];
 
-  if (mode == 3) {  //gateways
+  if (mode == GATEWAYMODE) {  //gateways
     Serial.print("GATEWAY MODE ");
     if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
     if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
@@ -1083,6 +1090,7 @@ void getLoggerModeAndName() {
     Serial.print("with ");
     Serial.print(savedRouterCount.read());
     Serial.println(" Router(s) ");
+    if (listenMode.read()) debugPrintln(" [Broadcasts Router Commands]");
     // Serial.println("");
     Serial.print("Gateway name ");
     Serial.println(flashLoggerName.sensorNameList[0]);
@@ -1092,22 +1100,26 @@ void getLoggerModeAndName() {
     }
 
   } else {  // other standalone dataloggers
-    if (mode == 0) {
-      Serial.println("ARQ MODE");
-    } else if (mode == 1) {
-      Serial.println("ARQ MODE + UBLOX Module:");
-    } else if (mode == 2) {
+    if (mode == ARQMODE) {
+      Serial.print("STAND-ALONE DATALOGGER ");
+      if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
+      if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
+      if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("(Rain gauge only) ");
+    // } else if (mode == 1) {
+    //   Serial.println("ARQ MODE + UBLOX Module:");
+    } else if (mode == ROUTERMODE) {
       Serial.print("ROUTER MODE ");
       if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
       if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
-      if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.println("(Rain gauge only)");
+      if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.println("(Rain gauge only) ");
+      if (listenMode.read()) debugPrintln(" [Listen Mode ENABLED]");
       // Serial.println("");
-    } else if (mode == 4) {       // should remove this later...
-      Serial.println("RAIN GAUGE ONLY (GSM)");
-    } else if (mode == 5) {       // arQ mode GNSS sensor
-      Serial.println("RAIN GAUGE ONLY (Router)");
+    // } else if (mode == 4) {       // should remove this later...
+    //   Serial.println("RAIN GAUGE ONLY (GSM)");
+    // } else if (mode == 5) {       // arQ mode GNSS sensor
+    //   Serial.println("RAIN GAUGE ONLY (Router)");
     }
-    Serial.print("");
+    Serial.println("");
     Serial.print("Datalogger name: ");
     Serial.println(flashLoggerName.sensorNameList[0]);
   }
@@ -1310,26 +1322,26 @@ void CheckingSavedParameters() {
 
       // Integrated printDataLoggerDescription function
       switch (savedDataLoggerMode) {
-        case 0:
-          Serial.println("arQ mode - Standalone Datalogger");
+        case ARQMODE:
+          Serial.println("Stand-alone Datalogger (arQ mode)");
           break;
-        case 1:
-          Serial.println("arQ mode + UBLOX Rover");
-          break;
-        case 2:
-          Serial.println("Router mode");
-          break;
-        case 3:
+        // case 1:
+        //   Serial.println("arQ mode + UBLOX Rover");
+        //   break;
+        case GATEWAYMODE:
           Serial.println("Gateway mode");
           break;
-        case 4:
-          Serial.println("Rain gauge sensor only - GSM");
+        case ROUTERMODE:
+          Serial.println("Router mode");
           break;
-        case 5:
-          Serial.println("Rain gauge sensor only - Router");
-          break;
+        // case 4:
+        //   Serial.println("Rain gauge sensor only - GSM");
+        //   break;
+        // case 5:
+        //   Serial.println("Rain gauge sensor only - Router");
+        //   break;
         default:
-          Serial.println("Invalid mode");
+          Serial.println("N/A");
           break;
       }
 

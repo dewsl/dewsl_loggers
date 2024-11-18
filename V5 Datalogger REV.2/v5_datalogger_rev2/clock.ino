@@ -2,18 +2,18 @@
 
 /// RTC initialization
 void RTCInit(uint8_t RTCPin) {
-  pinMode(RTCPin, INPUT_PULLUP);
+  pinMode(RTCPin, INPUT_PULLDOWN);
   REG_EIC_INTFLAG = EIC_INTFLAG_EXTINT4;    // clears interrupt flag
   attachInterrupt(digitalPinToInterrupt(RTCPin), RTCISR, FALLING);
 }
 
 /// RTC iterrupt service routine function
 void RTCISR() {
-  if (listenMode.read()) {
+  if (listenMode.read() == false) {
     int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
     operationFlag = true;
+    debugPrintln("RTC interrupt");
   }
-  debugPrintln("RTC interrupt");
 }
 
 /// Accepts sting input of date time;
