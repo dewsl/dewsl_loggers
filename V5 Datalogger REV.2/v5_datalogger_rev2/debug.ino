@@ -700,8 +700,8 @@ void printRTCIntervalEquivalent() {
 void printLoggerModes() {
   resetWatchdog();
   Serial.println("[0] Stand-alone Datalogger (arQ mode)");  // arQ like function only: Includes rain gauge only (GSM), sa ngayon kasama yung mgay UBLOX dito, technicall sa gateway dapat sya..
-  Serial.println("[1] Router mode");                       // anything that send data to other datalogger through LoRa; Includes rain gauge only (LoRa)
-  Serial.println("[2] Gateway mode");                      // anything that wait for other datalogger LoRa data
+  Serial.println("[1] Gateway mode");                       // anything that send data to other datalogger through LoRa; Includes rain gauge only (LoRa)
+  Serial.println("[2] Router mode");                      // anything that wait for other datalogger LoRa data
   // Serial.println("[4] Rain gauge sensor only - GSM");      // same as gateway mode with no routers, sensor, or ublox module
   // Serial.println("[5] Rain gauge sensor only - Router");   // same with [2] but no sensors or ublox
   resetWatchdog();
