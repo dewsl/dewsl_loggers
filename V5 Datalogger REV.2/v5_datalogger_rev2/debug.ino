@@ -495,7 +495,7 @@ void debugFunction() {
       Serial.println("DATALOGGERNAME:SENSLOPE:\t\tReplaces current datalogger name with additional parameter");
       Serial.println("SERVERNUMBER:SENSLOPE:\t\t\tReplaces the current server number with the additional parameter");
       Serial.println("?SERVERNUMBER:SENSLOPE:\t\t\tChecks current/saved server number of the device");
-      Serial.println("RESET:SENSLOPE:\t\t\tResets the microcontroller; similar to pressing the reset button");
+      Serial.println("RESET:SENSLOPE:\t\t\t\t\tResets the microcontroller; similar to pressing the reset button");
       Serial.println("RESETGSM:SENSLOPE:\t\t\tResets the GSM module only");
       Serial.println("SETBATTERYTYPE:SENSLOPE:\t\tReplaces current battery type with additional parameter");
       Serial.println("SETGSMPOWERMODE:SENSLOPE:\t\t[experimental]Replaces current [saved] GSM power mode with additional parameter");
@@ -802,10 +802,12 @@ void updateLoggerMode() {
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasSubsurfaceSensorFlag.write(99);
+    else hasSubsurfaceSensorFlag.write(0);
     Serial.print("   Gateway with UBLOX module? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasUbloxRouterFlag.write(99);
+    else hasUbloxRouterFlag.write(0);
     Serial.print("   Gateway broadcast command* [for LBT router(s)] [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
