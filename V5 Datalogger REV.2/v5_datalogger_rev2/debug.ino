@@ -172,6 +172,38 @@ void debugFunction() {
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
+      } else if (inputIs(serialLineInput, "LBT_TOGGLE")) {
+      resetWatchdog();
+      Serial.print("Listen Mode ");
+      if (listenMode.read()) {
+        Serial.println("ENABLED");
+        Serial.println("Disable Listen Mode?");
+      } 
+      else {
+        Serial.println("DISABLED");
+        Serial.println("Enable Listen Mode?");
+        // Serial.println("Datalogger will reset afterwards");
+      }
+      
+      if (changeParameter()) {
+        if ( listenMode.read()) {
+          listenMode.write(false);
+          Serial.println("Listen Mode DISABLED");
+          delayMillis(1000);
+        }
+        else {
+          listenMode.write(true);
+          Serial.println("Listen Mode ENABLED");
+          updateListenKey();
+          delayMillis(1000);
+          // Serial.println("   Datalogger will reset..");
+          // delayMillis(1000);
+          // NVIC_SystemReset();                             
+         } 
+      }
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+
     } else if (inputIs(serialLineInput, "RAIN_DATA")) {
       resetWatchdog();
       Serial.print("Rain data type to send: ");
@@ -723,6 +755,7 @@ void printExtraCommands() {
   Serial.println(F("BUILD_PARAM_SMS     Consolidate all [relevant] saved parameters into one string "));
   Serial.println(F("DUE_CONFIG          Checks saved config on custom due [requires 12V power]"));
   Serial.println(F("UPDATE_DUE_CONFIG   Updates name on custom due name using datalogger name"));
+  Serial.println(F("LBT_TOGGLE          Toggles Listen Mode ON or OFF"));
   Serial.println(F(" "));
   Serial.println(F("------------------------------------------------------"));
   resetWatchdog();
@@ -917,11 +950,11 @@ void savedParameters() {
   Serial.println("");
   Serial.print(">>>>> ");
   getLoggerModeAndName();
-  if (listenMode.read()) {
-    Serial.println("[Listen Mode Enabled]");
-    // Serial.print("Listen key: ");
-    // Serial.println(listenKey);  
-  }
+  // if (listenMode.read()) {
+  //   Serial.println("[Listen Mode Enabled]");
+  //   // Serial.print("Listen key: ");
+  //   // Serial.println(listenKey);  
+  // }
   Serial.println("");
   printDateTime();  //  Shows an easily readable datetime format
 
@@ -1098,6 +1131,7 @@ void getLoggerModeAndName() {
       sprintf(printBuffer, "Router %d: %s", rCount, flashLoggerName.sensorNameList[rCount]);
       Serial.println(printBuffer);
     }
+    if (listenMode.read()) debugPrintln("[Listen Mode ENABLED]");
 
   } else {  // other standalone dataloggers
     if (mode == ARQMODE) {
@@ -1112,7 +1146,7 @@ void getLoggerModeAndName() {
       if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
       if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
       if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.println("(Rain gauge only) ");
-      if (listenMode.read()) debugPrintln(" [Listen Mode ENABLED]");
+      if (listenMode.read()) debugPrintln("[Listen Mode ENABLED]");
       // Serial.println("");
     // } else if (mode == 4) {       // should remove this later...
     //   Serial.println("RAIN GAUGE ONLY (GSM)");

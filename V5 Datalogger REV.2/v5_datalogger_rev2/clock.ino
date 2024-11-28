@@ -22,7 +22,7 @@ void setupTime() {
   resetWatchdog();
   unsigned long setupStart = millis();
   int MM = 0, DD = 0, YY = 0, hh = 0, mm = 0, ss = 0, dd = 0;
-  Serial.println(F("\nSet time and date in this format: YYYY,MM,DD,hh,mm,ss,dd[0-6]Mon-Sun"));
+  Serial.println(F("\nSet time and date in this format: YYYY,MM,DD,hh,mm,ss,dd[0-6]Sun-Sat"));
   
   while (millis() - setupStart < 60000) {
     if (Serial.available() > 0) {
