@@ -330,6 +330,7 @@ void debugFunction() {
       resetWatchdog();
       CheckingSavedParameters();
       Serial.println("Quitting debug mode...");
+      resetRainTips();
       if (loggerWithGSM(savedDataLoggerMode.read())) deleteMessageInbox();
       else digitalWrite(GSMPWR, LOW);  //should turn off GSM module
       setNextAlarm(savedAlarmInterval.read());
@@ -342,6 +343,7 @@ void debugFunction() {
       resetWatchdog();
       // CheckingSavedParameters();
       Serial.println("Quitting debug mode...");
+      resetRainTips(); //reset rain tips
       // DELETE all SIM message or turn off GSM module
       if (loggerWithGSM(savedDataLoggerMode.read())) deleteMessageInbox();
       else digitalWrite(GSMPWR, LOW);
@@ -349,7 +351,7 @@ void debugFunction() {
       if (listenMode.read()) Serial.println("LBT enabled");
       else {
         setNextAlarm(savedAlarmInterval.read());
-        rtc.clearINTStatus();
+        // rtc.clearINTStatus();
       }
       debugProcess = false;
       debugMode = false;
@@ -380,7 +382,7 @@ void debugFunction() {
         if (operationFlag) {
           Serial.print("wait before starting...");
           resetWatchdog();
-          delayMillis(10000);
+          delayMillis(LBT_BROADCAST);  //wait time should be greater or equal to the broadcast duration
           resetWatchdog();}
         if (operationFlag) {
           operationFlag = false;
@@ -396,7 +398,7 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "LORA_BROADCAST")) {
-      broadcastLoRaKey(random(100, 500), 12000);
+      broadcastLoRaKey(random(100, 500), LBT_BROADCAST);
       Operation(flashServerNumber.dataServer);
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
@@ -670,7 +672,7 @@ void debugFunction() {
     // Serial.println(F("------------------------------------------------------"));
     Serial.println(F("Exiting DEBUG MENU"));
     Serial.println(F("------------------------------------------------------"));
-    // setNextAlarm(savedAlarmInterval.read());
+    if (listenMode.read() == false) setNextAlarm(savedAlarmInterval.read());
     delayMillis(75);
     // rtc.clearINTStatus();
     if (loggerWithGSM(savedDataLoggerMode.read()))
@@ -967,7 +969,7 @@ void savedParameters() {
     if (nextAlarmMinuteBuffer != 0) sprintf(nextAlarmBuffer, "%d:%02d %s", nextAlarmHourBuffer, nextAlarmMinuteBuffer, timeOfDayEq[timeOfDayIndex2]);  //  Shows next computed alarm based on the alamr interval and current time
     else sprintf(nextAlarmBuffer, "%d:00 %s", nextAlarmHourBuffer, timeOfDayEq[timeOfDayIndex2]);                                                      // do ko sure kung paano gawing zero padded yung zero na hindi ginagawang char
     Serial.print(nextAlarmBuffer);
-    if (listenMode.read()) Serial.print(" [DISABLED]");
+    if (listenMode.read() && (savedDataLoggerMode.read()==ROUTERMODE)) Serial.print(" [DISABLED]");
     Serial.println("");
   }
   
@@ -1011,7 +1013,7 @@ void savedParameters() {
   Serial.print(readRTCTemp());
   Serial.println("°C");
 
-  if (savedDataLoggerMode.read() != 2) {
+  if (savedDataLoggerMode.read() != ROUTERMODE) {
 
     Serial.print("Gsm power mode:\t ");
     if (savedGSMPowerMode.read() == 1) Serial.println("Low-power Mode (Always ON, but SLEEPS when inactive)");
@@ -1404,7 +1406,7 @@ void CheckingSavedParameters() {
 
     // Execute only if data logger mode is 0
     int currentDataLoggerMode = savedDataLoggerMode.read();
-    if (currentDataLoggerMode == 0 || currentDataLoggerMode == 1 || currentDataLoggerMode == 3 || currentDataLoggerMode == 4 || currentDataLoggerMode == 5) {
+    if (currentDataLoggerMode == 0 || currentDataLoggerMode == 1) {
       while (true) {
         Serial.print("Current server number: ");
         Serial.println(flashServerNumber.dataServer);

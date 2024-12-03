@@ -57,7 +57,7 @@ void Operation(const char * operationServerNumber) {
 
   } else if (dataloggerMode == GATEWAYMODE) {                             //  GATEWAY MODE
     // GATEWAY MODE
-    if (listenMode.read()) broadcastLoRaKey(random(100, 500), 12000);     
+    if (listenMode.read()) broadcastLoRaKey(random(100, 500), LBT_BROADCAST);     
     debugPrintln("Waiting for router data..");                            //  This is not conditional: We'd assume that if its a gateway, there should be a router
     waitForLoRaRouterData(MAX_GATEWAY_WAIT, savedRouterCount.read(), savedLoraReceiveMode.read());
     
@@ -147,6 +147,8 @@ void Operation(const char * operationServerNumber) {
     debugPrintln(routerOTAbuf);
     if (strlen(routerOTAbuf) > 0) findOTACommand(routerOTAbuf, "NANEEE", routerOTAts);               // CAUTION Experimental function only
   }
+
+  if (listenMode.read() && savedDataLoggerMode.read() == ROUTERMODE) LoRaInit(INIT_WAIT);
 
   // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
   // END OF OPERATION

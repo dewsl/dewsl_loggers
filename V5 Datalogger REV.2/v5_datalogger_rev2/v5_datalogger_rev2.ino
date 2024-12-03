@@ -15,7 +15,7 @@
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2411.28             //YYMM.DD
+#define FIRMWAREVERSION 2412.03             //YYMM.DD of git commit
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 300000
@@ -40,6 +40,7 @@
 #define INIT_WAIT 10000
 #define MAX_GATEWAY_WAIT 300000
 #define MAX_ROUTER_COUNT 20
+#define LBT_BROADCAST 15000   // duration of listen key broadcast
 // #define 
 
 // rain
@@ -336,7 +337,7 @@ void loop() {
     selfResetFlag = false;                            //  precaution only in case reset function fails (unlikely); pwede naman kahit wala ito
     LEDSelfReset();                                   //  distinct dapat ito sa regular sleep/wake LED pattern
     NVIC_SystemReset();                               //  reset
-  } else if (listenMode.read()  && savedDataLoggerMode.read() == ROUTERMODE) {
+  } else if (listenMode.read()  && (savedDataLoggerMode.read() == ROUTERMODE)) {
     resetWatchdog();
     rf95.sleep();
     //  defaults to 10s short sleep of short sleep value is not set or exceeds max interval between watchdog reset

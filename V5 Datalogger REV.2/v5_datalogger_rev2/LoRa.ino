@@ -392,13 +392,13 @@ void generateVoltString (char* stringContainer) {
   resetWatchdog();
 }
 
-void broadcastLoRaKey(int pingInterval, unsigned long broadcastDuration) {
+void broadcastLoRaKey(long pingInterval, unsigned long broadcastDuration) {
       resetWatchdog();
       int pingCounter = 0;
       debugPrint("broadcast LoRa key at specified interval (milliseconds):");
       debugPrint(pingInterval);
       // pingInterval = Serial.parseInt();
-      Serial.println(pingInterval);
+      // Serial.println(pingInterval);
       char pingMsgBuffer[100];
       char pingReply[100];
       unsigned long broadcastStart = millis();
@@ -442,6 +442,7 @@ void scanForCommand(int scanDuration, int keywordWaitDuration) {  // 1000,2000, 
   // put your main code here, to run repeatedly:
   scanStart = millis();
   // while(millis() - scanStart < scanTimeout && !channelActivity) {  // scan timeout: 2sec
+  
   while(millis() - scanStart < scanTimeout) {  // scan timeout: 2sec
     LEDOn();
     // rf95.init();
