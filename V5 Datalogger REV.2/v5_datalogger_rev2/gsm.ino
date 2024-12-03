@@ -699,7 +699,7 @@ bool checkServerNumber(char * serverNumber) {
   else if (inputIs(numberBuffer,"SMART1")) sprintf(serverNumber,"%s","09088125642");
   else if (inputIs(numberBuffer,"SMART2")) sprintf(serverNumber,"%s","09088125639");
   else if (inputIs(numberBuffer,"WEB")) sprintf(serverNumber,"%s","09053648335");
-  else if (inputIs(numberBuffer,"CHI")) sprintf(serverNumber,"%s","09179995183");
+  else if (inputIs(numberBuffer,"CHI")) sprintf(serverNumber,"%s","09954127577");
 
   //  expects that the length is equal to usual server number lengths 09XXXXXXXXX (11) or 639XXXXXXXXX (12)
   //  otherwise the number will be replaced by the default server number

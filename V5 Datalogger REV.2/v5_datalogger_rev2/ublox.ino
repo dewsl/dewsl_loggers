@@ -3,10 +3,10 @@ SFE_UBLOX_GNSS myGNSS;
 
 #define BUFLEN (5*RH_RF95_MAX_MESSAGE_LEN) //max size of data burst we can handle - (5 full RF buffers) - just arbitrarily large
 #define RFWAITTIME 500 //maximum milliseconds to wait for next LoRa packet - used to be 600 - may have been too long
-#define RTCM_TIMEOUT 180000 //3 minutes
+#define RTCM_TIMEOUT 240000 //4 minutes
 
 char siteCode[10]; //logger name - sensor site code
-int MIN_SAT = 30;
+int MIN_SAT = 20;
 int AVE_COUNT = 12;
 
 bool READ_FLAG = false;
@@ -270,9 +270,9 @@ void readUbloxData(char * ubloxDataContainer, int containerSize, char* sitecode)
     noGNSSDataAcquired(ubloxDataContainer, sizeof(ubloxDataContainer), siteCode);
   }
   // resetWatchdog();
-  // d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
-  // accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
-  // accu_count = 0;
+  d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
+  accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
+  accu_count = 0;
   // resetWatchdog();
 }
 
