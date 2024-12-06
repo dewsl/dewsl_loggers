@@ -139,6 +139,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
   } 
 
   if (READ_FLAG = true) {
+    rf95.setModemConfig(RH_RF95::Bw125Cr45Sf128);
     resetWatchdog();
     READ_FLAG = false;
     RX_LORA_FLAG == 0;
