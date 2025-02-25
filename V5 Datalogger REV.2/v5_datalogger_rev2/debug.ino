@@ -832,13 +832,16 @@ void updateLoggerMode() {
     Serial.print("   Router with Subsurface Sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
-    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasSubsurfaceSensorFlag.write(99);
-    else hasSubsurfaceSensorFlag.write(0);
-    Serial.print("   Router with UBLOX module? [Y/N] ");
-    getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
-    Serial.println(addOnBuffer);
-    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasUbloxRouterFlag.write(99);
-    else hasUbloxRouterFlag.write(0);
+    if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) {
+        hasSubsurfaceSensorFlag.write(99);
+    } else {  // Only ask if Ublox if Subsurface is not selected
+        hasSubsurfaceSensorFlag.write(0);
+        Serial.print("   Router with UBLOX module? [Y/N] ");
+        getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
+        Serial.println(addOnBuffer);
+        if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasUbloxRouterFlag.write(99);
+        else hasUbloxRouterFlag.write(0);
+    }
     Serial.print("   Router mode LISTEN-BEFORE-TALK*? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
@@ -1090,24 +1093,58 @@ void scalableUpdateSensorNames() {
     getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
     if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESG");
     Serial.println(nameBuffer);
-    sprintf(flashLoggerName.sensorNameList[0], nameBuffer);
-    for (byte listPos = 1; listPos <= savedRouterCount.read(); listPos++) {  // router name positioning starts at index 1, 0 is self
+    sprintf(flashLoggerName.sensorNameList[0], "%s", nameBuffer);
+
+    uint8_t routerStartIndex = 1;
+    if (hasUbloxRouterFlag.read() == 99) {
+      Serial.print("Input name for Ublox Module: ");
+      getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
+      if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESUA");
+      Serial.println(nameBuffer);
+      sprintf(flashLoggerName.sensorNameList[1], "%s", nameBuffer);
+      routerStartIndex = 2;
+    }
+    expectedRouter = savedRouterCount.read();
+
+    for (byte listPos = routerStartIndex; listPos < routerStartIndex + expectedRouter; listPos++) {
       Serial.print("Input name of ROUTER ");
-      Serial.print(listPos);
+      Serial.print(listPos - routerStartIndex + 1);
       Serial.print(": ");
       getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
-      if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TEST%d", listPos);
+      if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TEST%d", listPos - routerStartIndex + 1);
       Serial.println(nameBuffer);
-      sprintf(flashLoggerName.sensorNameList[listPos], nameBuffer);
+      sprintf(flashLoggerName.sensorNameList[listPos], "%s", nameBuffer);
     }
-  } else {  // stand-alone mode or router modes
+  }  else if (currentLoggerMode == ROUTERMODE) { // Router Mode
+    if (hasUbloxRouterFlag.read() == 99) {
+      Serial.print("Input name for Ublox Module: ");
+      getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
+      if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESU");
+      Serial.println(nameBuffer);
+      sprintf(flashLoggerName.sensorNameList[0], "%s", nameBuffer);
+    } else {
+      hasUbloxRouterFlag.write(0);
+      Serial.print("Input ROUTER name: ");
+      getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
+      if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESR");
+      Serial.println(nameBuffer);
+      sprintf(flashLoggerName.sensorNameList[0], "%s", nameBuffer);
+    }
+  } else {  // Standalone (ARQ Mode)
     Serial.print("Input DATALOGGER name: ");
     getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
     if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESTA");
     Serial.println(nameBuffer);
-    sprintf(flashLoggerName.sensorNameList[0], nameBuffer);
-  }  // other standalone routers
+    sprintf(flashLoggerName.sensorNameList[0], "%s", nameBuffer);
 
+    if (hasUbloxRouterFlag.read() == 99) {
+      Serial.print("Input name for Ublox Module: ");
+      getSerialInput(nameBuffer, sizeof(nameBuffer), 60000);
+      if (strlen(nameBuffer) == 0) sprintf(nameBuffer, "TESUA");
+      Serial.println(nameBuffer);
+      sprintf(flashLoggerName.sensorNameList[1], "%s", nameBuffer);
+    }
+  }
   savedLoggerName.write(flashLoggerName);
   updateListenKey();
   resetWatchdog();
@@ -1119,47 +1156,55 @@ void getLoggerModeAndName() {
   uint8_t mode = savedDataLoggerMode.read();
   char printBuffer[50];
 
-  if (mode == GATEWAYMODE) {  //gateways
+  if (mode == GATEWAYMODE) {  // gateways
     Serial.print("GATEWAY MODE ");
     if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
-    if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
+    if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module ");
     if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("(Rain gauge only) ");
     Serial.print("with ");
     Serial.print(savedRouterCount.read());
     Serial.println(" Router(s) ");
     if (listenMode.read()) debugPrintln(" [Broadcasts Router Commands]");
-    // Serial.println("");
+
     Serial.print("Gateway name ");
     Serial.println(flashLoggerName.sensorNameList[0]);
+
+    uint8_t nameIndex = 1;
+    if (hasUbloxRouterFlag.read() == 99) {
+      Serial.print("Ublox name: ");
+      Serial.println(flashLoggerName.sensorNameList[nameIndex]);
+      nameIndex++;
+    }
+
     for (byte rCount = 1; rCount <= savedRouterCount.read(); rCount++) {
-      sprintf(printBuffer, "Router %d: %s", rCount, flashLoggerName.sensorNameList[rCount]);
+      sprintf(printBuffer, "Router %d: %s", rCount, flashLoggerName.sensorNameList[nameIndex]);
       Serial.println(printBuffer);
+      nameIndex++;
     }
     if (listenMode.read()) debugPrintln("[Listen Mode ENABLED]");
 
-  } else {  // other standalone dataloggers
-    if (mode == ARQMODE) {
-      Serial.print("STAND-ALONE DATALOGGER ");
-      if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
-      if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
-      if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("(Rain gauge only) ");
-    // } else if (mode == 1) {
-    //   Serial.println("ARQ MODE + UBLOX Module:");
-    } else if (mode == ROUTERMODE) {
-      Serial.print("ROUTER MODE ");
-      if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
-      if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module: ");
-      if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.println("(Rain gauge only) ");
-      if (listenMode.read()) debugPrintln("[Listen Mode ENABLED]");
-      // Serial.println("");
-    // } else if (mode == 4) {       // should remove this later...
-    //   Serial.println("RAIN GAUGE ONLY (GSM)");
-    // } else if (mode == 5) {       // arQ mode GNSS sensor
-    //   Serial.println("RAIN GAUGE ONLY (Router)");
+  } else {  // Standalone Dataloggers or Router Mode
+    Serial.print((mode == ARQMODE) ? "STAND-ALONE DATALOGGER " : "ROUTER MODE ");
+    // if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
+    if (hasSubsurfaceSensorFlag.read() == 99) {
+      Serial.print("with Subsurface Sensor ");
+      hasUbloxRouterFlag.write(0);  // Disable Ublox if Subsurface Sensor exists
     }
-    Serial.println("");
-    Serial.print("Datalogger name: ");
-    Serial.println(flashLoggerName.sensorNameList[0]);
+
+    // if (hasUbloxRouterFlag.read() == 99) Serial.print(" UBLOX Module ");
+    if (hasUbloxRouterFlag.read() == 99) {
+      Serial.print(" UBLOX Module ");
+      hasSubsurfaceSensorFlag.write(0);  // Disable Subsurface Sensor if Ublox exists
+    }
+    
+    if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("(Rain gauge only) ");   
+    if (mode == ROUTERMODE && listenMode.read()) debugPrintln("[Listen Mode ENABLED]");
+    Serial.println("\nDatalogger name: " + String(flashLoggerName.sensorNameList[0]));
+    
+    if (hasUbloxRouterFlag.read() == 99) {
+        Serial.print("Ublox name: ");
+        Serial.println(flashLoggerName.sensorNameList[mode == ROUTERMODE ? 0 : 1]);
+    }
   }
   resetWatchdog();
 }

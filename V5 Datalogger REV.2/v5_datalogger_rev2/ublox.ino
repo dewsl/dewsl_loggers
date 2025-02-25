@@ -291,10 +291,15 @@ void noGNSSDataAcquired(char* msgContainer, int containerSize, char* sitecode) {
 }
 
 void initialize_sitecode(char* siteCodeContainer) {
-  if (savedDataLoggerMode.read() == GATEWAYMODE) { //Gateway with sensor and 1 lora tx (if gnss) ; Gateway rain gauge with gnss
-    sprintf(siteCodeContainer, flashLoggerName.sensorNameList[1]);
-  } else {
-    sprintf(siteCodeContainer, flashLoggerName.sensorNameList[0]);
-  } 
-  siteCodeContainer[strlen(siteCodeContainer)]=0x00;
+  uint8_t mode = savedDataLoggerMode.read();
+  uint8_t siteIndex = 0;  // Default index for standalone mode
+
+  // Determine site index dynamically based on Ublox and Subsurface presence
+  if (mode == GATEWAYMODE || mode == ARQMODE) {
+    if (hasSubsurfaceSensorFlag.read() == 99) siteIndex++; // Shift further if Subsurface sensor is present
+    if ((hasSubsurfaceSensorFlag.read() == 0) && (hasUbloxRouterFlag.read() ==99)) siteIndex++;
+  }
+
+  sprintf(siteCodeContainer, "%s", flashLoggerName.sensorNameList[siteIndex]);
+  siteCodeContainer[strlen(siteCodeContainer)] = 0x00; // Null-terminate
 }

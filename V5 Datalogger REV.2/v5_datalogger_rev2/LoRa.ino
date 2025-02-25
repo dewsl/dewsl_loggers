@@ -167,7 +167,15 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, 
   debugPrint("Router count: ");
   debugPrintln(savedRouterCount.read());
   debugPrintln("Listed router(s): ");
-  for (int routerPos=1; routerPos <= savedRouterCount.read(); routerPos++) debugPrintln(flashLoggerName.sensorNameList[routerPos]);
+  // uint8_t startIndex = (hasUbloxRouterFlag.read() == 99) ? 2 : 1;  // Start at index 2 if Ublox exists
+  uint8_t startIndex = 1;  
+  uint8_t routerTotal = savedRouterCount.read();  
+  // Adjust index and count if HASUBLOX is present and it's a Gateway
+  if (hasUbloxRouterFlag.read() == 99 && savedDataLoggerMode.read() == GATEWAYMODE) {  
+      startIndex = 2;  // Skip Ublox  
+      routerTotal += 1;  // Increase count since Ublox shifts router names  
+  }
+  for (int routerPos=startIndex; routerPos <= routerTotal; routerPos++) debugPrintln(flashLoggerName.sensorNameList[routerPos]);
   debugPrintln("");
   debugPrint("Wait time limit: ");
   debugPrint(receiverWaitDuration/1000/60);

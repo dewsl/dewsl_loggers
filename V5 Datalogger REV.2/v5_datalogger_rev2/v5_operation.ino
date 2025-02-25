@@ -46,7 +46,7 @@ void Operation(const char * operationServerNumber) {
       getGNSSData(smsSegmentContainer, sizeof(smsSegmentContainer));
       addToSMSStack(smsSegmentContainer);
     }
-    if (hasSubsurfaceSensorFlag.read() == 99) {
+    else if (hasSubsurfaceSensorFlag.read() == 99) {
       debugPrintln("Collecting sensor column data..");
       dueDataCollection(SAMPLINGTIMEOUT); 
     } 
