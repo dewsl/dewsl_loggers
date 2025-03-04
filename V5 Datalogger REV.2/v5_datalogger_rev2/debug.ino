@@ -1185,16 +1185,23 @@ void getLoggerModeAndName() {
 
   } else {  // Standalone Dataloggers or Router Mode
     Serial.print((mode == ARQMODE) ? "STAND-ALONE DATALOGGER " : "ROUTER MODE ");
-    // if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
-    if (hasSubsurfaceSensorFlag.read() == 99) {
-      Serial.print("with Subsurface Sensor ");
-      hasUbloxRouterFlag.write(0);  // Disable Ublox if Subsurface Sensor exists
-    }
 
-    // if (hasUbloxRouterFlag.read() == 99) Serial.print(" UBLOX Module ");
-    if (hasUbloxRouterFlag.read() == 99) {
-      Serial.print(" UBLOX Module ");
-      hasSubsurfaceSensorFlag.write(0);  // Disable Subsurface Sensor if Ublox exists
+    if (mode == ARQMODE) {
+      if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
+      if (hasUbloxRouterFlag.read() == 99) Serial.print("+ UBLOX Module ");
+
+    } else if (mode == ROUTERMODE) {
+      // if (hasSubsurfaceSensorFlag.read() == 99) Serial.print("with Subsurface Sensor ");
+      if (hasSubsurfaceSensorFlag.read() == 99) {
+        Serial.print("with Subsurface Sensor ");
+        hasUbloxRouterFlag.write(0);  // Disable Ublox if Subsurface Sensor exists
+      }
+
+      // if (hasUbloxRouterFlag.read() == 99) Serial.print(" UBLOX Module ");
+      if (hasUbloxRouterFlag.read() == 99) {
+        Serial.print(" UBLOX Module ");
+        hasSubsurfaceSensorFlag.write(0);  // Disable Subsurface Sensor if Ublox exists
+      }
     }
     
     if (hasSubsurfaceSensorFlag.read() != 99 && hasUbloxRouterFlag.read() != 99) Serial.print("(Rain gauge only) ");   
