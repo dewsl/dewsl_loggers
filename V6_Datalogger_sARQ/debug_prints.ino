@@ -168,7 +168,7 @@ void savedParameters() {
   else Serial.println("Lead acid");
   Serial.print("Input Voltage:\t ");
   // Serial.print(readBatteryVoltage(EEPROM.readByte(BATTERY_TYPE)));
-  Serial.println("N/A");
+  Serial.print("N/A");
   Serial.println("V");
 
   Serial.print("RTC temperature: ");

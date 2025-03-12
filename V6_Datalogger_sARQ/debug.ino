@@ -55,15 +55,19 @@ void debugFunction() {
       uint8_t RainCollectorType = EEPROM.read(RAIN_COLLECTOR_TYPE);
       Serial.print("\nCollector type: ");
       char rainMsg[30];
-      if (RainCollectorType == 0) sprintf(rainMsg, "Pronamic (0.5mm/tip)\nRain tip count: %d\nEquivalent: %0.2fmm", tipCount, (tipCount * 0.5));
-      else if (RainCollectorType == 1) sprintf(rainMsg, "Davis (0.2mm/tip)\nRain tip count: %d\nEquivalent: %0.2fmm", tipCount, (tipCount * 0.2));
+      // if (RainCollectorType == 0) sprintf(rainMsg, "Pronamic (0.5mm/tip)\nRain tip count: %d\nEquivalent: %0.2fmm", tipCount, (tipCount * 0.5));
+      // else if (RainCollectorType == 1) sprintf(rainMsg, "Davis (0.2mm/tip)\nRain tip count: %d\nEquivalent: %0.2fmm", tipCount, (tipCount * 0.2));
+      if (RainCollectorType == 0) sprintf(rainMsg, "Pronamic (0.5mm/tip)\nRain tip count: %d\nEquivalent: %0.2fmm", RTC_SLOW_MEM[EDGE_COUNT] & 0xFFFF, (tipCount * 0.5));
+      else if (RainCollectorType == 1) sprintf(rainMsg, "Davis (0.2mm/tip)\nRain tip count: %d\nEquivalent: %0.2fmm", RTC_SLOW_MEM[EDGE_COUNT] & 0xFFFF, (tipCount * 0.2));
       Serial.println(rainMsg);
       delayMillis(20);
-      resetRainTips();
+      // resetRainTips();
+      // RTC_SLOW_MEM[EDGE_COUNT] & 0xFFFF;
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "BB")) {
+
       rainTest();
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
@@ -93,27 +97,27 @@ void debugFunction() {
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
     
-    //  else if (inputIs(serialLineInput, "E")) {
+    } else if (inputIs(serialLineInput, "E")) {
 
-    //   Serial.print("Current timestamp: ");
-    //   getTimeStamp(_timestamp, sizeof(_timestamp));
-    //   Serial.println(_timestamp);
-    //   if (changeParameter()) {
-    //     setupTime();
-    //     Serial.print("New timestamp: ");
-    //     Serial.println(_timestamp);
-    //   }
-    //   debugModeStart = millis();
-    //   Serial.println(F("------------------------------------------------------"));
+      Serial.print("Current timestamp: ");
+      getTimeStamp(_timestamp, sizeof(_timestamp));
+      Serial.println(_timestamp);
+      if (changeParameter()) {
+        setupTime();
+        Serial.print("New timestamp: ");
+        Serial.println(_timestamp);
+      }
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
 
-    // } else if (inputIs(serialLineInput, "F")) {
+    } else if (inputIs(serialLineInput, "F")) {
 
-    //   if (savedDataLoggerMode.read() != ROUTERMODE) {
-    //     Serial.println("Checking network time..");
-    //     updateTimeWithGPRS();
-    //     debugModeStart = millis();
-    //     Serial.println(F("------------------------------------------------------"));
-    //   } else Serial.println("Can't check network time using ROUTER mode");
+      if (EEPROM.readByte(DATALOGGER_MODE) != ROUTERMODE) {
+        Serial.println("Checking network time..");
+        updateTimeWithGPRS();
+        debugModeStart = millis();
+        Serial.println(F("------------------------------------------------------"));
+      } else Serial.println("Can't check network time using ROUTER mode");
 
     } else if (inputIs(serialLineInput, "G")) {
 
@@ -291,9 +295,9 @@ void debugFunction() {
       }
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
-    } 
     
-    // else if (inputIs(serialLineInput, "P")) {
+    
+    //} else if (inputIs(serialLineInput, "P")) {
 
     //   flashCommands = savedCommands.read();
     //   Serial.print("Current sensor command: ");
@@ -329,23 +333,52 @@ void debugFunction() {
     //   Serial.println(F("------------------------------------------------------"));
 
 
-    // } else if (inputIs(serialLineInput, "X") || inputIs(serialLineInput, "EXIT")) {
+    } else if (inputIs(serialLineInput, "X") || inputIs(serialLineInput, "EXIT")) {
 
-    //   CheckingSavedParameters();
-    //   Serial.println("Quitting debug mode...");
-    //   resetRainTips();
-    //   if (loggerWithGSM(savedDataLoggerMode.read())) deleteMessageInbox();
-    //   else digitalWrite(GSMPWR, LOW);  //should turn off GSM module
-    //   setNextAlarm(savedAlarmInterval.read());
-    //   debugProcess = false;
-    //   debugMode = false;
-    //   // USBDevice.detach();
-    //   Serial.println(F("------------------------------------------------------"));
+      // CheckingSavedParameters();
+      Serial.println("Quitting debug mode...");
+      // resetRainTips();
+      // if (loggerWithGSM(EEPROM.readByte(DATALOGGER_MODE))) deleteMessageInbox();
+      // else digitalWrite(AUX_TRIG, LOW);  //should turn off GSM module
+      // setNextAlarm(savedAlarmInterval.read());
+      debugProcess = false;
+      debugExitSkip = true;
+      // Serial.end();
+      // USBDevice.detach();
+      Serial.println(F("------------------------------------------------------"));
 
-    // }
+    } else if (inputIs(serialLineInput, "T")) {
+      if (gpio_get_level(GPIO_NUM_26) == 1) {debugPrintln("AUX TRIGGER DISABLED"); digitalWrite(AUX_TRIG, LOW);}
+      else if (gpio_get_level(GPIO_NUM_26) == 0) {debugPrintln("AUX TRIGGER ENABLED"); digitalWrite(AUX_TRIG, HIGH);}
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------")); 
 
-    else if (inputIs(serialLineInput, "?")) {
+    } else if (inputIs(serialLineInput, "?")) {
       savedParameters();
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+
+    } else if (inputIs(serialLineInput, "LORA_SEND")) {
+      char testSend[50] = "sarQ test packet";
+      sendThruLoRa(testSend);
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+    
+    } else if (inputIs(serialLineInput, "LORA_RCV")) {
+      char receiveContainer[RH_RF95_MAX_MESSAGE_LEN];
+      receiveLoRaData(receiveContainer, sizeof(receiveContainer), 120000);
+      debugPrintln(receiveContainer);
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+    
+    } else if (inputIs(serialLineInput, "INFO_STRING")) {
+      Serial.println("Generating info strings");
+      char infoStrContainer[100];
+      generateInfoMessage(infoStrContainer);
+      // infoStrContainer[strlen(infoStrContainer)] = 0x00;
+      Serial.println(infoStrContainer);
+      // generateVoltString(infoStrContainer);
+      // Serial.println(infoStrContainer);
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
     }
@@ -358,7 +391,6 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
       break;
     }
-
 
     // if (strlen(serialLineInput) != 0) {                                                     //  
     //   debugPrint(serialLineInput);
@@ -374,15 +406,23 @@ void debugFunction() {
     //   if (strlen(GSMResponseBuffer) != 0) debugPrint(GSMResponseBuffer);
     //   if (strlen(GSMResponseBuffer) != 0) GSMResponseBuffer[0]=0x00;
     // }
-
   }
 }
+
 
 bool inputIs(const char* inputFromSerial, const char* expectedInput) {
   bool correctInput = false;
   if ((strstr(inputFromSerial, expectedInput)) && (strlen(expectedInput) == strlen(inputFromSerial))) {
     correctInput = true;
   }
+  return correctInput;
+}
+
+bool inputHas(const char* inputToCheck, const char* expectedInputSegment) {
+  bool correctInput = false;
+  char * pointerResult = strstr(inputToCheck, expectedInputSegment);
+  if (pointerResult != NULL) correctInput = true;
+  else (correctInput = false);
   return correctInput;
 }
 
@@ -607,6 +647,5 @@ void scalableUpdateSensorNames() {
   EEPROM.put(DATALOGGER_NAME, flashLoggerName);
   EEPROM.commit();
   updateListenKey();
-
 }
 
