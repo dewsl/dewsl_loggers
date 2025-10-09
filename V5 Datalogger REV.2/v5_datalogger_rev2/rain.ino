@@ -6,6 +6,7 @@ void rainInit(int rainINTPin ) {
 
 void rainISR() {
   int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
+  countDownMS += 1; // this does nothing, just to catch a warning
   LEDOn();
   _rainTips += 1;
   debugPrint("Rain tips: ");
@@ -16,7 +17,7 @@ void rainISR() {
 void updateRainCollectorType() {
   resetWatchdog();
   unsigned long updateStart = millis();
-  int updateTimeout = 60000;
+  unsigned long updateTimeout = 60000;
   int collectorTypeBuf = 0;
   uint8_t currentType = savedRainCollectorType.read();
   if (currentType == 0) debugPrintln("Pronamic (0.5mm/tip)");
@@ -46,7 +47,7 @@ void updateRainCollectorType() {
 void updateRainDataType() {
   resetWatchdog();
   unsigned long updateStart = millis();
-  int updateTimeout = 60000;
+  unsigned long updateTimeout = 60000;
   int newDataType = 0;
   uint8_t currentType = savedRainSendType.read();
   if (currentType == 0) debugPrintln("Sends converted \"mm\" equivalent");

@@ -27,12 +27,11 @@ void GSMOn(){
 bool GSMInit() {
   resetWatchdog();
   bool initOK = false;
-  char GSMLine[500];
   bool gsmSerial = false;
   bool GSMconfig = false;
   bool signalCOPS = false;
   unsigned long initStart = millis();
-  int initTimeout = 25000;
+  unsigned long initTimeout = 25000;
   uint8_t errorCount = 0;
 
   debugPrintln("Connecting GSM to network...");
@@ -55,7 +54,7 @@ bool GSMInit() {
   do {
     resetWatchdog();
     GSMAnswer(gsmInitResponse, 100);  
-    if (strlen(gsmInitResponse) > 0 && gsmInitResponse != "\n") debugPrintln(gsmInitResponse);
+    if (strlen(gsmInitResponse) > 0 && strcmp(gsmInitResponse,"\n") != 0) debugPrintln(gsmInitResponse);
     delayMillis(300);
     resetWatchdog();
   } while (millis() - gsmPowerOn < 5000);
@@ -135,7 +134,6 @@ bool GSMInit() {
 bool sendThruGSM(const char* messageToSend, const char* serverNumber) {
   resetWatchdog();
   bool sentFlag = false;
-  char GSMresponse[100];
   char messageContainer[1000];
   char CMGSContainer[50];
   char serverBuffer[20];
@@ -261,10 +259,8 @@ void sendSMSDump(const char* messageDelimilter, const char* dumpServer) {
   // in case of 
 }
 
-void GSMAnswer(char* responseBuffer, int bufferLength) {
+void GSMAnswer(char* responseBuffer, uint16_t bufferLength) {
   resetWatchdog();
-  int bufferIndex = 0;
-  unsigned long waitStart = millis();
 
   for (int i = 0; i < bufferLength; i++){
     responseBuffer[i] = 0x00;
@@ -282,7 +278,7 @@ void GSMAnswer(char* responseBuffer, int bufferLength) {
 
 // Checks command response from GSM serial.
 // Returns TRUE then correct response is received
-bool GSMWaitResponse(const char* targetResponse, int waitDuration, bool showResponse) {
+bool GSMWaitResponse(const char* targetResponse, unsigned long waitDuration, bool showResponse) {
   resetWatchdog();
   bool responseValid = false;
   char toCheck[50];
@@ -294,10 +290,10 @@ bool GSMWaitResponse(const char* targetResponse, int waitDuration, bool showResp
 
   do {
     resetWatchdog();
-      for (int i = 0; i < sizeof(responseBuffer); i++){
+      for (uint16_t i = 0; i < sizeof(responseBuffer); i++){
         responseBuffer[i] = 0x00;
       }
-      for (int j = 0; j < sizeof(responseBuffer) && GSMSerial.available() > 0 ; j++) {
+      for (uint16_t j = 0; j < sizeof(responseBuffer) && GSMSerial.available() > 0 ; j++) {
         charBuffer = GSMSerial.read();
         if (charBuffer == '\n' || charBuffer == '\r') {
           responseBuffer[j]=0x00;
@@ -307,7 +303,7 @@ bool GSMWaitResponse(const char* targetResponse, int waitDuration, bool showResp
         }
       }
 
-      if (strlen(responseBuffer) > 0 && responseBuffer != "\n") {
+      if (strlen(responseBuffer) > 0 && strcmp(responseBuffer,"\n")!= 0) {
         if (showResponse) debugPrintln(responseBuffer);
         if (strstr(responseBuffer, toCheck)) {
           // debugPrintln(responseBuffer);
@@ -325,7 +321,7 @@ bool GSMWaitResponse(const char* targetResponse, int waitDuration, bool showResp
 }
 
 // 
-bool GSMGetResponse(char* responseContainer, int containerLen, const char * responseReq, int getDuration) {
+bool GSMGetResponse(char* responseContainer, uint16_t containerLen, const char * responseReq, unsigned long getDuration) {
   resetWatchdog();
 
   char toCheck[50];
@@ -497,10 +493,10 @@ bool readCSQ(char * csqContainer) {
 
 void updateServerNumber() {
   resetWatchdog();
-  int changeServerTimeout = 60000;
+  unsigned long changeServerTimeout = 60000;
   char serverNumBuffer[15];
   char numBuf;
-  int numberIndex = 0;
+  uint16_t numberIndex = 0;
   unsigned long waitStart;
 
   waitStart = millis();
@@ -533,9 +529,10 @@ void testSendToServer() {
   resetWatchdog();
   char sendBuf;
   unsigned long sendWait = millis();
-  int sendTestTimeout = 60000;
-  int testSendIndex = 0;
+  unsigned long sendTestTimeout = 60000;
+  uint16_t testSendIndex = 0;
   char testSendBuffer[200];
+  char messageContainer[300];
   flashLoggerName = savedLoggerName.read();
 
   while (millis() - sendWait < sendTestTimeout) {
@@ -555,10 +552,11 @@ void testSendToServer() {
   }
   if (strlen(testSendBuffer) > 0 && loggerWithGSM(savedDataLoggerMode.read())) {
     flashServerNumber = savedServerNumber.read();
-    if (sendThruGSM(testSendBuffer,flashServerNumber.dataServer)) debugPrintln("Message sent");
-    else {GSMReset(); if (sendThruGSM(testSendBuffer,flashServerNumber.dataServer)) debugPrintln("Message sent");}
+    sprintf(messageContainer,"%s: %s",flashLoggerName.sensorNameList[0],testSendBuffer);    // add datalogger name as prefic for message sending
+    if (sendThruGSM(messageContainer,flashServerNumber.dataServer)) debugPrintln("Message sent");
+    else {GSMReset(); if (sendThruGSM(messageContainer,flashServerNumber.dataServer)) debugPrintln("Message sent");}
   } else {
-    char loraSendBuffer[200];
+    char loraSendBuffer[300];
     getTimeStamp(_timestamp, sizeof(_timestamp));
     sprintf(loraSendBuffer, ">>%s*%s*%s",flashLoggerName.sensorNameList[0],testSendBuffer,_timestamp);
     sendThruLoRa(loraSendBuffer);
@@ -654,7 +652,7 @@ void GSMPowerModeReset() {
     GSMSerial.flush();
     GSMSerial.write("AT+CSCLK=0\r");
     // GSMSerial.write("AT+CFUN=1,1\r");
-    if (GSMWaitResponse,"OK",1000,true) debugPrintln("GSM is awake");
+    if (GSMWaitResponse("OK",1000,true)) debugPrintln("GSM is awake");
     else debugPrintln("GSM did NOT wake");  //error code
   } else {}  // default 
   resetWatchdog();  
@@ -671,7 +669,7 @@ void GSMPowerModeSet() {
   } else  if (powerMode == 1) {
     GSMSerial.write("AT+CSCLK=2\r");
     // GSMSerial.write("AT+CFUN=0\r");
-    if (GSMWaitResponse,"OK",1000,true) debugPrintln("GSM auto sleep enabled");
+    if (GSMWaitResponse("OK",1000,true)) debugPrintln("GSM auto sleep enabled");
     else debugPrintln("Failed to set GSM autosleep"); //error code
   } else {} // no powersavings; do nothing
   resetWatchdog();
@@ -685,7 +683,7 @@ bool checkServerNumber(char * serverNumber) {
   sprintf(numberBuffer, "%s", serverNumber);
   
 
-  if (inputIs(numberBuffer,"DAN")) sprintf(serverNumber,"%s","09762372823");
+  if (inputIs(numberBuffer,"DAN")) sprintf(serverNumber,"%s","09762481329");
   else if (inputIs(numberBuffer,"DON")) sprintf(serverNumber,"%s","09179995183");
   else if (inputIs(numberBuffer,"GLOBE1")) sprintf(serverNumber,"%s","09175972526");
   else if (inputIs(numberBuffer,"GLOBE2")) sprintf(serverNumber,"%s","09175388301");
@@ -745,7 +743,7 @@ void deleteMessageInbox() {
   GSMSerial.write("AT+CMGDA=\"DEL ALL\"\r");
   delayMillis(500);
   resetWatchdog();
-  if (GSMWaitResponse("OK", 15000, false)) if (Serial) Serial.println("Deleted all SMS from SIM");
+  if (GSMWaitResponse("OK", 15000, false)) {if (Serial) Serial.println("Deleted all SMS from SIM");}
   else {if (Serial) Serial.println("Delete SIM SMS failed");}
   resetWatchdog();
 }
@@ -769,7 +767,7 @@ void extractSMSdata(char *msgBody, char * senderNum, char* msgTS) {
   delayMillis(500);
 
   // fill array to prevent junk
-  for (int c = 0; c < sizeof(OTALineBuffer); c++) OTALineBuffer[c]=0x00;
+  for (uint16_t c = 0; c < sizeof(OTALineBuffer); c++) OTALineBuffer[c]=0x00;
 
   while (GSMSerial.available() > 0 ) {
     OTAchar = GSMSerial.read();
@@ -816,7 +814,6 @@ void extractSMSdata(char *msgBody, char * senderNum, char* msgTS) {
 bool fetchSenderNumber(char * OTAServerContainer, char * lineToProcess) {
   resetWatchdog();
   char OTACommandBuffer[500];
-  char OTASender[20];
   bool validServer = false;
 
   sprintf(OTACommandBuffer,"%s", lineToProcess);
@@ -939,8 +936,8 @@ void findOTACommand(const char* OTALineCheck, const char * OTASender, const char
   //  Sample: SETDATETIME:SENSLOPE:2024,02,23,21,22,40,1
   else if (inputHas(otaString, "SETDATETIME:SENSLOPE:")) {
     resetWatchdog();
-    char *_password = strtok(otaString + 11, ":");      // tokenize timestning to extract datetime values
-    char *YY = strtok(NULL, ",");                       //  pwede ito gawing loop para bawas sa lines pero mas madali lang tingnan kung ganito
+    // char *_password = strtok(otaString + 11, ":");      // tokenize timestring to extract datetime values
+    char *YY = strtok(otaString + 20, ",");                       //  pwede ito gawing loop para bawas sa lines pero mas madali lang tingnan kung ganito
     char *MM = strtok(NULL, ",");
     char *DD = strtok(NULL, ",");
     char *hh = strtok(NULL, ",");
@@ -1189,10 +1186,8 @@ void findOTACommand(const char* OTALineCheck, const char * OTASender, const char
   else if (inputHas(otaString, "CMD:SENSLOPE:")) {
     resetWatchdog();
     flashCommands = savedCommands.read();
-    char *_password = strtok(otaString + 4, ":\",");
-    char *dueCmd = strtok(NULL, ":\",");
 
-    strcpy((flashCommands.sensorCommand), dueCmd);
+    strcpy(flashCommands.sensorCommand, otaString + 13);
     savedCommands.write(flashCommands);  //save to flash memory
 
     flashCommands = savedCommands.read();
@@ -1216,13 +1211,12 @@ void findOTACommand(const char* OTALineCheck, const char * OTASender, const char
 
 void clearGlobalSMSDump() {
   resetWatchdog();
-  for (int d = 0; d < sizeof(_globalSMSDump);d++) _globalSMSDump[d]=0x00; 
+  for (uint16_t d = 0; d < sizeof(_globalSMSDump);d++) _globalSMSDump[d]=0x00; 
 }
 
 void updateTimeWithGPRS() {
   resetWatchdog();
   detachInterrupt(digitalPinToInterrupt(GSMINT));
-  char timebuffer[13];
   char gsmResponse[200];
 
   GSMSerial.write("AT+SAPBR=3,1,\"Contype\",\"GPRS\"\r");  //AT+SAPBR=3,1,"Contype","GPRS"
@@ -1305,6 +1299,77 @@ void setGSMPowerMode() {
     Serial.println(savedGSMPowerMode.read());
     break;
     }
+  }
+  resetWatchdog();
+}
+
+
+/// Simple function for checking CSQ value continously
+void signalCheckMode() {   
+  debugPrint("this might cause the SIM to be temporarily blocked by the network provider; USE MODERATELY")
+  resetWatchdog();
+  char sendLine[500];
+  unsigned long checkInterval = 8000;     // interval for triggering CSQ checking function
+  unsigned long lastCheck = millis();
+  bool _checkMode = true;
+  bool _checkCSQ = true;
+  char bufferChar;
+  GSMSerial.flush();
+  while (_checkMode) {
+    resetWatchdog();
+
+    for (int j = 0; j < 500; j++){          // clear send and receive buffers
+        sendLine[j] = 0x00;
+    }
+    if (Serial.available() > 0 ) {          // accept serial input for exiting the function
+      for (int j = 0; j < 500; j++) {
+        bufferChar = Serial.read();
+        // sendLine[j] = Serial.read();
+        if (bufferChar == '\n' || bufferChar == '\r') {
+          break;
+        } else {
+          sendLine[j] = bufferChar;
+        }
+      }
+      if (strlen(sendLine) >= 500) {
+        sendLine[500-1] = 0x00;
+      } else {
+        sendLine[strlen(sendLine)]=0x00;
+      }
+    }
+
+    if (millis() - lastCheck > checkInterval) {   //  check trigger for next time for next checking cycle and set check flag
+      lastCheck = millis();
+      _checkCSQ = true;
+    }
+
+    if (_checkCSQ) {                              //  run CSQ checking function here
+      // debugPrintln("Check CSQ");
+      char gsmCSQResponse[200];
+      GSMSerial.write("AT+CSQ\r");
+      delayMillis(1000);
+      while (GSMSerial.available() > 0) {
+        if (GSMGetResponse(gsmCSQResponse, sizeof(gsmCSQResponse), "+CSQ: ", 1000)) {
+          resetWatchdog();
+          int CSQval = parseCSQ(gsmCSQResponse);
+          if (CSQval > 0) {
+            // if (Serial) Serial.print("Checking GSM network signal..");
+            debugPrint("CSQ: ");
+            debugPrintln(CSQval);
+          }
+        }
+      }
+      _checkCSQ = false;
+    }
+
+    if (inputIs(sendLine,"EXIT")) {               //  check input keyword for loop exit
+      resetWatchdog();
+      delayMillis(1000);
+      debugPrintln("Exiting signal checking mode");
+      _checkMode = false;
+    } 
+    delayMillis(100);
+    
   }
   resetWatchdog();
 }

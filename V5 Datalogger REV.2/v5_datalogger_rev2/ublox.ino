@@ -124,7 +124,7 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
       resetWatchdog();
       readUbloxData(dataBuffer, sizeof(dataBuffer), siteCode);
       dataBuffer[strlen(dataBuffer)]=0x00;
-      RX_LORA_FLAG == 1;
+      RX_LORA_FLAG = 1;
       READ_FLAG = true;
       resetWatchdog();
     }
@@ -133,16 +133,16 @@ void getGNSSData(char *dataToSend, unsigned int bufsize) {
     resetWatchdog();
     noGNSSDataAcquired(dataBuffer, sizeof(dataBuffer), siteCode);
     dataBuffer[strlen(dataBuffer)]=0x00; // not needed 
-    RX_LORA_FLAG == 1;
+    RX_LORA_FLAG = 1;
     READ_FLAG = true;
     resetWatchdog();
   } 
 
-  if (READ_FLAG = true) {
+  if (READ_FLAG == true) {
     rf95.setModemConfig(RH_RF95::Bw125Cr45Sf128);
     resetWatchdog();
     READ_FLAG = false;
-    RX_LORA_FLAG == 0;
+    RX_LORA_FLAG = 0;
 
     getTimeStamp(_timestamp, sizeof(_timestamp));
     strncat(dataBuffer, "*", 2);
@@ -271,8 +271,13 @@ void readUbloxData(char * ubloxDataContainer, int containerSize, char* sitecode)
     noGNSSDataAcquired(ubloxDataContainer, sizeof(ubloxDataContainer), siteCode);
   }
   // resetWatchdog();
-  d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
-  accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   //reset accumulators to zero
+
+  // this was the old format of the two lines below, this doesn't work well.. 
+  // d_lat, d_lon, f_msl, f_accuracy_hor, f_accuracy_ver = 0.0;
+  // accu_lat, accu_lon, accu_msl, accu_accuracy_hor, accu_accuracy_ver = 0.0;   
+  
+  d_lat = d_lon = f_msl = f_accuracy_hor = f_accuracy_ver = 0.0;
+  accu_lat = accu_lon = accu_msl = accu_accuracy_hor = accu_accuracy_ver = 0.0;   //reset accumulators to zero
   accu_count = 0;
   // resetWatchdog();
 }

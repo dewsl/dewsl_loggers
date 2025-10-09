@@ -1,4 +1,4 @@
-void getSerialInput(char* inputBuffer, int bufferLength, int inputTimeout) {
+void getSerialInput(char* inputBuffer, int bufferLength, unsigned long inputTimeout) {
   resetWatchdog();
 
   int bufferIndex = 0;
@@ -36,7 +36,7 @@ void debugFunction() {
 
   while (debugProcess) {
     resetWatchdog();
-    for (int i = 0; i < sizeof(serialLineInput); i++) serialLineInput[i] = 0x00;
+    for (uint16_t i = 0; i < sizeof(serialLineInput); i++) serialLineInput[i] = 0x00;
 
     getSerialInput(serialLineInput, sizeof(serialLineInput), 60000);
 
@@ -57,7 +57,7 @@ void debugFunction() {
       resetWatchdog();
       uint8_t RainCollectorType = savedRainCollectorType.read();
       Serial.print("\nCollector type: ");
-      char rainMsg[30];
+      char rainMsg[200];
       if (RainCollectorType == 0) sprintf(rainMsg, "Pronamic (0.5mm/tip)\nRain tips: %0.2f tips\nEquivalent: %0.2fmm", _rainTips, (_rainTips * 0.5));
       else if (RainCollectorType == 1) sprintf(rainMsg, "Davis (0.2mm/tip)\nRain tips: %0.2f tips\nEquivalent: %0.2fmm", _rainTips, (_rainTips * 0.2));
       Serial.println(rainMsg);
@@ -358,6 +358,14 @@ void debugFunction() {
       // USBDevice.detach();
       Serial.println(F("------------------------------------------------------"));
 
+    } else if (inputIs(serialLineInput, "CHECK_CSQ")) {
+      resetWatchdog();
+      Serial.println("Continous CSQ checking::");
+      Serial.println("IMPORTANT: Input \"EXIT\" to quit checking mode.");
+      signalCheckMode();
+      debugModeStart = millis();
+      Serial.println(F("------------------------------------------------------"));
+
     } else if (inputIs(serialLineInput, "SHORT_SLEEP_INTERVAL")) {
       resetWatchdog();
       Serial.print("Saved short sleep interval: ");
@@ -398,8 +406,9 @@ void debugFunction() {
       Serial.println(F("------------------------------------------------------"));
 
     } else if (inputIs(serialLineInput, "LORA_BROADCAST")) {
+      Serial.print(F("Simple broadcast test for LBT mode."));
       broadcastLoRaKey(random(100, 500), LBT_BROADCAST);
-      Operation(flashServerNumber.dataServer);
+      // Operation(flashServerNumber.dataServer);
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
@@ -453,7 +462,6 @@ void debugFunction() {
 
     } else if (inputIs(serialLineInput, "LORA_WAIT_TEST_2")) {
       resetWatchdog();
-      uint8_t receiveType = 99;
       Serial.println(F("Listens for any broadcasted LoRa data from the listed router(s)"));
       Serial.print(F("Timeout: "));
       Serial.print(MAX_GATEWAY_WAIT);
@@ -521,12 +529,12 @@ void debugFunction() {
       DUESerial.begin(DUEBAUD);
       delayMillis(500);
       unsigned long sdConfigStart = millis();
-      int sdWaitTime = 10000;
+      unsigned long sdWaitTime = 10000;
       DUESerial.write(sd_cmd);
       bool readConfig = true;
       while (millis() - sdConfigStart < sdWaitTime && readConfig) {
         resetWatchdog();
-        for (int i = 0; i < sizeof(sdConfigLineBuffer); ++i) sdConfigLineBuffer[i] = 0x00;
+        for (uint16_t i = 0; i < sizeof(sdConfigLineBuffer); ++i) sdConfigLineBuffer[i] = 0x00;
 
         DUESerial.readBytesUntil('\n', sdConfigLineBuffer, sizeof(sdConfigLineBuffer));
 
@@ -553,13 +561,13 @@ void debugFunction() {
       DUESerial.begin(DUEBAUD);
       delayMillis(2000);
       unsigned long sdConfigStart = millis();
-      int sdWaitTime = 10000;
+      unsigned long sdWaitTime = 10000;
       DUESerial.write(sdConfigLineBuffer);
       // DUESerial.write("\n");
       bool readConfig = true;
       while (millis() - sdConfigStart < sdWaitTime && readConfig) {
         resetWatchdog();
-        for (int i = 0; i < sizeof(sdConfigLineBuffer); ++i) sdConfigLineBuffer[i] = 0x00;
+        for (uint16_t i = 0; i < sizeof(sdConfigLineBuffer); ++i) sdConfigLineBuffer[i] = 0x00;
         DUESerial.readBytesUntil('\n', sdConfigLineBuffer, sizeof(sdConfigLineBuffer));
 
         if (strlen(sdConfigLineBuffer) > 0) {
@@ -645,7 +653,7 @@ void debugFunction() {
       while (1) {
 
         delayMillis(30000);
-        sprintf(beaconMsg, "");
+        sprintf(beaconMsg, " ~");
         pingCount++;
       }
       Serial.println(F("------------------------------------------------------"));
@@ -684,7 +692,6 @@ void debugFunction() {
 
 void printMenu() {
   resetWatchdog();
-  char timeString[100];
   Serial.println(F("------------------------------------------------------"));
   Serial.print(F("Firmware Version: "));
   Serial.print(FIRMWAREVERSION);
@@ -745,6 +752,7 @@ void printExtraCommands() {
   resetWatchdog();
 
   Serial.println(F("RAIN_DATA           Change Rain data type to send"));  //
+  Serial.println(F("CHECK_CSQ           Continously check for CSQ value"));  //
   Serial.println(F("CHECK_OTA           Check and execute [the first] OTA command in SIM inbox"));
   Serial.println(F("OTA_COMMANDS        Display accepted OTA commands"));
   Serial.println(F("OTA_TEST            Manual input of OTA command"));
@@ -765,8 +773,6 @@ void printExtraCommands() {
 
 void updateLoggerMode() {
   resetWatchdog();
-  unsigned long updateStart = millis();
-  int updateTimeout = 60000;
   int loggerModeBuffer = 0;
   char addOnBuffer[10];
   uint8_t initialLoggerMode = savedDataLoggerMode.read();
@@ -889,9 +895,9 @@ bool inputHas(const char* inputToCheck, const char* expectedInputSegment) {
 }
 
 
-void delayMillis(int delayDuration) {
+void delayMillis(unsigned long delayDuration) {
   resetWatchdog();
-  int maxDelayDuration = 15000;  //15sec
+  unsigned long maxDelayDuration = 15000;  //15sec
   bool maxDurationReached = false;
   unsigned long timeStart = millis();
   while (!maxDurationReached) {
@@ -912,9 +918,6 @@ void delayMillis(int delayDuration) {
 bool changeParameter() {
   resetWatchdog();
   int changeParamTimeout = 20000;  //20 sec to wait for parameter change confirmation
-  unsigned long waitStart = millis();
-  int bufIndex = 0;
-  char paramBuf;
   char changeBuffer[10];
 
   Serial.println(" ");
@@ -1030,7 +1033,7 @@ void savedParameters() {
     } else {
       char serverNameBuf[20];
       sprintf(serverNameBuf, flashServerNumber.dataServer);
-      Serial.print(serverNameBuf);
+      Serial.println(serverNameBuf);
       checkSender(serverNameBuf);
       if (strlen(serverNameBuf) != strlen(flashServerNumber.dataServer)) {
         Serial.print(" [");
@@ -1053,7 +1056,7 @@ void savedParameters() {
         }
       }
     }
-    for (int c = 0; c < sizeof(gsmCSQResponse); c++) gsmCSQResponse[c] = 0x00;
+    for (uint16_t c = 0; c < sizeof(gsmCSQResponse); c++) gsmCSQResponse[c] = 0x00;
     GSMSerial.write("AT+COPS?\r");
     delayMillis(1000);
     while (GSMSerial.available() > 0) {
@@ -1219,7 +1222,7 @@ void getLoggerModeAndName() {
 void updateBatteryType() {
   resetWatchdog();
   unsigned long updateStart = millis();
-  int updateTimeout = 60000;
+  unsigned long updateTimeout = 60000;
   int batteryTypeBuf = 0;
   uint8_t currentType = savedBatteryType.read();
   Serial.print("Input battery type:");
@@ -1395,7 +1398,6 @@ void CheckingSavedParameters() {
   const char rcvr[] = "09476873967";
   bool debugProcess = true;
   char serialInput[1000];
-  unsigned long debugModeStart = millis();
 
   flashLoggerName = savedLoggerName.read();
   flashServerNumber = savedServerNumber.read();

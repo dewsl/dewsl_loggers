@@ -9,13 +9,14 @@
 #include <RH_RF95.h>
 #include <avr/dtostrf.h>  // dtostrf missing in Arduino Zero/Due
 #include <EnableInterrupt.h>
+#pragma message("WARNING: Ensure that the installed EnableInterrupt library version is pre-0.9.6. If not, this will be a problem...")
 #include <FlashStorage.h>
 #include <Arduino.h>         // required before wiring_private.h
 #include "wiring_private.h"  // pinPeripheral() function
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2412.03             //YYMM.DD of git commit
+#define FIRMWAREVERSION 2510.09             //YYMM.DD of git commit
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 300000
@@ -136,7 +137,7 @@ char routerOTACommand[100];         //  container for OTA command to be passed t
  * Reserve a portions of flash memory to store parameters
  */
 FlashStorage(listenMode, bool);
-FlashStorage(savedShortSleepInterval, uint8_t);       // scanning/listeting interval for Listen Mode
+FlashStorage(savedShortSleepInterval, uint16_t);       // scanning/listeting interval for Listen Mode
 FlashStorage(savedAlarmInterval, uint8_t);
 FlashStorage(savedDataLoggerMode, uint8_t);
 FlashStorage(hasSubsurfaceSensorFlag, uint8_t);
@@ -148,7 +149,7 @@ FlashStorage(savedRainSendType, uint8_t);
 FlashStorage(savedBatteryType, uint8_t);
 FlashStorage(savedLoraReceiveMode, uint8_t);
 FlashStorage(loggerParamSetFlag,uint8_t);
-FlashStorage(savedLoggerResetAlarm,uint8_t);
+FlashStorage(savedLoggerResetAlarm,uint16_t);
 FlashStorage(savedServerNumber, serverNumberStruct);
 FlashStorage(savedCommands, commandStruct);
 FlashStorage(savedLoggerName, SensorNameStruct);
@@ -349,7 +350,7 @@ void loop() {
     delayMillis(300);                                 // 
     LEDOff();                                         //
     disableWatchdog();
-    sleepNow(savedDataLoggerMode.read());             // proceed with normal wake sleep cycle
+    sleepNow();                                       // proceed with normal wake sleep cycle
   }
   // wdSleepDuration = Watchdog.sleep();  
 }
@@ -363,6 +364,7 @@ void enableWatchdog() {
   Serial.println("");
   Serial.println(F("------------------------------------------------------"));
   int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
+  countDownMS += 1; // this does nothing, just to catch a warning
   long yourChances = random(5);                   // 20%ish
   // Serial.print(yourChances);
   if (yourChances == 4) {                    // good luck  
@@ -382,8 +384,8 @@ void enableWatchdog() {
   resetWatchdog();
 }
 
-/// Kick watchdog to reset timer
-/// Nilagay sa function para madali magmodify or magdisable ng WDT
+/// Kick watchdog to reset timer.
+/// Nilagay ito sa function para madali mag-modify ng WDT interaction
 void resetWatchdog() {          
   Watchdog.reset();
 }

@@ -3,14 +3,13 @@ void dueInit (uint8_t dueTrigPin) {
   digitalWrite(dueTrigPin, LOW);
 }
 
-void dueDataCollection(int samplingTimeout) {
+void dueDataCollection(unsigned long samplingTimeout) {
   resetWatchdog();
   bool readDueData = true;
   // int lineBufferLength = 500;
   char dueLineBuffer[500];
   char commandContainer[100];
-  char dueChar;
-  int dataSegmentCount;
+  uint8_t dataSegmentCount = 0;
   unsigned long samplingStart;
   samplingStart = millis();
 
@@ -35,11 +34,11 @@ void dueDataCollection(int samplingTimeout) {
       break;
     }
 
-    for (int i=0; i < sizeof(dueLineBuffer); i++)  dueLineBuffer[i] = 0x00;
+    for (uint16_t i=0; i < sizeof(dueLineBuffer); i++)  dueLineBuffer[i] = 0x00;
 
     DUESerial.readBytesUntil('\n', dueLineBuffer, sizeof(dueLineBuffer));
     
-    for (int n = 0; n < sizeof(dueLineBuffer); n++) {
+    for (uint16_t n = 0; n < sizeof(dueLineBuffer); n++) {
       if (dueLineBuffer[n] == '\n' || dueLineBuffer[n] == '\r') dueLineBuffer[n]=0x00; // Overwrite extra '\n' character from readBytesUntil
     }
 
@@ -68,7 +67,7 @@ void dueDataCollection(int samplingTimeout) {
   DUESerial.end();
 
   if (dataSegmentCount == 0) {
-    char noDataBUffer[30];
+    char noDataBUffer[200];
     getTimeStamp(_timestamp, sizeof(_timestamp));
     sprintf(noDataBUffer, "%s*NODATAFROMSENSLOPE*%s",flashLoggerName.sensorNameList[0],_timestamp);
     addToSMSStack(noDataBUffer);
@@ -88,7 +87,7 @@ void updatSavedCommand() {
     Serial.println(flashCommands.sensorCommand);
     Serial.println("Sensor command updated");  
   } else {
-    strncpy(flashCommands.sensorCommand, "ARQCMD6T", 8); // default if timed out or invalid input length
+    strncpy(flashCommands.sensorCommand, "ARQCMD6T", 9); // default if timed out or invalid input length
     Serial.println("Defaulted to \"ARQCMD6T\"");
   }
   savedCommands.write(flashCommands);

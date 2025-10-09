@@ -92,8 +92,9 @@ void Operation(const char * operationServerNumber) {
   // Next step is to send everything to the appropriate channel (thru GSM or LoRa)
 
   if (loggerWithGSM(savedDataLoggerMode.read())) GSMPowerModeReset();                       //  disable power saving modes (if any is enabled) BEFORE sending data; 
-  debugPrintln("Sending SMS dump");                                                         //  inidcator
-  debugPrintln(_globalSMSDump);                                                             //  In case you want to check manually.. 
+  debugPrintln("SMS dump contents: ");                                                         //  inidcator
+  debugPrintln(_globalSMSDump);
+  debugPrintln(" ");                                                             //  In case you want to check manually.. 
   sendSMSDump(dumpDelimiter, operationServerNumber);                                        //  sends entire sending stack depending on communication mode
   clearGlobalSMSDump();                                                                     //  as the name suggests...
   
@@ -200,7 +201,7 @@ void initSleepCycle() {
 //   SCB->SCR |= SCB_SCR_SEVONPEND_Msk;  // Enable Send-Event-on-Pend
 // }
 
-void sleepNow(uint8_t savedLoggerMode) {
+void sleepNow() {
 
   rf95.sleep();
   Serial.println(F("MCU is going to sleep . . ."));

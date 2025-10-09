@@ -10,7 +10,8 @@ void RTCInit(uint8_t RTCPin) {
 /// RTC iterrupt service routine function
 void RTCISR() {
   debugPrintln("RTC interrupt");
-  int countDownMS = Watchdog.enable(16000);  // max of 16 seconds
+  int countDownMS = Watchdog.enable(16000);  // max of 16 seconds; this will trigger a warning
+  countDownMS += 1; // this does nothing, just to catch a warning
   if (listenMode.read() && savedDataLoggerMode.read() == ROUTERMODE) return;  //gate
   operationFlag = true;  
 }
@@ -86,7 +87,6 @@ void getNetworkFormatTimeStamp(char* tsContainer, uint8_t sizeOfContainer) {
 /// Actual alrm interval is computed based on current minute and interval equivalent of parameter value
 /// @param IntervalEquivalent - interval equivalent value [0-5]; not the actual alarm interval value
 void setNextAlarm(int intervalEquivalent) {
-  char tsBuf[30];
   uint16_t store_rtc = 00;
   DateTime now = rtc.now();  //get the current date-time
   store_rtc = nextAlarm((int)(now.minute()),intervalEquivalent);
@@ -226,7 +226,7 @@ void setResetAlarmTime() {
 void setSelfResetFlag(int alarm24hrFormat) {
   resetWatchdog();
   int savedAlarm = alarm24hrFormat;
-  if (savedAlarm > 2400) savedAlarm == 0; 
+  if (savedAlarm > 2400) savedAlarm = 0; 
   // with input example "2330" (or 11:30PM)
   // first part should get first 2 digits (hour) from the left of 24h format input.
   // extracting "23" from "2330"

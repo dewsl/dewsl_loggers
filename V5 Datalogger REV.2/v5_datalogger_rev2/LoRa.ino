@@ -43,8 +43,7 @@ void LoRaInit(uint32_t initWaitTime) {
 void sendThruLoRa(const char *radiopacket) {
   resetWatchdog();
   uint8_t payload[RH_RF95_MAX_MESSAGE_LEN];
-  int sendRetryLimit = 3;
-  int i = 0, j = 0;
+  uint8_t i = 0, j = 0;
 
   for (i = 0; i < sizeof(payload); i++) {
     payload[i] = 0x00;
@@ -52,7 +51,7 @@ void sendThruLoRa(const char *radiopacket) {
   for (j = 0; j < sizeof(payload); j++) {
     payload[j] = (uint8_t)radiopacket[j];
   }
-  payload[j] = 0x00;
+  // payload[j] = 0x00;
 
   debugPrint("Sending to LoRa: ");
   debugPrintln((char *)payload);
@@ -146,12 +145,10 @@ bool receiveLoRaData(char* receiveContainer, uint16_t receiveContainerSize, unsi
 void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, uint8_t receiveMode) {
   resetWatchdog();
   char gatewayDataDump[200];
-  char routerNames[routerCount][20];
   char loRaBuffer[1000];
   uint8_t routerNameIndex = 100;
   uint8_t nameIndexLimit = 100;     // temporary limit
-  uint8_t voltCount = 0;
-  char sendAck[50];
+  char sendAck[300];
   int RSSIbuffer = 0;
   int endCounter[routerCount+1];  // this will not use index zero. the ff can be simplified using multidimensional array, but this is easier to read..
   int RSSIContainer[routerCount+1];
@@ -186,7 +183,7 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, 
   // Serial.println(routerWaitStart);
 
   while (millis() - routerWaitStart < receiverWaitDuration) {
-    for (int lb = 0; lb < sizeof(loRaBuffer); lb++) loRaBuffer[lb]=0x00;  // clear buffer
+    for (uint16_t lb = 0; lb < sizeof(loRaBuffer); lb++) loRaBuffer[lb]=0x00;  // clear buffer
     debugPrintln("~");
     resetWatchdog();
     receiveLoRaData(loRaBuffer, sizeof(loRaBuffer), 30000);        // receive instances of lora data here
@@ -255,7 +252,6 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, 
 
     if (routerCount == endCount) {
       debugPrintln("Router check count complete.."); 
-      byte eCount = 0;
       for (int eIndex = 0; eIndex <= routerCount;eIndex++) endCounter[eIndex]=0;
       debugPrint("Volt count: ");
       debugPrintln(endCount);
@@ -270,7 +266,7 @@ void waitForLoRaRouterData(unsigned long receiverWaitDuration, int routerCount, 
   }
 
   routerOTAflag = false;      // reset router OTA flag
-  for (int rO=0;rO<sizeof(routerOTACommand);rO++) routerOTACommand[rO]=0x00; // clears global router OTA container
+  for (uint8_t rO=0;rO<sizeof(routerOTACommand);rO++) routerOTACommand[rO]=0x00; // clears global router OTA container
   
   if (receiveMode == 0) {
     // build gateway data here
@@ -322,30 +318,6 @@ float parseVoltage(char* stringToParse, int stringContainerSize) {
   return voltageParsed;
 }
 
-/// Generates an acknowlegment key used for confirming successful transmission of sensor/datalogger data
-/// 
-/// Gataway modes: The function searches for an instance the router name of from the reference string to be sent back as an acknowledgement.
-/// Router mode: Generates an acknowledgement key that will be compared with the acknowledgement key to be received from the gateway
-/// 
-/// @param keyContainer - pointer of the container for the acknowledgement key that will be generated
-/// @param referenceString - used by gateways to indentify if transmission came from a listed router
-///
-void key_gen(char *keyContainer, char *referenceString) {
-  resetWatchdog();
-  char referenceBuffer[sizeof(referenceString)+1];
-  char keyBuffer[20];
-  // strncpy(toFind, ">>", 2);
-  
-  if (savedDataLoggerMode.read() == ROUTERMODE) {  //  add other router modes here
-    //  gets first charaters (depending on router char length) from reference to generate acknowledgement key
-    strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorNameList[0])));   
-  } else {  // gateway modes
-    //  gets first characters (depending on router char length) from reference to generate acknowledgement key
-    //  alternative ito sa tokenization kasi nanggaling tayo sa strtok
-    strncpy(keyBuffer, referenceString, (strlen(flashLoggerName.sensorNameList[1]))); // bakit 1 ito? ang assumption ay pare parehas lang ang length ng router names kaya ito ang ginamit na reference [temporary].. 
-  }    
-  resetWatchdog();
-}
 
 /// Checks whether received data is from a valid datalogger.
 /// Router modes retuns 0 for valid acknowledgement.
@@ -356,7 +328,6 @@ void key_gen(char *keyContainer, char *referenceString) {
 ///
 int loRaFilterPass(char* payloadToCheck, int sizeOfPayload) {
   resetWatchdog();
-  uint8_t payloadType = 0;
   char payloadBuffer[sizeOfPayload+1];
 
   sprintf(payloadBuffer, payloadToCheck);
@@ -400,15 +371,14 @@ void generateVoltString (char* stringContainer) {
   resetWatchdog();
 }
 
-void broadcastLoRaKey(long pingInterval, unsigned long broadcastDuration) {
+void broadcastLoRaKey(unsigned long pingInterval, unsigned long broadcastDuration) {
       resetWatchdog();
       int pingCounter = 0;
-      debugPrint("broadcast LoRa key at specified interval (milliseconds):");
+      debugPrintln("broadcast LoRa key at specified interval (milliseconds):");
       debugPrint(pingInterval);
       // pingInterval = Serial.parseInt();
       // Serial.println(pingInterval);
       char pingMsgBuffer[100];
-      char pingReply[100];
       unsigned long broadcastStart = millis();
       sprintf(pingMsgBuffer, "CMD*");                                           // 
       for (int RCount = 1; RCount <= savedRouterCount.read(); RCount ++ ) {     // iterte through all saved router names
@@ -443,10 +413,10 @@ void broadcastLoRaKey(long pingInterval, unsigned long broadcastDuration) {
 void scanForCommand(int scanDuration, int keywordWaitDuration) {  // 1000,2000, 6000
   resetWatchdog();
   char receiveBuffer[500];
-  int scanTimeout = scanDuration;
+  unsigned long scanTimeout = scanDuration;
   unsigned long scanStart = 0;
   bool channelActivity = false;
-  for (int rb = 0; rb < sizeof(receiveBuffer); rb ++) receiveBuffer[rb] = 0x00;
+  for (uint16_t rb = 0; rb < sizeof(receiveBuffer); rb ++) receiveBuffer[rb] = 0x00;
   // put your main code here, to run repeatedly:
   scanStart = millis();
   // while(millis() - scanStart < scanTimeout && !channelActivity) {  // scan timeout: 2sec
