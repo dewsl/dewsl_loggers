@@ -374,8 +374,8 @@ void generateVoltString (char* stringContainer) {
 void broadcastLoRaKey(unsigned long pingInterval, unsigned long broadcastDuration) {
       resetWatchdog();
       int pingCounter = 0;
-      debugPrintln("broadcast LoRa key at specified interval (milliseconds):");
-      debugPrint(pingInterval);
+      debugPrint("broadcast LoRa key at specified interval (milliseconds):");
+      debugPrintln(pingInterval);
       // pingInterval = Serial.parseInt();
       // Serial.println(pingInterval);
       char pingMsgBuffer[100];

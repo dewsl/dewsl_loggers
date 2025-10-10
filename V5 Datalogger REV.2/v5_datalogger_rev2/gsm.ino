@@ -1306,7 +1306,7 @@ void setGSMPowerMode() {
 
 /// Simple function for checking CSQ value continously
 void signalCheckMode() {   
-  debugPrint("this might cause the SIM to be temporarily blocked by the network provider; USE MODERATELY")
+  debugPrint("this might cause the SIM to be temporarily blocked by the network provider; USE MODERATELY");
   resetWatchdog();
   char sendLine[500];
   unsigned long checkInterval = 8000;     // interval for triggering CSQ checking function
