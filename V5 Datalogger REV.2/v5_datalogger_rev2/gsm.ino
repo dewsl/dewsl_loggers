@@ -612,11 +612,15 @@ void addToSMSStack(const char* payloadToAdd) {
 
 void generateInfoMessage(char* infoContainer) {             // TESXXW,40.50,0.00,15.92,11,240415081500
   resetWatchdog();
+  char infoDelim = ',';
   char csqBuffer[100];
   uint8_t CSQ = 0;
   char tsBuffer[13];
   float rainMultiplier = 1;
-  float battVolt = readBatteryVoltage(savedBatteryType.read());
+  float battVolt = readBatteryVoltage(savedBatteryType.read()); 
+
+  if (nerfInfoString.read()) infoDelim = '^'; // update delimiter if it needs to be nerfed
+
   if (readCSQ(csqBuffer)) { // if FALSE, CSQ remains 0
     CSQ = parseCSQ(csqBuffer);
   }
@@ -627,12 +631,17 @@ void generateInfoMessage(char* infoContainer) {             // TESXXW,40.50,0.00
     else if (savedRainCollectorType.read()==1)rainMultiplier = 0.2;   
   }
   delayMillis(1000);
-  sprintf(infoContainer,"%sW,%0.2f,%0.2f,%0.2f,%u,%s",
+  sprintf(infoContainer,"%sW%c%0.2f%c%0.2f%c%0.2f%c%u%c%s",
     flashLoggerName.sensorNameList[0],
+    infoDelim,
     readRTCTemp(),
+    infoDelim,
     _rainTips*rainMultiplier,
+    infoDelim,
     battVolt,
+    infoDelim,
     CSQ,
+    infoDelim,
     tsBuffer);
   resetWatchdog();
 }

@@ -29,7 +29,7 @@ void dueDataCollection(unsigned long samplingTimeout) {
     resetWatchdog();
     
     if (millis() - samplingStart > samplingTimeout) {
-      Serial.printf("Sampling timed out!");
+      Serial.println("Sampling timed out!");
       readDueData = false;
       break;
     }

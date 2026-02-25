@@ -172,7 +172,7 @@ void debugFunction() {
       debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
-      } else if (inputIs(serialLineInput, "LBT_TOGGLE")) {
+    } else if (inputIs(serialLineInput, "LBT_TOGGLE")) {
       resetWatchdog();
       Serial.print("Listen Mode ");
       if (listenMode.read()) {
@@ -323,6 +323,37 @@ void debugFunction() {
       if (changeParameter()) {
         setResetAlarmTime();
       }
+      Serial.println(F("------------------------------------------------------"));
+
+    } else if (inputIs(serialLineInput, "NERF_INFO_STRING") || inputIs(serialLineInput, "S")) {  
+      resetWatchdog();
+      Serial.print("Info string Mode: ");
+      if (nerfInfoString.read()) {                    // this should be a bool, but stored adressess doesn't seem to have TRUE as a default initialized value (it might be FALSE.. get it?). Hence, its an int (uint8_t)... or we set FALSE as a default.. or we initialize it every time after an upload.
+        Serial.println("MODIFIED");
+        Serial.println("Revert information/diagnostic string delimiter to normal?");
+      } 
+      else {
+        Serial.println("NORMAL");
+        Serial.println("Modify information/diagnostic string?");
+        Serial.println("This will changes it's delimiter to prevent if from being parsed by office scripts");
+              }
+      
+      if (changeParameter()) {
+        if (nerfInfoString.read()) {
+          nerfInfoString.write(false);
+          Serial.println("Info string Mode: NORMAL");
+          delayMillis(1000);
+        }
+        else {
+          nerfInfoString.write(true);
+          Serial.println("Info string Mode: MODIFIED");
+          delayMillis(1000);                           
+        }
+        char infoTemp[100];
+        generateInfoMessage(infoTemp);
+        Serial.println(infoTemp);
+      }
+      debugModeStart = millis();
       Serial.println(F("------------------------------------------------------"));
 
 
@@ -695,7 +726,7 @@ void printMenu() {
   Serial.println(F("------------------------------------------------------"));
   Serial.print(F("Firmware Version: "));
   Serial.print(FIRMWAREVERSION);
-  Serial.println("β");
+  Serial.println("β");                  // this firmware code might stay as a perpetual beta
   // Serial.print("Current datetime: ");
   printDateTime();
   delayMillis(1000);
@@ -719,6 +750,7 @@ void printMenu() {
   Serial.println(F("[P] Change SENSLOPE command."));
   Serial.println(F("[Q] Text [Thread] Mode"));
   Serial.println(F("[R] Update SELF RESET alarm time."));
+  Serial.println(F("[S] Modify diagnostic info string delimiter."));
   Serial.println(F("[X] Exit Debug mode."));
   Serial.println(F(" "));
   Serial.println(F("------------------------------------------------------"));
@@ -766,6 +798,7 @@ void printExtraCommands() {
   Serial.println(F("DUE_CONFIG          Checks saved config on custom due [requires 12V power]"));
   Serial.println(F("UPDATE_DUE_CONFIG   Updates name on custom due name using datalogger name"));
   Serial.println(F("LBT_TOGGLE          Toggles Listen Mode ON or OFF"));
+
   Serial.println(F(" "));
   Serial.println(F("------------------------------------------------------"));
   resetWatchdog();
@@ -835,12 +868,14 @@ void updateLoggerMode() {
 
   } else if (loggerModeBuffer == ROUTERMODE) {
     if (savedRouterCount.read() != 0) savedRouterCount.write(0);  // resets router count to prevent values from being carried over in case of mode change
+    //  input choice if datalogger has subsurface sensors
     Serial.print("   Router with Subsurface Sensor? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
     if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) {
         hasSubsurfaceSensorFlag.write(99);
-    } else {  // Only ask if Ublox if Subsurface is not selected
+    } else {  // Only ask if Ublox if Subsurface is not selected; Why?... i don't remember
+        //  not sure if this can be independent from the subsurface sensor;
         hasSubsurfaceSensorFlag.write(0);
         Serial.print("   Router with UBLOX module? [Y/N] ");
         getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
@@ -848,6 +883,7 @@ void updateLoggerMode() {
         if ((inputIs(addOnBuffer, "Y")) || (inputIs(addOnBuffer, "y"))) hasUbloxRouterFlag.write(99);
         else hasUbloxRouterFlag.write(0);
     }
+    //  input choice if datalogger uses Listen-before-talk
     Serial.print("   Router mode LISTEN-BEFORE-TALK*? [Y/N] ");
     getSerialInput(addOnBuffer, sizeof(addOnBuffer), 60000);
     Serial.println(addOnBuffer);
@@ -949,11 +985,12 @@ void savedParameters() {
   uint8_t nextAlarmMinuteBuffer = nextAlarm((int)(now.minute()), savedAlarmInterval.read());
   uint8_t nextAlarmHourBuffer = now.hour();
   uint8_t timeOfDayIndex2 = 0;
-  const char* timeOfDayEq[3] = { "AM", "PM" };                                                                //  default identifier is AM
+  const char* timeOfDayEq[3] = { "AM", "PM", "ER" };                                                                //  default identifier is AM
   if (now.minute() > nextAlarmMinuteBuffer) nextAlarmHourBuffer++;                                            //  indicates next hour for alarm
   if (nextAlarmHourBuffer > 11 && nextAlarmHourBuffer < 24) timeOfDayIndex2 = 1;                              //  change daytime identifier to PM if true
-  if (nextAlarmHourBuffer > 12 && nextAlarmHourBuffer <= 24) nextAlarmHourBuffer = nextAlarmHourBuffer - 12;  //  subtract 12 from 24hr format to get 12hr format
-
+  if (nextAlarmHourBuffer > 24) timeOfDayIndex2 = 2;                                                          //  change daytime identifier to ER pr ERROR for invalid hour value if true (yes, this happens)
+  if (nextAlarmHourBuffer > 12 && nextAlarmHourBuffer < 24) nextAlarmHourBuffer = nextAlarmHourBuffer - 12;  //  subtract 12 from 24hr format to get 12hr format
+  if (nextAlarmHourBuffer == 00) nextAlarmHourBuffer = 12; 
 
   Serial.println(F("------------      STORED  PARAMETERS      ------------"));
   Serial.println(F("------------------------------------------------------"));

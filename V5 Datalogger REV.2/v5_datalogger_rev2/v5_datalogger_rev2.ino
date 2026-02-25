@@ -9,14 +9,13 @@
 #include <RH_RF95.h>
 #include <avr/dtostrf.h>  // dtostrf missing in Arduino Zero/Due
 #include <EnableInterrupt.h>
-#pragma message("WARNING: Ensure that the installed EnableInterrupt library version is pre-0.9.6. If not, this will be a problem...")
 #include <FlashStorage.h>
 #include <Arduino.h>         // required before wiring_private.h
 #include "wiring_private.h"  // pinPeripheral() function
 #include <string.h>
 #include <Adafruit_SleepyDog.h>
 
-#define FIRMWAREVERSION 2510.09             //YYMM.DD of git commit
+#define FIRMWAREVERSION 2602.25             //YYMM.DD of git commit
 #define BAUDRATE 115200
 #define DUEBAUD 9600
 #define DEBUGTIMEOUT 300000
@@ -127,10 +126,10 @@ unsigned long _last_interrupt_time = 0;
 volatile float _rainTips = 0.00;
 
 // OTA related global variables
-bool routerOTAflag = false;          //  determined wether OTA command will be passed to the router(s)
-bool routerProcessOTAflag = false;   //  triggers router OTA processing after data sending
-char routerOTACommand[100];         //  container for OTA command to be passed to routers(s)
-                                    //  routers also use this to store OTA command to be processed triggered by the routerProcessOTAflag
+bool routerOTAflag = false;           //  determined wether OTA command will be passed to the router(s)
+bool routerProcessOTAflag = false;    //  triggers router OTA processing after data sending
+char routerOTACommand[100];           //  container for OTA command to be passed to routers(s)
+                                      //  routers also use this to store OTA command to be processed triggered by the routerProcessOTAflag
 
 
 /**
@@ -154,6 +153,7 @@ FlashStorage(savedServerNumber, serverNumberStruct);
 FlashStorage(savedCommands, commandStruct);
 FlashStorage(savedLoggerName, SensorNameStruct);
 FlashStorage(autoPowerSaving, uint8_t);
+FlashStorage(nerfInfoString, bool);      
 
 //Flags
 bool selfResetFlag = false;

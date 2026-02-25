@@ -17,12 +17,13 @@ void RTCISR() {
 }
 
 /// Accepts sting input of date time;
-/// Accepted format: YYYY,MM,DD,hh,mm,ss,dd[0-6]Mon-Sun
+/// Accepted format: YYYY,MM,DD,hh,mm,ss 
 void setupTime() {
   resetWatchdog();
   unsigned long setupStart = millis();
   int MM = 0, DD = 0, YY = 0, hh = 0, mm = 0, ss = 0, dd = 0;
-  Serial.println(F("\nSet time and date in this format: YYYY,MM,DD,hh,mm,ss,dd[0-6]Sun-Sat"));
+  Serial.println(F("\nSet time and date in this format: YYYY,MM,DD,hh,mm,ss"));
+  Serial.println(F("REMINDER: Hour(hh) uses a 24H format"));
   
   while (millis() - setupStart < 60000) {
     if (Serial.available() > 0) {
@@ -32,17 +33,20 @@ void setupTime() {
     hh = Serial.parseInt();
     mm = Serial.parseInt();
     ss = Serial.parseInt();
-    dd = Serial.parseInt();
+    // dd = Serial.parseInt();
     
+    dd = dayOfWeek(YY,MM,DD);   // computes for the day of week value range is [0-6] Sunday - Monday
+    // Serial.print("Day of week: ");
+    // Serial.println(dd);
     delayMillis(10);
     setRTCDateTime(YY, MM, DD, hh, mm, ss, dd);
     // Serial.print("Current timestamp: ");
     getTimeStamp(_timestamp, sizeof(_timestamp));
     // Serial.println(_timestamp);
     Serial.println();
-    resetWatchdog();
     return;
     }
+    resetWatchdog();
   }
 }
 
@@ -182,14 +186,13 @@ float readRTCTemp() {
   return temp;
 }
 
-int dayOfWeek(uint16_t YYYY, uint8_t MM, uint8_t DD)  {
-  //  for context, this computation assumes that 'start' of the gregorian calendar; January 1st, year '0000', is a Saturday.
+int dayOfWeek(uint16_t YYYY, uint8_t MM, uint8_t DD)  {                 //  assumption/reference: January 1st, year '0000', is a Saturday.
   resetWatchdog();
-  uint16_t months[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};   
+  uint16_t months[] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};   // we add month values incrementally
   uint32_t days = YYYY * 365;                                           //  days until year 
-  for (uint16_t i = 4; i < YYYY; i += 4) if (LEAP_YEAR(i) ) days++;     //  adjust leap years, test only multiple of 4 of course
-  days += months[MM-1] + DD;                                            //  computes for the day in the year
-  if ((MM > 2) && LEAP_YEAR(YYYY)) days++;                              //  adjust 1 if this year is a leap year, but only after febr
+  for (uint16_t i = 4; i < YYYY; i += 4) if (LEAP_YEAR(i) ) days++;     //  adjust leap years, test only multiple of 4
+  days += months[MM-1] + DD;                                            //  compute for the day in the year
+  if ((MM > 2) && LEAP_YEAR(YYYY)) days++;                              //  adjust 1 if this year is a leap year, but only after feb
   //  removes all multiples of 7 and compute for day offset so count (zero index) begins on a SUNDAY instead of Saturday
   //  why? why not?
   resetWatchdog();
@@ -244,16 +247,17 @@ void printDateTime() {
   char timestring[100] = "INVALID";
   // getTimeStamp(_timestamp, sizeof(_timestamp));
   const char * monthsEq[12] = {"Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"};
-  const char * daysEq[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
-  const char * timeOfDayEq[2] = {"AM", "PM"};
-  uint8_t timeOfDayIndex = 0; // defaults to AM ddaytime indicator
-  DateTime now = rtc.now();
+  const char * daysEq[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+  const char * timeOfDayEq[3] = {"AM", "PM" , "ER"};
+  uint8_t timeOfDayIndex = 0;                                                   // defaults to AM daytime indicator
+  DateTime now = rtc.now();                                                     // get current datetime
+  // process day half indicator
   uint8_t hourBuffer = now.hour();
-  
   if (hourBuffer > 11 && hourBuffer < 24) timeOfDayIndex = 1;                   //  sets PM as daytime indicator
+  if (hourBuffer > 24) timeOfDayIndex = 2;                                      //  sets ER as daytime indicator for false values
   if (hourBuffer > 12 && hourBuffer < 24) hourBuffer = hourBuffer - 12;         //  subtract 12 from 24hr format to get 12hr format
   if (hourBuffer == 0) hourBuffer = 12;                                         //  replace midnight time 00 to 12
-  if (now.month()-1 <= 12) sprintf(timestring, "%s %s %d, %d", daysEq[now.dayOfWeek()-1],monthsEq[now.month()-1],now.date(),now.year());  //  generate day and data string
+  if (now.month()-1 <= 12) sprintf(timestring, "%s %s %d, %d", daysEq[now.dayOfWeek()],monthsEq[now.month()-1],now.date(),now.year());  //  generate day and data string
   debugPrint("Current date:\t ");
   debugPrintln(timestring);
   if (inputIs(timestring, "INVALID")) sprintf(timestring, "%d:%02d:%02d %s [RTC_ERR]" ,hourBuffer,now.minute(),now.second(),timeOfDayEq[timeOfDayIndex]);
