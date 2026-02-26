@@ -693,20 +693,15 @@ bool checkServerNumber(char * serverNumber) {
   
 
   if (inputIs(numberBuffer,"DAN")) sprintf(serverNumber,"%s","09762481329");
-  else if (inputIs(numberBuffer,"DON")) sprintf(serverNumber,"%s","09179995183");
+  else if (inputIs(numberBuffer,"CLIFFORD")) sprintf(serverNumber,"%s","09498211578");
   else if (inputIs(numberBuffer,"GLOBE1")) sprintf(serverNumber,"%s","09175972526");
   else if (inputIs(numberBuffer,"GLOBE2")) sprintf(serverNumber,"%s","09175388301");
   else if (inputIs(numberBuffer,"KATE")) sprintf(serverNumber,"%s","09476873967");
-  else if (inputIs(numberBuffer,"JAY")) sprintf(serverNumber,"%s","09451136212");
-  else if (inputIs(numberBuffer,"JJ")) sprintf(serverNumber,"%s","09287706189");
-  else if (inputIs(numberBuffer,"KENNEX")) sprintf(serverNumber,"%s","09293175812");
   else if (inputIs(numberBuffer,"KIM")) sprintf(serverNumber,"%s","09458057992");
-  else if (inputIs(numberBuffer,"REYN")) sprintf(serverNumber,"%s","09669622726");
   else if (inputIs(numberBuffer,"SAM")) sprintf(serverNumber,"%s","09770452845");
   else if (inputIs(numberBuffer,"SMART1")) sprintf(serverNumber,"%s","09088125642");
   else if (inputIs(numberBuffer,"SMART2")) sprintf(serverNumber,"%s","09088125639");
   else if (inputIs(numberBuffer,"WEB")) sprintf(serverNumber,"%s","09053648335");
-  else if (inputIs(numberBuffer,"CHI")) sprintf(serverNumber,"%s","09954127577");
 
   //  expects that the length is equal to usual server number lengths 09XXXXXXXXX (11) or 639XXXXXXXXX (12)
   //  otherwise the number will be replaced by the default server number
