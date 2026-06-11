@@ -1,75 +1,77 @@
+float parseVoltage(char* stringToParse, int stringContainerSize);
+
 void Operation(const char * operationServerNumber) {
   
-  char infoSMS[100];
-
-  //  reload global variables
-  uint8_t dataloggerMode = EEPROM.readByte(DATALOGGER_MODE);
-  EEPROM.get(DATALOGGER_NAME, flashLoggerName);
-  getTimeStamp(_timestamp, sizeof(_timestamp));
-  clearGlobalSMSDump();
-
-  //  main operation here
-  switch(dataloggerMode) { 
-    case ARQMODE: Serial.println("AQRMODE"); break; // nothing much
-      Serial.println("ARQ MODE");    
-    case GATEWAYMODE:
-      Serial.println("GATEWAY MODE");
-      debugPrintln("Waiting for router data..");    //  We'd assume that if its a gateway, there should be a router
-      waitForLoRaRouterData(MAX_GATEWAY_WAIT_TIME, EEPROM.readByte(ROUTER_COUNT), 0);
-      //  wake
-      //  get router data
-      break;     
-    case ROUTERMODE: Serial.println("ROUTER MODE"); break;
-      Serial.println("ROUTER MODE");
-    default:
-      Serial.println("DEFAULT MODE");
-      //  Should be the same as ARQ mode unless a new mode is necessary
-      //  
-  }
-  if (EEPROM.readByte(SUBSURFACE_SENSOR_FLAG)) getSSMData(_globalSMSDump);  
-  if (EEPROM.readByte(UBLOX_FLAG)) getUBLOXData(_globalSMSDump);                
-  generateInfoMessage(infoSMS);  
-  addToSMSStack(infoSMS);
-  // send everything here
-}
-
-void operation_test() {
-  //  load saved parameters to local variables
-  //  
-  char dummyServer[15];
-  char savedTimeStamp[15];
-  char messageWrapper[200];
-
-  digitalWrite(AUX_TRIG, HIGH);
-  GSMInit();
-  delayMillis(1000);
+  char infoSMS[200];
+  uint8_t dataloggerMode = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);
+  uint8_t powerMode = fetchParam(paramStorage, POWER_SAVING_MODE, (uint8_t)0);
+  uint8_t ssmFlag = fetchParam(paramStorage, SUBSURFACE_SENSOR_FLAG, false);
+  uint8_t ubloxFlag = fetchParam(paramStorage, UBLOX_FLAG, false);
   
-  EEPROM.get(SERVER_NUMBER, dummyServer);
-  EEPROM.get(DATALOGGER_NAME, flashLoggerName);
-  getTimeStamp(savedTimeStamp, sizeof(savedTimeStamp));
+  GSMOn();                      //  if its is turned OFF caused by power saving; turn it of early to give time to connect
 
-  // sprintf(messageWrapper, "%s*SLEEP/WAKE_TEST_%d*%d*%s",flashLoggerName.sensorNameList[0], alarmCount, tipCount, savedTimeStamp);
-  // sprintf(messageWrapper, "%s*SLEEP/WAKE_TEST_%d*%d*%s",flashLoggerName.sensorNameList[0], alarmCount, (RTC_SLOW_MEM[EDGE_COUNT] & 0xFFFF)/2, savedTimeStamp);
-  generateInfoMessage(messageWrapper);
+  diagnosticCheck(1);
+  
+  clearGlobalSMSDump();
+  
+  //  show timestamp here; it might be helpful..
 
-  if (sendThruGSM(messageWrapper,dummyServer)) debugPrintln("Message sent");
-  else {GSMReset(); if (sendThruGSM(messageWrapper,dummyServer)) debugPrintln("Message sent");}
+  //  START OF DATA COLLECTION
+  //  PLACE EVERYTHING RELATED TO DATA COLLECTION HERE
+  debugPrintln("------------------------------------------------------");
+  getLoggerModeAndName();
+  if (dataloggerMode == 0 || dataloggerMode == 1) {
+    debugPrint("Server number: ");
+    debugPrintln(operationServerNumber);
+  }
+  debugPrintln("------------------------------------------------------");
+  //  These are mostly print/labels for now.. unless other other functions are added per datalogger mode
+  //  Labels are important so you'd know what you're getting in to...right?
+  //  This used to be switch case type, it looks clean but ifs are shorter...for now
+  if (dataloggerMode == 0)  {                                                     
+    debugPrintln("Starting STAND-ALONE DATALOGGER operation");                    // nothing much yet after this
+    // getSSMData();
+  }
+  else if (dataloggerMode == 1) {
+      debugPrintln("Starting GATEWAY operation");
+      debugPrintln("Waiting for router data..");                                  //  We'd assume that if its a gateway, there should be a router. Hence, it will wait..
+      waitForLoRaRouterData(MAX_GATEWAY_WAIT_TIME, fetchParam(paramStorage, ROUTER_COUNT, (uint8_t)0), 0);
+  }
+  else if (dataloggerMode == 2) {        
+      debugPrintln("Starting ROUTER operation");                                  // nothing much after this also
+  }
+  else debugPrintln("DATALOGGER MODE ERROR");                                     //  You should not reach this, but try to catch it anyway
 
-  digitalWrite(AUX_TRIG, LOW);
-  alarmCount++;
-  delayMillis(1000);
-}
+  if (ssmFlag) getSSMData();                                                      //  this is placed here since all modes can have SSM
+  if (ubloxFlag) debugPrintln("Fetch UBLOX data here");                           //  this is placed here since I assumed all modes 'can' have a UBLOX module
+  if (!ssmFlag && !ubloxFlag) debugPrintln("RAIN GAUGE ONLY");                    //  assumption; if it has no ssm or ublox, it operates as rain gauge only
+  generateInfoMessage(infoSMS, sizeof(infoSMS));                                  //  datalogger 
+  addToSMSStack(infoSMS);
+  mDiagnosticBuilder(infoSMS, sizeof(infoSMS));
+  addToSMSStack(infoSMS);
+  // END OF DATA COLLECTION
+  
+  
+  //  START OF DATA SENDING
+  //  PLACE EVERYTHING RELATED TO DATA SENDING HERE
+  
+  if (dataloggerMode == 2) {   // ROUTER
+      debugPrintln("Sending data to gateway via LoRa...");
+      sendSMSDump("~", operationServerNumber);
+  }
+  else {   // STANDALONE or GATEWAY
 
-// void generateVoltString (char* stringContainer) {
-//   EEPROM.get(DATALOGGER_NAME, flashLoggerName);
-//   getTimeStamp(_timestamp, sizeof(_timestamp));
-//   delayMillis(1000);
-//   sprintf(stringContainer, ">>%s*VOLT:%.2f*%s",flashLoggerName.sensorNameList[0], readBatteryVoltage(savedBatteryType.read()),_timestamp);
-// }
+      debugPrintln("Sending packets separately via GSM...");
+      sendSMSDump("~", operationServerNumber);
+
+  }
+
+}  
 
 float inputVoltage(float Vmon, long res1, long res2) {
   //  based off Vmax of 14V
   float inputVoltage = ((Vmon * (res1+res2))/res2);
+  return inputVoltage;
 }
 
 float parseVoltage(char* stringToParse, int stringContainerSize) {

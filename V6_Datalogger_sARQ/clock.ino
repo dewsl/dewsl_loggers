@@ -1,13 +1,13 @@
 void rtcInit(byte RTC_INT_PIN) {
-  // pinMode(RTC_INT_PIN, INPUT_PULLUP);
+  pinMode(RTC_INT_PIN, INPUT_PULLUP);
+  if (!rtc.begin()) {                             
+    debugPrintln("RTC module ERROR");
+    delayMillis(1000);
+  } else debugPrintln("RTC init OK");
   // attachInterrupt(RTC_INT_PIN, alarmISR, FALLING);
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 0);
-  // REG_SET_FIELD(RTC_CNTL_REG, RTC_CNTL_DBIAS_WAK, 4);
-  // REG_SET_FIELD(RTC_CNTL_REG, RTC_CNTL_DBIAS_SLP, 4);
-  // esp_sleep_enable_ext1_wakeup_io(BUTTON_PIN_BITMASK(GPIO_NUM_13), ESP_EXT1_WAKEUP_ANY_HIGH);
   rtc_gpio_pulldown_dis(GPIO_NUM_13);
   rtc_gpio_pullup_en(GPIO_NUM_13);
-  
 }
 
 void delayMillis(int delayDuration) {
@@ -16,7 +16,7 @@ void delayMillis(int delayDuration) {
   unsigned long timeStart = millis();
   while (!maxDurationReached) {
     if ((millis() - timeStart) > maxDelayDuration) {
-      Serial.println("Max delay duration: 15000");
+      debugPrintln("Max delay duration: 15000");
       return;
     }
     if ((millis() - timeStart) > delayDuration) {
@@ -25,25 +25,19 @@ void delayMillis(int delayDuration) {
   }
 }
 
+
 void dateTimeNow() {
   DateTime now = rtc.now();
-  Serial.print("RTC Date Time: ");
-  Serial.print(now.year(), DEC);
-  Serial.print('/');
-  Serial.print(now.month(), DEC);
-  Serial.print('/');
-  Serial.print(now.day(), DEC);
-  Serial.print(" (");
-  Serial.print(now.dayOfTheWeek());
-  Serial.print(") ");
-  Serial.print(now.hour(), DEC);
-  Serial.print(':');
-  Serial.print(now.minute(), DEC);
-  Serial.print(':');
-  Serial.println(now.second(), DEC);
+  char timeString[100];
+  const char * dayNames[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+  const char * monthNames[] = {"","Jan","Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+  debugPrint("RTC Date Time: ");
+  sprintf(timeString, "  %s %d %s %d %02d:%02d:%02d",dayNames[now.dayOfTheWeek()],now.day(),monthNames[now.month()],now.year(),now.hour(),now.minute(),now.second());
+  debugPrintln(timeString);
 }
 
-void set2Alarms(byte minuteAlarm1, byte minuteAlarm2) {
+// this part uses two registers instead of one
+void set2Alarms(uint8_t minuteAlarm1, uint8_t minuteAlarm2) {
   rtc.armAlarm(1, false);
   rtc.clearAlarm(1);
   rtc.alarmInterrupt(1, false);
@@ -64,40 +58,86 @@ void set2Alarms(byte minuteAlarm1, byte minuteAlarm2) {
   rtc.alarmInterrupt(2, true);
 }
 
+// arms the primary alarm (1)
+// also clears the second alarm (2); this assumes only alarm 1 will be used
+void setAlarm1(uint8_t minuteAlarm1) {
 
-/// Incase rtc loses power, time is set to the datetime that the code is compiled
+  rtc.armAlarm(1, false);                                 // disarm alarm 1
+  rtc.clearAlarm(1);
+  rtc.alarmInterrupt(1, false);
+
+  rtc.armAlarm(2, false);                                 // disarm alarm 2
+  rtc.clearAlarm(2);
+  rtc.alarmInterrupt(2, false);
+  
+  rtc.writeSqwPinMode(DS3231_OFF);                        // turn off square wave output
+  
+  rtc.setAlarm(ALM1_MATCH_MINUTES, minuteAlarm1, 0, 0);   //write alarm setting to alarm 1 register
+  rtc.alarmInterrupt(1, true);                            // arm alarm 1
+}
+
+void updateAlarmInterval() {
+
+}
+
+/// Syncs RTC with date & time that the code is compiled
+/// Incase rtc loses power, time is reset compile time
 /// This is just a fall back measure to prevent invalid timstamps
-void rtcFallback() {
+void syncRTCwithCompileTime() {
   if (rtc.lostPower()) {
-    Serial.println("RTC lost power, setting time!");
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));  
+    debugPrintln("RTC lost POWER! Timestamp will be set to compile time.");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
 }
 
 void setupTime() {
   unsigned long setupStart = millis();
-  int MM = 0, DD = 0, YY = 0, hh = 0, mm = 0, ss = 0, dd = 0;
-  Serial.println(F("\nSet time and date in this format: YYYY,MM,DD,hh,mm,ss"));
-  
+  int YY = 0, MM = 0, DD = 0, hh = 0, mm = 0, ss = 0;
+  bool inputCaptured = false;
+
+  debugPrintln("\nSet time and date in this format: YYYY,MM,DD,hh,mm,ss");
+
   while (millis() - setupStart < 60000) {
+
     if (Serial.available() > 0) {
-    YY = Serial.parseInt();
-    MM = Serial.parseInt();
-    DD = Serial.parseInt();
-    hh = Serial.parseInt();
-    mm = Serial.parseInt();
-    ss = Serial.parseInt();
-    // dd = Serial.parseInt();
-    
-    delayMillis(10);
-    setRTCDateTime(YY, MM, DD, hh, mm, ss);
-    // Serial.print("Current timestamp: ");
-    getTimeStamp(_timestamp, sizeof(_timestamp));
-    // Serial.println(_timestamp);
-    Serial.println();
-    return;
+      YY = Serial.parseInt();
+      MM = Serial.parseInt();
+      DD = Serial.parseInt();
+      hh = Serial.parseInt();
+      mm = Serial.parseInt();
+      ss = Serial.parseInt();
+      inputCaptured = true;
+    } 
+    else if (BTSerial.available() > 0) {
+      YY = BTSerial.parseInt();
+      MM = BTSerial.parseInt();
+      DD = BTSerial.parseInt();
+      hh = BTSerial.parseInt();
+      mm = BTSerial.parseInt();
+      ss = BTSerial.parseInt();
+      inputCaptured = true;
     }
+
+    if (inputCaptured) {
+      if (YY >= 2020 && MM >= 1 && MM <= 12 && DD >= 1 && DD <= 31 &&
+          hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59 && ss >= 0 && ss <= 59) {
+
+        setRTCDateTime(YY, MM, DD, hh, mm, ss);
+        getTimeStamp(_timestamp, sizeof(_timestamp));
+
+        debugPrint("RTC updated. New timestamp: ");
+        debugPrintln(_timestamp);
+      } else {
+        debugPrintln("Invalid date/time input. RTC not updated.");
+      }
+
+      return;
+    }
+
+    delayMillis(10);
   }
+
+  debugPrintln("RTC update timed out. RTC not updated.");
 }
 
 /// Changes the saved date time with input paramters
@@ -193,4 +233,90 @@ void getNetworkFormatTimeStamp(char* tsContainer, uint8_t sizeOfContainer) {
   for (int t=0; t < sizeOfContainer; t++) tsContainer[t] = 0x00;
   DateTime now = rtc.now();  //get the current date-time
   sprintf(tsContainer, "%02d/%02d/%02d,%02d:%02d:%02d", now.year()%1000,now.month(),now.day(),now.hour(),now.minute(),now.second());
+}
+
+/// Sets next alarm of RTC depending on the the interval equivalent value of the parameter
+/// Actual alrm interval is computed based on current minute and interval equivalent of parameter value
+/// @param IntervalEquivalent - interval equivalent value [0-5]; not the actual alarm interval value, only an index
+void setNextAlarm() {
+  DateTime now = rtc.now();             //get the current date-time
+  uint8_t intervalEquivalent = 30;      //  default value
+  uint8_t savedInterval = fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0);
+  if (savedInterval == 0) {set2Alarms(0,30); return;} // multiple returns are not really advisable, but.. this keeps this part short, so yes... it stays 
+  else if (savedInterval == 1) {set2Alarms(15,45); return;}
+  else if (savedInterval == 2) intervalEquivalent = 15;
+  else if (savedInterval == 3) intervalEquivalent = 10;
+  else if (savedInterval == 4) intervalEquivalent = 5;
+  setAlarm1(nextAlarmGen((int)(now.minute()),intervalEquivalent,0));   //  set computed next alarm to register    
+}
+
+//  identify next alarm minute depending on parameters
+//  this should also work for intervals that doesn't start with 00 minute, provided that the interval series would return to the same number with the given interval
+uint8_t nextAlarmGen(uint8_t currentMinute, uint8_t intervalEquivalent, uint8_t intervalStart) {
+  uint8_t maxSteps = 60 / intervalEquivalent + 1;
+
+  // If exactly on an alarm mark, move to next slot
+  for (uint8_t i = 0; i < maxSteps; i++) {
+    uint8_t candidate = (intervalStart + (i * intervalEquivalent)) % 60;
+    uint8_t next = (intervalStart + ((i + 1) * intervalEquivalent)) % 60;
+
+    if (candidate == currentMinute) {
+      return next;
+    }
+  }
+
+  // Find next future alarm
+  for (uint8_t i = 0; i < maxSteps; i++) {
+    uint8_t candidate = (intervalStart + (i * intervalEquivalent)) % 60;
+
+    if (candidate > currentMinute) {
+      return candidate;
+    }
+  }
+
+  // Wrap to next hour
+  return intervalStart;
+}
+
+void setAlarmInterval() {
+  int intervalBuffer = 0;
+  unsigned long intervalWait = millis();
+  bool inputCapture = false;
+  debugPrint("Enter alarm settings: ");
+  while (millis() - intervalWait < 60000) {
+    if (Serial.available() > 0) {     // usb serial instance
+      intervalBuffer = Serial.parseInt();
+      inputCapture = true;
+    }
+    if (BTSerial.available() > 0) {   // bluetooth instance.. keep separate
+      intervalBuffer = BTSerial.parseInt();
+      inputCapture = true;
+    }
+    if (inputCapture) {
+      if (intervalBuffer > 4) {intervalBuffer = 0; debugPrintln("Alarm interval defaulted to 30 mins.");}  // prevent values outside index range and defaults to 30 min interval
+      storeParam(paramStorage, ALARM_INTERVAL, (uint8_t)intervalBuffer);
+      debugPrint("Updated alarm interval: ");
+      debugPrintln(fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0));
+      inputCapture = false; // this is not necessary but keep it
+      break;
+    }
+  }
+}
+
+void displayNextAlarm() {
+  DateTime now = rtc.now();             //get the current date-time
+  uint8_t intervalEquivalent = 30;      //  default value
+  uint8_t intervalStart = 0;            //  default value
+  // if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 0) // this does nothins because it uses default values
+  if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 1) intervalStart = 15; 
+  else if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 2) intervalEquivalent = 15;
+  else if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 3) intervalEquivalent = 10;  
+  else if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 4) intervalEquivalent = 5; // anything higher and it does nothing..
+  debugPrint("Next alarm:\t hh:");
+  debugPrintln(nextAlarmGen((int)(now.minute()),intervalEquivalent,intervalStart));
+}
+
+void setCompileTime() {
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    Serial.println("Time set to compile time!");
 }
