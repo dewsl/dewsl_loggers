@@ -113,7 +113,7 @@ void savedParameters() {
   else if (alarmInterval == 3) debugPrintln("10 minutes (hh:00, hh:10, hh:20, ... )");
   else if (alarmInterval == 4) debugPrintln("5 minutes (hh:00, hh:05, hh:10, ... )");
   else debugPrintln("Default 30 minutes (hh:00 & hh:30)");
-  displayNextAlarm();
+  displayNextAlarm2(fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0));
   if (fetchParam(paramStorage, SUBSURFACE_SENSOR_FLAG, false)) {
     debugPrint("Sensor command:\t ");
     if (strlen(nvsSensorCommand) == 0) debugPrintln("[DEFAULT SET] - ARQCM6T");

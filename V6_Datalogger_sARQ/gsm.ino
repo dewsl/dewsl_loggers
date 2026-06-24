@@ -1,7 +1,3 @@
-#define GSM_RXD 16
-#define GSM_TXD 17
-#define GSM_RING_INT 35
-#define GSM_RST 25
 
 void GSMInitInt(byte INT_PIN) {
   pinMode(INT_PIN, INPUT);
@@ -36,7 +32,7 @@ bool GSMReset() {
   // digitalWrite(GSMPWR, LOW);
   digitalWrite(COMM_SW, LOW);
   delayMillis(3000);
-  digitalWrite(GSM_RST, HIGH);
+  digitalWrite(COMM_SW, HIGH);
   // digitalWrite(GSMPWR, HIGH);
   delayMillis(2000);
   return GSMInit();
@@ -121,128 +117,69 @@ bool sendThruGSM(const char* messageToSend, const char* serverNumber) {
   char messageContainer[1000];
   char CMGSContainer[50];
   char serverBuffer[20];
-
   strcpy(serverBuffer, serverNumber);
   strcpy(CMGSContainer, serverNumber);
 
   debugPrint("Send to ");
 
-  if (strlen(CMGSContainer) == 11 || strlen(CMGSContainer) == 13) {
-
-    // crude check for a valid number
+  if (strlen(CMGSContainer) == 11 || strlen(CMGSContainer) == 13) {             // crude check for a valid number
     sprintf(CMGSContainer, "AT+CMGS=\"%s\"\r", serverBuffer);
-
     checkSender(serverBuffer);
-
     debugPrint(serverBuffer);
-
-  } else {
-
-    // uses default server number if current is invalid
+  } else {                                                                      // uses default server number if current is invalid
     sprintf(CMGSContainer, "AT+CMGS=\"%s\"\r", defaultServerNumber);
-
     debugPrint(defaultServerNumber);
   }
-
   sprintf(messageContainer, "%s", messageToSend);
-
   debugPrint(": ");
   debugPrintln(messageContainer);
 
-  /*
-   * Check GSM serial first
-   */
   GSMSerial.flush();
-
   delayMillis(200);
-
   GSMSerial.write("AT\r");
-
   if (GSMWaitResponse("OK", 3000, true)) {
-
     debugPrintln("GSM serial OK");
-
-    /*
-     * Set SMS text mode
-     */
     GSMSerial.write("AT+CMGF=1\r");
-
     if (!GSMWaitResponse("OK", 3000, true)) {
-
       debugPrintln("Failed to set SMS text mode");
-
       return false;
     }
-
     delayMillis(300);
-
     /*
      * Send CMGS command
      */
     GSMSerial.write(CMGSContainer);
-
     if (GSMWaitResponse(">", 10000, true)) {
-
-      debugPrintln("GSM prompt received");
-
-      /*
-       * Send message body
-       */
-      GSMSerial.print(messageToSend);
-
-      delayMillis(2000);
-
-      /*
-       * Send CTRL+Z
-       */
-      GSMSerial.write((char)26);
-
+      debugSysln("GSM send ready..");                             // send ready marker
+      GSMSerial.print(messageToSend);                           // send message body
+      delayMillis(1000);
+      GSMSerial.write((char)26);                                // send confirmation
       GSMSerial.flush();
-
-      debugPrintln("CTRL+Z sent");
-
     } else {
-
-      debugPrintln("GSM module unable to send");
-
-      GSMSerial.write(27);
-      GSMSerial.write(27);
-
+      debugSysln("GSM module unable to send");
+      GSMSerial.write(27);                                      //  send cancel command
+      GSMSerial.write(27);                                      //  try again??
       return false;
     }
 
-    /*
-     * Wait for SMS send confirmation
-     */
     if (
       GSMWaitResponse("+CMGS", 30000, true) ||
       GSMWaitResponse("OK", 30000, true)
     ) {
-
-      debugPrintln("SMS SENT SUCCESSFULLY");
-
+      debugSysln("Network send rensponse received");
       sentFlag = true;
-
       return sentFlag;
-
     } else {
-
       delayMillis(5000);
-
       debugPrintln("Sending failed");
-
       GSMSerial.write(27);
       GSMSerial.write(27);
       GSMSerial.write(27);
-
       GSMSerial.flush();
     }
-
   } else {
-
     debugPrintln("GSM module error.");
   }
-
   return sentFlag;
 }
 
@@ -264,7 +201,6 @@ bool sendThruGSM(const char* messageToSend, const char* serverNumber) {
 void GSMConfig() {
   GSMSerial.begin(115200, SERIAL_8N1, GSM_RXD, GSM_TXD);
   delayMillis(300);
-  pinMode(COMM_SW, OUTPUT);
   pinMode(GSM_RST, OUTPUT);
   pinMode(GSM_RING_INT, INPUT);
   // digitalWrite(GSM_RST, HIGH);
@@ -602,6 +538,7 @@ void generateInfoMessage(char* infoContainer, size_t containerSize) {           
   char csqBuffer[100];
   uint8_t CSQ = 0;
   float rainMultiplier = 1;
+  uint16_t rainBuffer = 0;
   float battVolt = readINA219VoltageCurrent(0);     
   char dlogName[10];
   memset(infoContainer,0,containerSize);
@@ -618,13 +555,14 @@ void generateInfoMessage(char* infoContainer, size_t containerSize) {           
     // add more collector types here  
   }
   delayMillis(1000);
+  rainBuffer = getRainCount(PCNT_UNIT_0, false);
   sprintf(infoContainer,"%sW,%0.2f,%0.2f,%0.2f,%u,%s",
     dlogName,
     readRTCTemp(),
-    ((RTC_SLOW_MEM[EDGE_COUNT] & 0xFFFF)/2)*rainMultiplier,
+    (rainBuffer*rainMultiplier),
     battVolt,
     CSQ,
-    _timestamp);
+    _timestamp); 
 }
 
 void addToSMSStack(const char* payloadToAdd) {
@@ -662,9 +600,9 @@ void sendSMSDump(const char* messageDelimilter, const char* dumpServer) {
 
   char * sendToken = strtok(_globalSMSDump, messageDelimilter);
   while (sendToken != NULL) {
-    if (GSMSerial) debugPrint("GSMSerial OK");
-    else {debugPrint("check GSM serial/module"); break;}
-    debugPrint("Sending segment no. ");
+    if (GSMSerial) debugPrintln("GSMSerial OK");
+    else {debugPrintln("Check GSM serial/module"); break;}
+    debugPrint("\nSending segment no. ");
     debugPrintln(sendCount);
     
     sprintf(tokenBuffer, "%s", sendToken);
@@ -705,22 +643,24 @@ void clearGlobalSMSDump() {
 void seTPowerMode() {
   uint8_t pMode = fetchParam(paramStorage, POWER_SAVING_MODE, (uint8_t)0);
 
+  debugPrintln("------------------------------------------------------"); 
   if (pMode == 0) {
-    debugPrintln("INFO:\nNo power savings used.\nGSM module is (always) ON.");
-    cpuFrequency(80);       // temporarily set to 80Mhz to conserve power; modify later 
+    debugPrintln("\nINFO:\nNo power savings used.\nGSM module is (always) ON.");
+    cpuFrequency(160);       // temporarily set to 160Mhz
     if (digitalRead(COMM_SW) == 0) {
       GSMOn();
       GSMInit(); // this just makes sure COMM_SW is alway ON
     }
   } else if (pMode == 1) {
-    debugPrintln("INFO:\nGSM is turned ON only during operation or when needed\nCPU frequency is reduced.");
+    debugPrintln("\nINFO:\nGSM is turned ON only during operation or when needed\nCPU frequency is reduced.");
     if (digitalRead(COMM_SW) == 1) GSMOff();
     cpuFrequency(80);
   } else if (pMode == 3) {
-    debugPrintln("INFO:\nGSM is turned ON only during operation or when needed\nCPU frequency is significantly reduced.");
+    debugPrintln("\nINFO:\nGSM is turned ON only during operation or when needed\nCPU frequency is significantly reduced.");
     if (digitalRead(COMM_SW) == 1) GSMOff();
     cpuFrequency(40);
-  } else debugPrintln("Power mode value error");  
+  } else debugPrintln("Power mode value error");
+  debugPrintln("------------------------------------------------------");   
 }
 
 
@@ -734,9 +674,14 @@ void mDiagnosticBuilder(char* mBuffer, size_t bufLen) {            //          T
   getTimeStamp(_timestamp, sizeof(_timestamp));
   sprintf(mDiagnostic, "%s*m*%2.4f*%2.4f*%2.4f*%2.4f*%2.4f*%2.4f>%d*%s",
                         dNameBuffer,_mValue[0],_mValue[1],_mValue[2],_mValue[3],_mValue[4],_mValue[5],unsentTemp,_timestamp);
-  debugSysln(_mDiagnostic);
+  debugSysln(mDiagnostic);
   strcpy(mBuffer, mDiagnostic);     
   for (size_t m = 0; m < sizeof(_mValue)/sizeof(_mValue[0]);m++) {                // clear the global container for reuse
     _mValue[m] = 0.0f;
   }     
+}
+
+void ringFunction() {
+  ringFlag = false;
+  debugPrintln("RING");
 }

@@ -3,6 +3,8 @@
 extern "C" {
   
   #include "driver/rtc_io.h"        // for sleep-wake interaction
+  // #include "driver/pulse_cnt.h"
+
   #include <driver/gpio.h>
 
 }
@@ -16,8 +18,12 @@ extern "C" {
 #include <esp_err.h>
 #include <nvs_flash.h>
 #include <INA219.h>
-
-
+#include "esp_task_wdt.h"
+#include "driver/pcnt.h"
+#include "esp_wifi.h"
+#include "esp_bt.h"
+#include "esp32/rom/rtc.h"
+  // #include "esp_sleep.h"
 
 #define NO_ESP32_CRYPT              // Disable all SHA, AES and RSA hardware acceleration
 
@@ -39,39 +45,18 @@ extern "C" {
 #include "esp32/ulp.h"
 #include "driver/rtc_io.h"
 #include "soc/rtc_io_reg.h"
-#define GPIO_SENSOR_PIN GPIO_NUM_36   // GPIO pin connected to the sensor
-#define RAIN_PIN                36    // this is different from above
+// #define GPIO_SENSOR_PIN GPIO_NUM_36   // GPIO pin connected to the sensor
 #define MAX_TEST_LIMIT          20
 #define RTC_GPIO_INDEX          0     // attain dynamically with: rtc_io_number_get(GPIO_SENSOR_PIN)
-#define SLOW_PROG_ADDR          51    // di ko maalala kung bakit 51 & 50 ang address na nilagay ko dito, dapat yata may offset ito?
+// #define SLOW_PROG_ADDR          51    // di ko maalala kung bakit 51 & 50 ang address na nilagay ko dito, dapat yata may offset ito?
 #define EDGE_COUNT              10    // RTC RAM address start; different from flash address
 
-//  macros for ULP rain tip counter
-//  should always be placed at the beginning
-//  do not relocate.. unless necessary..
-
-const ulp_insn_t ulp_program[] = {
-  // Initialize transition counter and previous state
-  I_MOVI(R3, 0),                // R3 <- 0 (reset the transition counter)
-  I_MOVI(R2, 1),                // R2 <- 0 (previous state, assume LOW initially)
-  M_LABEL(1),                   // Main loop
-    I_RD_REG(RTC_GPIO_IN_REG, RTC_GPIO_INDEX + RTC_GPIO_IN_NEXT_S, RTC_GPIO_INDEX + RTC_GPIO_IN_NEXT_S),    // Read RTC_GPIO_INDEX with RTC offset
-    I_MOVR(R1, R0),             // R1 <- R0 Save current state to temporary register (R1)
-    I_SUBR(R0, R1, R2),         // R0 = current state (R1) - previous state (R2) (Compare current state (R1) with previous state (R2))
-    I_BL(5, 1),                 // If R0 == 0 (no state change), skip instructions
-    I_ADDI(R3, R3, 1),          // Increment R3 by 1 (transition detected)
-    I_MOVR(R2, R1),             // R2 <- R1 (store the current state for the next iteration)
-    // Store the state transition counter
-    I_MOVI(R1, EDGE_COUNT),     // Set R1 to address RTC_SLOW_MEM[1]
-    I_ST(R3, R1, 0),            // Store it in RTC_SLOW_MEM
-    // introduce some delay; RTC clock on the ESP32 is 17.5MHz 
-    // this might needs 5-10ms of sofware debounce..  
-    I_DELAY(0xFFFF),            // delay 0xFFFF = 3.74 ms
-    I_DELAY(0xFFFF),            // more..
-    I_DELAY(0xFFFF),            // 
-    // I_DELAY(0xFFFF),         // too much?
-  M_BX(1),                      // Loop back to label 1
-};
+#define RAIN_PIN                36    // this is different from above
+#define PCNT_UNIT               PCNT_UNIT_0                                     // use unit 0 of 8
+#define PCNT_CHANNEL            PCNT_CHANNEL_0
+// #define RAIN   PCNT_PIN_NOT_USED
+RTC_DATA_ATTR volatile uint16_t rainCountFlag = 0;               //  test counter for rain count event
+// pcnt_unit_handle_t pcnt_unit = NULL;
 
 /*USED FOR OTA FIRMWARE UPDATE*/
 #define OTA_HANDLER_DURATION          120000
@@ -114,7 +99,7 @@ BluetoothSerial BTSerial;     // Change partition to Minimal spiffs with OTA or 
 bool BtSerialFlag = false;
 
 //  DEBUG
-#define FIRMWAREVERSION               2506.11     //YYMM.DD
+#define FIRMWAREVERSION               2606.24     //YYMM.DD
 #define DEBUGTIMEOUT                  300000
 #define MAX_DATALOGGER_NAME_LENGTH    10
 #define SERIALBAUDRATE                115200
@@ -122,23 +107,28 @@ bool BtSerialFlag = false;
 #define GATEWAYMODE                   1
 #define ROUTERMODE                    2
 #define arrayCount(x) (sizeof(x) / sizeof(x[0]))    // arrayCount(arr) = number of rows  arrayCount(arr[0]) = number of columns
-RTC_DATA_ATTR volatile bool runOnce   = true; // safety  
+bool runOnceFlag                      = true; // safety  
 bool loggerNameChange                 = false;
 bool workingMode                      = false;
 bool debugExitSkip                    = false;
 bool forDeployment                    = false;
-bool operationFlag                    = false;  // wake reason flag for RTC
+volatile bool operationFlag           = false;  // wake reason flag for RTC
 bool gsmFlag                          = false;  // wake reason flag for GSM; use this later
 bool loraFlag                         = false;  // wake reason flag for LoRa; use this later
-bool debugReq                         = false;
+bool _debugReq                         = false;
 
 // GSM
 #define COMM_SW                       2             // Test switch pin. MUST BE LOW DURING BOOT
+#define GSM_RXD 16
+#define GSM_TXD 17
+#define GSM_RING_INT 35
+#define GSM_RST 25
 HardwareSerial                        GSMSerial(2);
 const char dumpDelimiter[]            = "~";
 char _globalSMSDump[3000];
+char _resetCauseContainer[500];
 float _mValue[6];                                   //  this counts 3 the pairs of data for voltage and current monitoring (pre-peri-post) 
-bool GSM_INIT_FLAG = true;
+volatile bool ringFlag = true;
 
 //LoRa
 #define CS_NSS                        5             // this must be HIGH during boot or may cause errors; inherent to ESP32
@@ -181,23 +171,10 @@ const char* paramStorage = "storedParam";       //  used for setting defaults
 char dataloggerNameList[MAX_ROUTER_COUNT][MAX_DATALOGGER_NAME_LENGTH];         //  let's try removing the struct container...
                                                             //  We need to reload this variable with the stored values every time the system resets
 
-typedef struct {
-  boolean valid;
-  char sensorNameList[MAX_DATALOGGER_NAME_LENGTH][20];      // currently limited to MAX_DATALOGGER_NAME_LENGTH 
-  // pwede pa maglagay dito ng ibang list
-} SensorNameStruct;
-SensorNameStruct flashLoggerName;
-
-
-
-// float opAmpSlopeDefault = 0.21;                   //  based on readings from sAQR 0013 op-amp 
-// float opAmpOffsetDefault = -0.07;
-
-
-
 portMUX_TYPE intSync = portMUX_INITIALIZER_UNLOCKED;        //  used for interruppt synchronization
 
 RTC_DATA_ATTR volatile uint8_t tipCount = 0;
+
 bool routerOTAflag = false;          //  determined wether OTA command will be passed to the router(s)
 bool routerProcessOTAflag = false;   //  triggers router OTA processing after data sending
 char routerOTACommand[100];          //  container for OTA command to be passed to routers(s)
@@ -215,188 +192,80 @@ void IRAM_ATTR LoRaISR() {
 /// Currently: All OTA messages thru GSM will only be processed after sensor data collection
 ///
 void IRAM_ATTR GSMISR() {
-  // debugPrintln("GSM Ring Interupt");
-  // LoRa.rfm_done = true;
+  ringFlag = true;
+}
+
+void IRAM_ATTR RAINISR() {
+  rainCountFlag = true;
+}
+
+void IRAM_ATTR RTCISR() {
+  operationFlag = true;
 }
 
 INA219 INA219Module(0x40);                                                          //  create object and set address of INA219
 
-void setup() {  
-  Serial.begin(SERIALBAUDRATE);                                                     //  initialize Serial
+void setup() {
+
+  Serial.begin(SERIALBAUDRATE);                                           //  initialize Serial
   Wire.begin();
-  wakeReason();
-  // initializeLORA(VSPI_RST);           //  initialize VSPI for LORA
-  InitializeRainULP(RAIN_PIN);                                                      //
-  initializeULPProgram();                                                           // Load the ULP program for reading rain tips during deep sleep
-  ADCInit();
-  // GSMSerial.begin(115200, SERIAL_8N1, GSM_RXD, GSM_TXD);
-  // GSMInitInt(GSM_RING_INT);        // iffy but it works
+  resetReason(0); resetReason(1);                                         // check reset reasons
+
+  rainCounterInit(RAIN_PIN, GPIO_NUM_36, PCNT_UNIT);
+  resetRainCounter(PCNT_UNIT);
 
   rtcInit(RTC_INT);
-  if (!rtc.begin()) {
-    debugPrintln("RTC module ERROR");
-    delayMillis(1000);
-  }
+  syncRTCwithCompileTime();                                               //  Failsafe to prevent invalid timestamps when RTC power is removed
 
-  //RTC_SLOW_MEM[EDGE_COUNT] = 0;
-  //ulp_run(SLOW_PROG_ADDR);      // Start the ULP program with offset
-
-  esp_err_t err = ulp_run(SLOW_PROG_ADDR);
-
-  debugPrint("ulp_run result = ");
-  debugPrintln(err);
-
-  // delay(1000);
-
-  // debugPrint("RTC[10] after 1 sec = ");
-  // debugPrintln(RTC_SLOW_MEM[10]);
-
-  // pinMode(GPIO_NUM_2, OUTPUT);
-  // gpio_hold_dis(GPIO_NUM_2);      // release hold after wake
-  // digitalWrite(GPIO_NUM_2, HIGH); // turn GSM ON
-  // delayMillis(3000);              // wait for GSM boot
-
-  GSMConfig();
-  
-  GSM_INIT_FLAG = true;
-
-  SSMInit();
-  loadDefaultParams(paramStorage);              // by default this should not write to the NVS
-  syncRTCwithCompileTime();                     //  Failsafe to prevent invalid timestamps when RTC power is removed
+  loadDefaultParams(paramStorage);                                        // by default this should not write to the NVS
   uint8_t dMode = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);
-  if (dMode == 1 || dMode == 2) initializeLORA(VSPI_RST);         // only initialize if it will be used
+  if (dMode == 1 || dMode == 2) initializeLORA(VSPI_RST);                 // only initialize if it will be used
 
   delayMillis(1000);
-  // set2Alarms(0,30);  // 
-  // loadDefaultParams(defaultServerNumber);
-
-  pinMode(AUX_TRIG, OUTPUT);
-  digitalWrite(AUX_TRIG, LOW);
-
-  // pinMode(COMM_SW, OUTPUT);
-  // pinMode()
-  // digitalWrite(COMM_SW, LOW);
   
-  // digitalWrite(COMM_SW, HIGH);
-  
-  if (runOnce) {
-    //setCpuFrequencyMhz(80);
-    setCpuFrequencyMhz(160);    // Wifi & bluetooth requires frequencies above 80Mhz
-                                // 160Mhz setting causes sAQR to consume around 150mA.
-                                // Higher frequency means code is loaded and executed faster, but will require MORE power..
-                                // This can be adjusted up to 240Mhz.
-    
-    
-    // initWifiOTAConnection();  // wifi init function, do this later...
-    initBluetooth();          // bluetooth init
-    debugPrintln("Bluetooth debugging enabled");
+  pinMode(COMM_SW, OUTPUT);                                               //  This is detached from GSM because other functions also use it
+  if (dMode != 2) GSMOn(); delayMillis(1000);                             //  set initial state as HIGH if GSM will be used
+  pinMode(AUX_TRIG, OUTPUT);                                              //  This is detached from SSM init because other functions also use it         
+  digitalWrite(AUX_TRIG, LOW);                                            //  set initial state
 
-    unsigned long startConnectionWaitTime = millis();
-    bool connectedStat = false;
-    debugPrintln("WiFi network connection");
-    debugPrintln("[Input anything to cancel search]");
-    while (millis() - startConnectionWaitTime < WIFI_SEARCH_DURATION && !connectedStat) {
-      debugPrint("."); delayMillis(1000);
-      if (wifiConnectedStatus()) { connectedStat = true; OTAProc(OTA_HANDLER_DURATION);}
-      if (BTSerial.hasClient() == true) {connectedStat = true; BtSerialFlag = true; break;}
-      if (Serial.available() > 0) break;                        // for the impatient ones..
-    }
-    debugPrintln("");
-    if (!connectedStat) {
-      debugPrintln("No WiFi or Bluetooth connected");
-      disableWifi();                // turn these of since nothing is connected
-      BTSerial.end();               // turn these of since nothing is connected
-      // setCpuFrequencyMhz(80);       // drop cpu frequency to save power; otherwise retain higher freuqncy to maintain wifi & bluetooth connectivity
-      Serial.println("now operating at 80Mhz"); 
-    }
-
-    // debugPrintln("GSM ONLY MODE");
-    debugPrintln("[Input anything to enter debug]");
-
-    unsigned long startWait = millis();
-
-    while (millis() - startWait < 10000) {
-      debugPrint(".");
-      delayMillis(1000);
-
-      if (Serial.available() > 0) {
-        debugPrintln("");
-        debugPrintln("Debug requested");
-        BtSerialFlag = true;
-        debugReq = true;
-        break;
-      }
-    }        
-    debugPrintln("");
-    runOnce=false;                  // prevents this part from executing again, unless MCU is restarted
-  }
-
-  seTPowerMode();
-
+  GSMConfig();                                                            //  GSM pin congifuration
+  SSMInit();                                                              //  SSM config
+  seTPowerMode();                                                         //  test power mode here
+  watchdogConfig();                                                       //  generate watchdog congif and run it
+  requestDebug();                                                         //  debug mode
 }
 
-void loop() {
-
-  debugPrintln("");
-  debugPrintln("");
-
-  // Debug mode
-  if (debugReq) {
-  // if (BtSerialFlag || Serial.available() > 0) {
-    debugPrintln("DEBUG MODE START");
-    debugFunction();
-    debugPrintln("DEBUG MODE END");
-    // return;
-  }
-
-  if (runOnce) {
-
-  }
-
-  // Only run if RTC/scheduler sets this
-  if (operationFlag) {
-    operationFlag = false;
-
-    Serial.println("Initializing GSM...");
-
-    GSMInit();
-
-    char operationServer[15];
-    fetchParam(paramStorage, SERVER_NUMBER, operationServer, sizeof(operationServer));
-    Operation(operationServer);
-    delayMillis(3000);
-    resetRainULP();
-  }
-
-  debugPrintln("");
-  setNextAlarm();
-  displayNextAlarm();
-  delayMillis(500);
-
-  seTPowerMode();
-  delayMillis(500);
-
-  debugPrintln("ESP32 will enter deep sleep..");
-  delayMillis(500);
- 
-                                                  //  hold GPIO states so its retained during sleep
-  rtc_gpio_hold_en(GPIO_NUM_26);                  //  AUX POWER
-  rtc_gpio_hold_en(GPIO_NUM_25);                  //  GSM RST (If HIGH; change causes module reset)
-  rtc_gpio_hold_en(GPIO_NUM_2);                   //  COMMS POWER
-  rtc_gpio_hold_en(GPIO_NUM_4);                   //  SPI RST (If HIGH; change causes module reset)
-
-  // esp_deep_sleep_start();
-  esp_light_sleep_start();
-  Serial.println("ESP32 resumed from light sleep..");
+void loop() {                                                             // try to keep this clean so its easy to read
   
-                                                  //  disable pad holds so it can be changed if needed 
-  rtc_gpio_hold_en(GPIO_NUM_26);                  //  AUX POWER
-  rtc_gpio_hold_en(GPIO_NUM_25);                  //  GSM RST (to allow reset)
-  rtc_gpio_hold_en(GPIO_NUM_2);                   //  COMMS POWER
-  rtc_gpio_hold_en(GPIO_NUM_4);                   //  SPI RST (to allow reset)
+  
+  if (_debugReq) debugFunction();                                         //  debug subprocess
+  if (runOnceFlag) runOnce();                                             
+  if (ringFlag) ringFunction();                                           //  do something when ring is detected
+  if (rainCountFlag) rainCheck(PCNT_UNIT);                                //  temporary rain check
 
-  // resetPowerMode();
+  if (operationFlag) {                                                    // Only run if RTC/scheduler sets this
+    operationFlag = false;
+    char operationServer[15];
 
+    cpuFrequency(80);                                                     //  return CPU frequency to stable state
+    delayMillis(1000);                                                    //  wait a bit...
+    
+    fetchParam(paramStorage, SERVER_NUMBER, operationServer, sizeof(operationServer));    //  fetch saved server number
+    uint8_t dMode = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);                //  fetch saved datalogger mode
+    if (dMode != ROUTERMODE) GSMInit();                                   //  if datalogger has GSM module, check it first
+                                                                          //  if connection is unstable it has a chance to connect before sending
+    Operation(operationServer, dMode);                                    //  run operation subprocess using saved parameters
+    delayMillis(1000);                                                      
+
+    setNextAlarm();                                                       //  set next alarm 
+    // displayNextAlarm();                                                //  as it says..
+    displayNextAlarm2(fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0));
+    delayMillis(500);                                                     //  wait a bit so you get a chance to see whats happening
+
+    cpuFrequency(40);                                                     //  throttle down CPU frequency to save power; it should be around 25mA
+  }
+  esp_task_wdt_reset();                                                   //  reset watchdog counter
+  delayMillis(10);                                                        //  to keep thread busy 
 }
 
 void wakeReason() {
@@ -417,8 +286,31 @@ void wakeReason() {
   }
 }
 
-//overload here
+void resetReason(uint8_t coreIndex) {
+  if (coreIndex == 0)  debugPrint("CPU0 reset reason: ");
+  if (coreIndex == 1)  debugPrint("CPU1 reset reason: ");
+  if (coreIndex > 1)  {debugPrintln("Index ???"); return;}
+  switch (rtc_get_reset_reason(coreIndex)) {
+    case 1 : debugPrintln ("POWERON_RESET");break;          /**<1,  Vbat power on reset*/
+    case 3 : debugPrintln ("SW_RESET");break;               /**<3,  Software reset digital core*/
+    case 4 : debugPrintln ("OWDT_RESET");break;             /**<4,  Legacy watch dog reset digital core*/
+    case 5 : debugPrintln ("DEEPSLEEP_RESET");break;        /**<5,  Deep Sleep reset digital core*/
+    case 6 : debugPrintln ("SDIO_RESET");break;             /**<6,  Reset by SLC module, reset digital core*/
+    case 7 : debugPrintln ("TG0WDT_SYS_RESET");break;       /**<7,  Timer Group0 Watch dog reset digital core*/
+    case 8 : debugPrintln ("TG1WDT_SYS_RESET");break;       /**<8,  Timer Group1 Watch dog reset digital core*/
+    case 9 : debugPrintln ("RTCWDT_SYS_RESET");break;       /**<9,  RTC Watch dog Reset digital core*/
+    case 10 : debugPrintln ("INTRUSION_RESET");break;       /**<10, Instrusion tested to reset CPU*/
+    case 11 : debugPrintln ("TGWDT_CPU_RESET");break;       /**<11, Time Group reset CPU*/
+    case 12 : debugPrintln ("SW_CPU_RESET");break;          /**<12, Software reset CPU*/
+    case 13 : debugPrintln ("RTCWDT_CPU_RESET");break;      /**<13, RTC Watch dog Reset CPU*/
+    case 14 : debugPrintln ("EXT_CPU_RESET");break;         /**<14, for APP CPU, reseted by PRO CPU*/
+    case 15 : debugPrintln ("RTCWDT_BROWN_OUT_RESET");break;/**<15, Reset when the vdd voltage is not stable*/
+    case 16 : debugPrintln ("RTCWDT_RTC_RESET");break;      /**<16, RTC Watch dog reset digital core and rtc module*/
+    default : debugPrintln ("NO_MEAN");
+  }
+}
 
+//overload here
   void debugPrint(const char *toPrint) {
     if (Serial) Serial.print(toPrint);
     if (BTSerial.hasClient()) BTSerial.print(toPrint);
@@ -468,11 +360,36 @@ void wakeReason() {
     if (BTSerial.hasClient()) BTSerial.println(toPrintln);
   }
 
+
 void powerSaving(){
     // adc_digi_stop();           //  stop ADC conversions. restart ADC before use
     // adc_digi_deinitialize();   //  deinitialize ADC driver
     // WiFi.disconnect(true);     //  Disconnect from the network
     // WiFi.mode(WIFI_OFF);       //  Switch WiFi off
     // btStop();
-    setCpuFrequencyMhz(40);       //  reduce CPU frequency. Hanggang 80Mhz lang "daw" stable pero Ok pa din naman sa 40Mhz, Doable din ang 20Mhz pero wala pang long term testing
+    setCpuFrequencyMhz(40);       //  set
+}
+
+void watchdogConfig() {
+  esp_task_wdt_deinit();
+  esp_task_wdt_config_t wdtConfig = {
+    .timeout_ms = 600000,   // 10 seconds
+    .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,      // monitor only core 0 Idle task
+    .trigger_panic = true,    // trigger panic before reset
+  };
+  esp_task_wdt_init(&wdtConfig);
+  esp_task_wdt_add(NULL);
+}
+void runOnce() {                  //  as the name suggests, this should only be executed once in a runtime 
+    runOnceFlag = false;          //  reset flag so it doesn't run again
+    rainCountFlag = false;        //  reset RAIN flag; if gate should be initially false
+    ringFlag = false;             //  reset RING flag; if gate should be initially false
+    setNextAlarm();               //  prime the alarm for first operation to trigger subsequent alarms       
+    displayNextAlarm2(fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0));         //  name
+    debugPrintln("");   
+    disableModems();              // disable uncessary peripherals
+
+    //  check if datalogger has GSM
+    //  send boot message if it does                 
+    //  do something for the radio
 }

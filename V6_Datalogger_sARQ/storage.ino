@@ -199,7 +199,9 @@ void loadNameArrayFromStorage(bool showList) {
 }
 
 //  This might look short but this scenario happens a lot, so quite a lot of lines can be saved
-void getNameFromList(uint8_t nameIndex, char * nameContainer) {
+//  Index 0 is always the datalogger name (self)
+//  Index 1 ang above are the routers (if any)
+void getNameFromList(uint8_t nameIndex, char * nameContainer) {     //  
   debugSysln("#   start getNameFromList");
     loadNameArrayFromStorage(false);                               //  reload global name list variable from nvs
     if (strcpy(nameContainer, dataloggerNameList[nameIndex])) {  //  copy target paramter from global list to container

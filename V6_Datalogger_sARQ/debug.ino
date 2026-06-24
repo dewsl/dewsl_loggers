@@ -1,5 +1,5 @@
-bool auxTriggerState = false;
-bool gsmSwitchState = false;
+// bool auxTriggerState = false;
+// bool gsmSwitchState = false;
 
 
 /// returns FALSE if function timeout occurs; otherwise TRUE
@@ -47,7 +47,8 @@ void debugFunction() {
   bool debugProcess = true;
   unsigned long debugModeStart = millis();
 
-  // debugPrintln("DEBUG Mode");
+  debugPrintln("DEBUG MODE START");
+
   printMenu();
   while (debugProcess) {
     // digitalWrite(COMM_SW, HIGH);
@@ -65,8 +66,9 @@ void debugFunction() {
     if (inputIs(serialLineInput, "A")) {
       char testServer[15];
       debugPrintln("OPERATION CYCLE TEST RUN");
+      uint8_t testDataloggerMode = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);
       fetchParam(paramStorage, SERVER_NUMBER, testServer, sizeof(testServer));
-      Operation(testServer);
+      Operation(testServer, testDataloggerMode);
       debugModeStart = millis();  //update start of timeout counter
       debugPrintln("------------------------------------------------------");
 
@@ -88,7 +90,8 @@ void debugFunction() {
     } else if (inputIs(serialLineInput, "B")) {
 
         uint8_t RainCollectorType = fetchParam(paramStorage, RAIN_COLLECTOR_TYPE, (uint8_t)0);
-
+        
+        resetRainCounter(PCNT_UNIT);
         debugPrintln("\nCollector type:");
         if (RainCollectorType == 0)
             debugPrintln("Pronamic (0.5mm/tip)");
@@ -131,7 +134,9 @@ void debugFunction() {
         debugPrintln("------------------------------------------------------");
 
     } else if (inputIs(serialLineInput, "BB")) {
+      resetRainCounter(PCNT_UNIT);
       rainTest();
+      resetRainCounter(PCNT_UNIT);
       debugModeStart = millis();
       debugPrintln("------------------------------------------------------");
 
@@ -425,6 +430,7 @@ void debugFunction() {
 
       // CheckingSavedParameters();
       debugPrintln("Quitting debug mode...");
+      resetRainCounter(PCNT_UNIT);
       // resetRainTips();
       // if (loggerWithGSM(fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0))) deleteMessageInbox();
       // else digitalWrite(AUX_TRIG, LOW);  //should turn off GSM module
@@ -432,7 +438,7 @@ void debugFunction() {
       debugProcess = false;
       debugExitSkip = true;
       forDeployment = true;
-      debugReq = false;
+      _debugReq = false;
       break;
       // Serial.end();
       // USBDevice.detach();
@@ -525,7 +531,7 @@ void debugFunction() {
     if ((millis() - debugModeStart) >= DEBUGTIMEOUT) {
       debugModeStart = millis();
       debugProcess = false;
-      debugReq = false;
+      _debugReq = false;
       debugPrintln("TIMED OUT: Exiting debug mode");
       debugPrintln("------------------------------------------------------"); 
       break;
@@ -770,4 +776,27 @@ void updateSensorNames() {
   }  // other standalone routers
 
   updateListenKey();
+}
+
+bool requestDebug() {
+  bool reqState = false;
+
+  debugPrintln("[Input anything to enter debug]");
+
+  unsigned long startWait = millis();
+  while (millis() - startWait < 15000 && reqState == false) {
+    debugPrint(".");
+    delayMillis(1000);
+    if (Serial.available() > 0) {
+      debugPrintln("");
+      debugPrintln("Debug requested..");
+      _debugReq = true;
+      reqState = true;
+    }
+  }
+
+  debugPrintln("\n------------------------------------------------------");
+  Serial.flush();
+  while (Serial.available()) Serial.read();
+  return reqState;
 }

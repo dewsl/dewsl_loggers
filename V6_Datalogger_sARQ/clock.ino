@@ -1,13 +1,14 @@
 void rtcInit(byte RTC_INT_PIN) {
-  pinMode(RTC_INT_PIN, INPUT_PULLUP);
+  pinMode(RTC_INT_PIN, INPUT);
+  attachInterrupt(RTC_INT_PIN, RTCISR, FALLING);
   if (!rtc.begin()) {                             
     debugPrintln("RTC module ERROR");
     delayMillis(1000);
   } else debugPrintln("RTC init OK");
-  // attachInterrupt(RTC_INT_PIN, alarmISR, FALLING);
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 0);
-  rtc_gpio_pulldown_dis(GPIO_NUM_13);
-  rtc_gpio_pullup_en(GPIO_NUM_13);
+  
+  // esp_sleep_enable_ext0_wakeup(GPIO_NUM_13, 0);
+  // rtc_gpio_pulldown_dis(GPIO_NUM_13);
+  // rtc_gpio_pullup_en(GPIO_NUM_13);
 }
 
 void delayMillis(int delayDuration) {
@@ -29,10 +30,20 @@ void delayMillis(int delayDuration) {
 void dateTimeNow() {
   DateTime now = rtc.now();
   char timeString[100];
+  const char * dayPeriod = (now.hour() < 12) ? "AM" : "PM";
   const char * dayNames[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
   const char * monthNames[] = {"","Jan","Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+  uint8_t hour12f = (now.hour() % 12) == 0 ? 12 : (now.hour() % 12) ;
   debugPrint("RTC Date Time: ");
-  sprintf(timeString, "  %s %d %s %d %02d:%02d:%02d",dayNames[now.dayOfTheWeek()],now.day(),monthNames[now.month()],now.year(),now.hour(),now.minute(),now.second());
+  sprintf(timeString, "  %s %d %s %d %02d:%02d:%02d %s",dayNames[now.dayOfTheWeek()],now.day(),monthNames[now.month()],now.year(),hour12f,now.minute(),now.second(),dayPeriod);
+  debugPrintln(timeString);
+}
+
+void timeNow() {
+  DateTime now = rtc.now();
+  char timeString[100];
+  debugPrint("Current time: ");
+  sprintf(timeString, "%02d:%02d:%02d",now.hour(),now.minute(),now.second());
   debugPrintln(timeString);
 }
 
@@ -278,6 +289,41 @@ uint8_t nextAlarmGen(uint8_t currentMinute, uint8_t intervalEquivalent, uint8_t 
   return intervalStart;
 }
 
+void displayNextAlarm2(uint8_t alarmIndex) {
+  DateTime now = rtc.now();
+  uint8_t intervalStart = 0;   // default to 0
+  uint8_t almInterval = 0;
+  uint8_t currentHour = now.hour();
+  uint8_t currentMinute = now.minute();
+
+  switch (alarmIndex) {
+    case 0: almInterval = 30; break;
+    case 1: almInterval = 30; intervalStart = 15; break;
+    case 2: almInterval = 15; break;
+    case 3: almInterval = 10; break;
+    case 4: almInterval = 5; break;
+    default: almInterval = 30; break;
+  }
+  int offsetMinute = (currentMinute - intervalStart + 60) % 60;             //  get minute equivalent if offset is not zero
+  int remainder = offsetMinute % almInterval;                               //  excess minute from last alarm
+  int nextShifted = (offsetMinute - remainder + almInterval);               //  jump to next alarm if needed
+  int nextMinute = (intervalStart + nextShifted) % 60;                      //  get next actual alarm minute 
+  int nextHour = currentHour;                                               //  next hour if minute does not exceed next hour boundary
+  if (nextShifted + intervalStart >= 60) {                                  //  next hour if hour and day boundary is exceeded 
+    nextHour = (currentHour + 1) % 24;
+  }
+
+  const char* dayPeriod = (nextHour >= 12) ? "PM" : "AM";                   //  get day period so we can use 12hr format
+  int displayHH = nextHour % 12;                                            //  convert 24hr format to 12
+  if (displayHH == 0) displayHH = 12;                                       //  midnight is 00 not 24
+
+  char nextBuffer[15];                                                       // container for "HH:MM AM" + null terminator
+  snprintf(nextBuffer, sizeof(nextBuffer), "%02d:%02d %s", displayHH, nextMinute, dayPeriod);
+
+  debugPrint("Next alarm:\t ");
+  debugPrintln(nextBuffer);
+}
+
 void setAlarmInterval() {
   int intervalBuffer = 0;
   unsigned long intervalWait = millis();
@@ -305,13 +351,15 @@ void setAlarmInterval() {
 
 void displayNextAlarm() {
   DateTime now = rtc.now();             //get the current date-time
+  
   uint8_t intervalEquivalent = 30;      //  default value
   uint8_t intervalStart = 0;            //  default value
+  uint8_t intervalIndex = fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0);
   // if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 0) // this does nothins because it uses default values
-  if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 1) intervalStart = 15; 
-  else if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 2) intervalEquivalent = 15;
-  else if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 3) intervalEquivalent = 10;  
-  else if (fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0) == 4) intervalEquivalent = 5; // anything higher and it does nothing..
+  if (intervalIndex == 1) intervalStart = 15; 
+  else if (intervalIndex == 2) intervalEquivalent = 15;
+  else if (intervalIndex == 3) intervalEquivalent = 10;  
+  else if (intervalIndex == 4) intervalEquivalent = 5;  // anything higher and it does nothing..
   debugPrint("Next alarm:\t hh:");
   debugPrintln(nextAlarmGen((int)(now.minute()),intervalEquivalent,intervalStart));
 }
@@ -319,4 +367,16 @@ void displayNextAlarm() {
 void setCompileTime() {
   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     Serial.println("Time set to compile time!");
+}
+
+uint8_t intervalEquivalent(uint8_t alarmInterval) {
+  uint8_t interval = 30;    //  default value
+  switch (alarmInterval) {
+    case 0: interval = 30; ; break;
+    case 1: interval = 15; break;
+    case 2: interval = 10; break;
+    case 3: interval = 5; break;
+    default: interval = 30; break;
+  }
+  return interval;
 }

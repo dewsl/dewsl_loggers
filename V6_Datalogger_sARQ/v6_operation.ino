@@ -1,14 +1,15 @@
 float parseVoltage(char* stringToParse, int stringContainerSize);
 
-void Operation(const char * operationServerNumber) {
+void Operation(const char * operationServerNumber, uint8_t dataloggerMode) {
   
   char infoSMS[200];
-  uint8_t dataloggerMode = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);
-  uint8_t powerMode = fetchParam(paramStorage, POWER_SAVING_MODE, (uint8_t)0);
+  // uint8_t dataloggerMode = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);
+  // uint8_t powerMode = fetchParam(paramStorage, POWER_SAVING_MODE, (uint8_t)0);
   uint8_t ssmFlag = fetchParam(paramStorage, SUBSURFACE_SENSOR_FLAG, false);
   uint8_t ubloxFlag = fetchParam(paramStorage, UBLOX_FLAG, false);
   
   GSMOn();                      //  if its is turned OFF caused by power saving; turn it of early to give time to connect
+
 
   diagnosticCheck(1);
   
@@ -46,6 +47,7 @@ void Operation(const char * operationServerNumber) {
   if (ubloxFlag) debugPrintln("Fetch UBLOX data here");                           //  this is placed here since I assumed all modes 'can' have a UBLOX module
   if (!ssmFlag && !ubloxFlag) debugPrintln("RAIN GAUGE ONLY");                    //  assumption; if it has no ssm or ublox, it operates as rain gauge only
   generateInfoMessage(infoSMS, sizeof(infoSMS));                                  //  datalogger 
+  resetRainCounter(PCNT_UNIT);                                                             //  reset rain counter after data is fetched for sending so we wont miss anything 
   addToSMSStack(infoSMS);
   mDiagnosticBuilder(infoSMS, sizeof(infoSMS));
   addToSMSStack(infoSMS);

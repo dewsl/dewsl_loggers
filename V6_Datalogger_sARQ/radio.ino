@@ -312,3 +312,13 @@ bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, u
 
   return !noResponse;
 }
+
+void disableModems() {
+  // Disable Wi-Fi
+  WiFi.disconnect(true);   // disconnect and erase config
+  WiFi.mode(WIFI_OFF);     // turn off Wi-Fi hardware
+
+  // Disable Bluetooth
+  btStop();                // stops Classic BT
+  esp_bt_controller_disable(); // disables BT controller
+}
