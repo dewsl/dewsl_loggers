@@ -7,8 +7,8 @@
 
 
 void initWifiOTAConnection() {
-  const char* ssid = "Selah";
-  const char* password = "ilovehubby"; 
+  const char* ssid = "SARQ_ESP_WIFI";
+  const char* password = "espwifipass"; 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   Serial.println("WiFi init OK");

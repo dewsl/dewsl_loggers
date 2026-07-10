@@ -314,6 +314,7 @@ bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, u
 }
 
 void disableModems() {
+  debugPrintln("Disabling Wifi & Bt...");
   // Disable Wi-Fi
   WiFi.disconnect(true);   // disconnect and erase config
   WiFi.mode(WIFI_OFF);     // turn off Wi-Fi hardware

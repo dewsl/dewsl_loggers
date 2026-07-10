@@ -159,29 +159,35 @@ void savedParameters() {
     debugPrint("Server number:\t ");
     if (strlen(nvsServerNumber) == 0) {
       debugPrint(defaultServerNumber);
-      debugPrintln(" [Default]");
+      debugPrint(" [Default]");
     } else {
       debugPrint(nvsServerNumber);
       debugPrint(" ");
       checkSender(nvsServerNumber);
     }
-    
+    debugPrintln("");
+    char CSQval[10];
+    if (readCSQ(CSQval)) {
+      // if (Serial) Serial.print("Checking GSM network signal..");
+      // debugPrint("CSQ: ");
+      // debugPrintln(CSQval);
+    }    
 
   }
   debugPrintln(""); 
 }
 
 void checkSender(char* senderNum) {
-  if(inputHas(senderNum,"9762481329")) debugPrintln("[DAN]");
-  else if(inputHas(senderNum,"9175972526")) debugPrintln("[GLOBE1]");
-  else if(inputHas(senderNum,"9175388301")) debugPrintln("[GLOBE2]");
-  else if(inputHas(senderNum,"9476873967")) debugPrintln("[KATE]");
-  else if(inputHas(senderNum,"9458057992")) debugPrintln("[KIM]");
-  else if(inputHas(senderNum,"9770452845")) debugPrintln("[SAM]");
-  else if(inputHas(senderNum,"9088125642")) debugPrintln("[SMART1]");
-  else if(inputHas(senderNum,"9088125639")) debugPrintln("[SMART2]");
-  else if(inputHas(senderNum,"9053648335")) debugPrintln("[WEB]");
-  else if(inputHas(senderNum,"9179995183")) debugPrintln("[CHI]");
+  if(inputHas(senderNum,"9762481329")) debugPrint("[DAN]");
+  else if(inputHas(senderNum,"9175972526")) debugPrint("[GLOBE1]");
+  else if(inputHas(senderNum,"9175388301")) debugPrint("[GLOBE2]");
+  else if(inputHas(senderNum,"9476873967")) debugPrint("[KATE]");
+  else if(inputHas(senderNum,"9458057992")) debugPrint("[KIM]");
+  else if(inputHas(senderNum,"9770452845")) debugPrint("[SAM]");
+  else if(inputHas(senderNum,"9088125642")) debugPrint("[SMART1]");
+  else if(inputHas(senderNum,"9088125639")) debugPrint("[SMART2]");
+  else if(inputHas(senderNum,"9053648335")) debugPrint("[WEB]");
+  else if(inputHas(senderNum,"9179995183")) debugPrint("[CHI]");
 }
 
 void printRTCIntervalEquivalent() {

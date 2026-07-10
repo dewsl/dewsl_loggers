@@ -37,9 +37,9 @@ void getSSMData() {
    * Flush UART before powering STM32.
    */
   flushSSMSerial();
-  debugPrintln("Turning ON SSM...");
-  digitalWrite(AUX_TRIG, HIGH);
-  debugPrintln("SSM should now be ON");
+  // debugPrintln("Turning ON SSM...");
+  // digitalWrite(AUX_TRIG, HIGH);    // this was brought ouside the function
+  // debugPrintln("SSM should now be ON");
 
   /*
    * Allow STM32 boot time.

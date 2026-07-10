@@ -1,5 +1,20 @@
-// V6 [sARQ] datalogger code
-// Feb 4, 2025
+/*
+V6 [sARQ] datalogger
+Feb 4, 2025
+
+Important parameters to set:
+
+Board: "ESP32 dev module"
+Erase All Flash Before Sketch Upload: "Enabled"
+Events run on: "Core 1"
+Flash Frequency: "40Mhz"
+Flash Mode: "DIO"
+Arduino Runs on: "Core 1"
+Partition Scheme: "Minimal SPIFFS (1.9MB APP with OTA/128LB SPIFFS)"
+
+*/
+
+
 extern "C" {
   
   #include "driver/rtc_io.h"        // for sleep-wake interaction
@@ -26,6 +41,8 @@ extern "C" {
   // #include "esp_sleep.h"
 
 #define NO_ESP32_CRYPT              // Disable all SHA, AES and RSA hardware acceleration
+#define FREQ_DEFAULT   80
+#define FREQ_IDLE      40
 
 /* COMMENT THIS OUT TO REMOVE PRINTS FOR DEBUGGING*/
 // #define DEBUGPRINT
@@ -99,7 +116,7 @@ BluetoothSerial BTSerial;     // Change partition to Minimal spiffs with OTA or 
 bool BtSerialFlag = false;
 
 //  DEBUG
-#define FIRMWAREVERSION               2606.24     //YYMM.DD
+#define FIRMWAREVERSION               2607.10     //YYMM.DD
 #define DEBUGTIMEOUT                  300000
 #define MAX_DATALOGGER_NAME_LENGTH    10
 #define SERIALBAUDRATE                115200
@@ -195,15 +212,11 @@ void IRAM_ATTR GSMISR() {
   ringFlag = true;
 }
 
-void IRAM_ATTR RAINISR() {
-  rainCountFlag = true;
-}
-
 void IRAM_ATTR RTCISR() {
   operationFlag = true;
 }
 
-INA219 INA219Module(0x40);                                                          //  create object and set address of INA219
+INA219 INA219Module(0x40);                                                //  create object and set address of INA219
 
 void setup() {
 
@@ -217,37 +230,39 @@ void setup() {
   rtcInit(RTC_INT);
   syncRTCwithCompileTime();                                               //  Failsafe to prevent invalid timestamps when RTC power is removed
 
-  loadDefaultParams(paramStorage);                                        // by default this should not write to the NVS
+  loadDefaultParams(paramStorage);                                        //  by default this should not write to the NVS
   uint8_t dMode = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);
-  if (dMode == 1 || dMode == 2) initializeLORA(VSPI_RST);                 // only initialize if it will be used
+  if (dMode == 1 || dMode == 2) initializeLORA(VSPI_RST);                 //  only initialize if it will be used
 
   delayMillis(1000);
   
   pinMode(COMM_SW, OUTPUT);                                               //  This is detached from GSM because other functions also use it
+  GSMConfig();                                                            //  GSM pin congifurations
   if (dMode != 2) GSMOn(); delayMillis(1000);                             //  set initial state as HIGH if GSM will be used
   pinMode(AUX_TRIG, OUTPUT);                                              //  This is detached from SSM init because other functions also use it         
   digitalWrite(AUX_TRIG, LOW);                                            //  set initial state
 
-  GSMConfig();                                                            //  GSM pin congifuration
+  
   SSMInit();                                                              //  SSM config
-  seTPowerMode();                                                         //  test power mode here
+  seTPowerMode(FREQ_DEFAULT);                                             //  test power mode here; revise this later..
   watchdogConfig();                                                       //  generate watchdog congif and run it
   requestDebug();                                                         //  debug mode
 }
 
 void loop() {                                                             // try to keep this clean so its easy to read
   
-  
-  if (_debugReq) debugFunction();                                         //  debug subprocess
+  esp_task_wdt_reset();                                                   //  reset watchdog counter
+  if (_debugReq) {debugFunction(); cpuFrequency(FREQ_IDLE);}              //  debug subprocess
   if (runOnceFlag) runOnce();                                             
   if (ringFlag) ringFunction();                                           //  do something when ring is detected
   if (rainCountFlag) rainCheck(PCNT_UNIT);                                //  temporary rain check
 
   if (operationFlag) {                                                    // Only run if RTC/scheduler sets this
+    delayMillis(1000);
     operationFlag = false;
     char operationServer[15];
 
-    cpuFrequency(80);                                                     //  return CPU frequency to stable state
+    cpuFrequency(FREQ_DEFAULT);                                           //  return CPU frequency to stable state
     delayMillis(1000);                                                    //  wait a bit...
     
     fetchParam(paramStorage, SERVER_NUMBER, operationServer, sizeof(operationServer));    //  fetch saved server number
@@ -262,10 +277,12 @@ void loop() {                                                             // try
     displayNextAlarm2(fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0));
     delayMillis(500);                                                     //  wait a bit so you get a chance to see whats happening
 
-    cpuFrequency(40);                                                     //  throttle down CPU frequency to save power; it should be around 25mA
+    cpuFrequency(FREQ_IDLE);                                               //  throttle down CPU frequency to save power; this should keep current draw around 25mA
+    delayMillis(500);                                                     //  wait a bit so you get a chance to see whats happening
   }
-  esp_task_wdt_reset();                                                   //  reset watchdog counter
-  delayMillis(10);                                                        //  to keep thread busy 
+  delayMillis(20000);                                                        //  to keep thread busy 
+  debugPrint("Free heap: ");
+  debugPrintln(ESP.getFreeHeap());
 }
 
 void wakeReason() {
@@ -361,20 +378,21 @@ void resetReason(uint8_t coreIndex) {
   }
 
 
-void powerSaving(){
+// void powerSaving(){
     // adc_digi_stop();           //  stop ADC conversions. restart ADC before use
     // adc_digi_deinitialize();   //  deinitialize ADC driver
     // WiFi.disconnect(true);     //  Disconnect from the network
     // WiFi.mode(WIFI_OFF);       //  Switch WiFi off
     // btStop();
-    setCpuFrequencyMhz(40);       //  set
-}
+//     setCpuFrequencyMhz(40);       //  set
+// }
 
 void watchdogConfig() {
   esp_task_wdt_deinit();
   esp_task_wdt_config_t wdtConfig = {
-    .timeout_ms = 600000,   // 10 seconds
-    .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,      // monitor only core 0 Idle task
+    .timeout_ms = 600000,   // 10 minutes
+    // .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,      // monitor only core 0 Idle task
+    .idle_core_mask = 0,      // monitor only core 1 task and not Idle0
     .trigger_panic = true,    // trigger panic before reset
   };
   esp_task_wdt_init(&wdtConfig);
@@ -393,3 +411,17 @@ void runOnce() {                  //  as the name suggests, this should only be 
     //  send boot message if it does                 
     //  do something for the radio
 }
+
+//  this was wrapped in a function because it might get used a lot
+void auxPowerOn() {
+  if (gpio_get_level(GPIO_NUM_26) == 0) {digitalWrite(AUX_TRIG, HIGH); debugPrintln("AUX POWER is now ON");} 
+  else debugPrintln("No action taken: AUX POWER is ON");
+  delayMillis(200);
+}
+
+void auxPowerOff() {
+  if (gpio_get_level(GPIO_NUM_26) == 1) {digitalWrite(AUX_TRIG, LOW); debugPrintln("AUX POWER is now OFF");} 
+  else debugPrintln("No action taken: AUX POWER is OFF");
+  delayMillis(200);
+}
+

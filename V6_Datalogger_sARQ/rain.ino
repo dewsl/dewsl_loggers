@@ -104,12 +104,12 @@
 
 void rainCounterInit(uint8_t rainPin, gpio_num_t rainGpio, pcnt_unit_t pcntUnit) {
   debugSysln("XXXX rainCounterInit start ");
-  pinMode(rainPin,INPUT);
-  attachInterrupt(digitalPinToInterrupt(rainPin), RAINISR, RISING);
+  // pinMode(rainPin,INPUT);
+  // attachInterrupt(digitalPinToInterrupt(rainPin), RAINISR, RISING);
   debugSysln("XXXX build pcnt config");
   pcnt_config_t cfg = configPulseCNT(rainGpio, pcntUnit);
   debugSysln("XXXX set pcnt unit using config");
-  ESP_ERROR_CHECK(pcnt_unit_config(&cfg));
+  pcnt_unit_config(&cfg);
   debugPrintln("INFO: Ignore pin pullup error.");
   debugSysln("XXXX rainCounterInit start ");
 }

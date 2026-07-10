@@ -8,6 +8,7 @@ void Operation(const char * operationServerNumber, uint8_t dataloggerMode) {
   uint8_t ssmFlag = fetchParam(paramStorage, SUBSURFACE_SENSOR_FLAG, false);
   uint8_t ubloxFlag = fetchParam(paramStorage, UBLOX_FLAG, false);
   
+  debugPrintln(">>>>  Operation START");
   GSMOn();                      //  if its is turned OFF caused by power saving; turn it of early to give time to connect
 
 
@@ -43,11 +44,15 @@ void Operation(const char * operationServerNumber, uint8_t dataloggerMode) {
   }
   else debugPrintln("DATALOGGER MODE ERROR");                                     //  You should not reach this, but try to catch it anyway
 
-  if (ssmFlag) getSSMData();                                                      //  this is placed here since all modes can have SSM
+  if (ssmFlag) {                                                                  //  this is placed here since all modes can have SSM
+    auxPowerOn();
+    getSSMData();
+    auxPowerOff();
+  }
   if (ubloxFlag) debugPrintln("Fetch UBLOX data here");                           //  this is placed here since I assumed all modes 'can' have a UBLOX module
   if (!ssmFlag && !ubloxFlag) debugPrintln("RAIN GAUGE ONLY");                    //  assumption; if it has no ssm or ublox, it operates as rain gauge only
   generateInfoMessage(infoSMS, sizeof(infoSMS));                                  //  datalogger 
-  resetRainCounter(PCNT_UNIT);                                                             //  reset rain counter after data is fetched for sending so we wont miss anything 
+  resetRainCounter(PCNT_UNIT);                                                    //  reset rain counter after data is fetched for sending so we wont miss anything 
   addToSMSStack(infoSMS);
   mDiagnosticBuilder(infoSMS, sizeof(infoSMS));
   addToSMSStack(infoSMS);
@@ -67,7 +72,7 @@ void Operation(const char * operationServerNumber, uint8_t dataloggerMode) {
       sendSMSDump("~", operationServerNumber);
 
   }
-
+  debugPrintln(">>>>  Operation END");
 }  
 
 float inputVoltage(float Vmon, long res1, long res2) {

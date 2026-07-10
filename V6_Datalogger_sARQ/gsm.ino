@@ -606,7 +606,7 @@ void sendSMSDump(const char* messageDelimilter, const char* dumpServer) {
     debugPrintln(sendCount);
     
     sprintf(tokenBuffer, "%s", sendToken);
-    debugPrintln(_globalSMSDump);
+    // debugPrintln(_globalSMSDump);
     if (loggerWithGSM(fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0))) {  // send thru GSM
       if (sendThruGSM(tokenBuffer, dumpServer)) {
         debugPrintln("Message segment sent");
@@ -640,13 +640,13 @@ void clearGlobalSMSDump() {
   for (int d = 0; d < sizeof(_globalSMSDump);d++) _globalSMSDump[d]=0x00; 
 }
 
-void seTPowerMode() {
+void seTPowerMode(uint8_t defFreq) {   //  REVISE THIS LATER; remove redundant functions..
   uint8_t pMode = fetchParam(paramStorage, POWER_SAVING_MODE, (uint8_t)0);
 
   debugPrintln("------------------------------------------------------"); 
   if (pMode == 0) {
     debugPrintln("\nINFO:\nNo power savings used.\nGSM module is (always) ON.");
-    cpuFrequency(160);       // temporarily set to 160Mhz
+    cpuFrequency(defFreq);       // temporarily set to 160Mhz
     if (digitalRead(COMM_SW) == 0) {
       GSMOn();
       GSMInit(); // this just makes sure COMM_SW is alway ON
@@ -654,11 +654,11 @@ void seTPowerMode() {
   } else if (pMode == 1) {
     debugPrintln("\nINFO:\nGSM is turned ON only during operation or when needed\nCPU frequency is reduced.");
     if (digitalRead(COMM_SW) == 1) GSMOff();
-    cpuFrequency(80);
+    cpuFrequency(defFreq);
   } else if (pMode == 3) {
     debugPrintln("\nINFO:\nGSM is turned ON only during operation or when needed\nCPU frequency is significantly reduced.");
     if (digitalRead(COMM_SW) == 1) GSMOff();
-    cpuFrequency(40);
+    cpuFrequency(defFreq);
   } else debugPrintln("Power mode value error");
   debugPrintln("------------------------------------------------------");   
 }

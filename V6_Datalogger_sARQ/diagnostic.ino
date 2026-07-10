@@ -189,7 +189,7 @@ void readINA219() {
 
 
 float readINA219VoltageCurrent (byte paramIndex) {                  //  Voltage is separated from current because these are times these are needed separately
-  bool startTrigState = false;                                      //  assumes trigger is initially disabled (false)
+  // bool startTrigState = false;                                      //  assumes trigger is initially disabled (false)
   float paramHolder = 0.00;                                         //  This is used for both voltage and current
   //  INA219 is now continously powered with current drawe <1mA
   // if (gpio_get_level(GPIO_NUM_26) == 0) {                           //  continues here is trigger is disabled
@@ -204,7 +204,7 @@ float readINA219VoltageCurrent (byte paramIndex) {                  //  Voltage 
   if (paramIndex == 0) paramHolder = INA219Module.getBusVoltage();  //  index 0 returns voltage; 1 is current
   else paramHolder = ((INA219Module.getShuntVoltage_mV())*1000)/RSHUNT; // any index above 0 returns current value   
   
-  if (startTrigState == false) digitalWrite(AUX_TRIG, LOW);;        //  return switch to initial state
+  // if (startTrigState == false) digitalWrite(AUX_TRIG, LOW);;        //  return switch to initial state
   // else                                                           //  initial state was ON.. this does't really do anything        
   return paramHolder;                                               //  return
 } 
@@ -213,15 +213,16 @@ void cpuFrequency(uint8_t freQ) {
     uint8_t cpuFreq = getCpuFrequencyMhz();
     if (cpuFreq != freQ) {
       setCpuFrequencyMhz(freQ);
-    }
-    Serial.print("CPU frequency is set to: ");
-    Serial.print(cpuFreq);
+      Serial.print("CPU frequency is set to: ");
+    } else Serial.print("CPU frequency: ");
+    Serial.print(freQ);
     Serial.print("Mhz");
     Serial.println("\n");
 }
 
 //  This was used as a function because its cleaner, and you'll only edit instance item instead of multiple
 void diagnosticCheck(uint8_t mIndex) {
+  debugPrintln("dx check");
   switch (mIndex) {
     case 1: _mValue[0] = readINA219VoltageCurrent(1); _mValue[1] = readINA219VoltageCurrent(0); break;
     case 2: _mValue[2] = readINA219VoltageCurrent(1); _mValue[3] = readINA219VoltageCurrent(0); break;
