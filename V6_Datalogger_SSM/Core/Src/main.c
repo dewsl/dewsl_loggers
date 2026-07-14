@@ -45,8 +45,6 @@ static uint32_t previousMillis = 0;
 static const uint32_t blink_interval_ms = 500;
 
 // test lang
-// test ulit
-// magrereflect kaya?
 
 /* ================= UART PRINT HELPERS ================= */
 
