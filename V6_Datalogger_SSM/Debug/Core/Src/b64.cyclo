@@ -1,9 +1,0 @@
-../Core/Src/b64.c:16:6:checkValidMsgId	3
-../Core/Src/b64.c:31:6:reverse_char_order	2
-../Core/Src/b64.c:47:6:to_base64	10
-../Core/Src/b64.c:85:6:pad_b64	3
-../Core/Src/b64.c:114:20:b64_identify_params	8
-../Core/Src/b64.c:180:6:b64_write_frame_to_dump	5
-../Core/Src/b64.c:346:7:b64_timestamp	2
-../Core/Src/b64.c:376:6:b64_process_g_temp_dump	3
-../Core/Src/b64.c:451:6:b64_build_text_msgs	11

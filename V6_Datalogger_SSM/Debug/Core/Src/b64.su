@@ -1,9 +1,0 @@
-../Core/Src/b64.c:16:6:checkValidMsgId	24	static
-../Core/Src/b64.c:31:6:reverse_char_order	40	static
-../Core/Src/b64.c:47:6:to_base64	32	static
-../Core/Src/b64.c:85:6:pad_b64	56	static
-../Core/Src/b64.c:114:20:b64_identify_params	32	static
-../Core/Src/b64.c:180:6:b64_write_frame_to_dump	96	static
-../Core/Src/b64.c:346:7:b64_timestamp	32	static
-../Core/Src/b64.c:376:6:b64_process_g_temp_dump	80	static
-../Core/Src/b64.c:451:6:b64_build_text_msgs	5176	static
