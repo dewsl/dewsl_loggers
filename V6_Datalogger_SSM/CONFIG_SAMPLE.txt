@@ -1,0 +1,10 @@
+mastername = SARTA
+columnids = 1716,1825,2571,2793,3063
+sensorVersion = 3
+dataloggerVersion = 4
+PIEZO = 0
+turn_on_delay = 5000
+broadcastTimeout = 10000
+sampling_max_retry = 3
+b64 = 1
+endofconfig
