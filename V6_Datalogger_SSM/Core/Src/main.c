@@ -44,6 +44,8 @@ static uint8_t ledState = 0;
 static uint32_t previousMillis = 0;
 static const uint32_t blink_interval_ms = 500;
 
+// test lang
+
 /* ================= UART PRINT HELPERS ================= */
 
 static void UART_Printf_Internal(UART_HandleTypeDef *huart, const char *fmt, va_list args)
