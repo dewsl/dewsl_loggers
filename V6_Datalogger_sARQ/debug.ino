@@ -87,6 +87,8 @@ void debugFunction() {
     //   debugModeStart = millis();
     //   debugPrintln("------------------------------------------------------");
     
+// changed this function "B" for rain tips live monitor
+
     } else if (inputIs(serialLineInput, "B")) {
 
         uint8_t RainCollectorType = fetchParam(paramStorage, RAIN_COLLECTOR_TYPE, (uint8_t)0);
