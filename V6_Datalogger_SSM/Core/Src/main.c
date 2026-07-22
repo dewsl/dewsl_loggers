@@ -587,9 +587,9 @@ static void operation(int sensor_type, char communication_mode[])
         strncat(g_build_final, "*", sizeof(g_build_final) - strlen(g_build_final) - 1);
         strncat(g_build_final, g_timestamp, sizeof(g_build_final) - strlen(g_build_final) - 1);
 
-        send_thru_sarq_wait_ok(g_build_final);
+        //send_thru_sarq_wait_ok(g_build_final);
     } else {
-        send_thru_sarq_wait_ok(g_build_final);
+        //send_thru_sarq_wait_ok(g_build_final);
         g_build_final[0] = '\0';
         g_build[0] = '\0';
     }

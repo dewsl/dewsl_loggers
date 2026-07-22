@@ -90,8 +90,9 @@ void debugFunction() {
     } else if (inputIs(serialLineInput, "B")) {
 
         uint8_t RainCollectorType = fetchParam(paramStorage, RAIN_COLLECTOR_TYPE, (uint8_t)0);
-        
+
         resetRainCounter(PCNT_UNIT);
+
         debugPrintln("\nCollector type:");
         if (RainCollectorType == 0)
             debugPrintln("Pronamic (0.5mm/tip)");
@@ -102,13 +103,14 @@ void debugFunction() {
         debugPrintln("Press any key to exit");
         debugPrintln("------------------------------------------------------");
 
-        uint16_t prevTips = (RTC_SLOW_MEM[EDGE_COUNT] & 0xFFFF) / 2;
+        uint16_t prevTips = getRainCount(PCNT_UNIT, false);
 
         while (!Serial.available()) {
 
-            uint16_t currentTips = (RTC_SLOW_MEM[EDGE_COUNT] & 0xFFFF) / 2;
+            uint16_t currentTips = getRainCount(PCNT_UNIT, false);
 
             if (currentTips != prevTips) {
+
                 prevTips = currentTips;
 
                 debugPrint("Rain tip count: ");
@@ -117,10 +119,11 @@ void debugFunction() {
                 debugPrint("Equivalent: ");
 
                 if (RainCollectorType == 0)
-                    debugPrintln(currentTips * 0.5);
+                    debugPrint(currentTips * 0.5);
                 else
-                    debugPrintln(currentTips * 0.2);
+                    debugPrint(currentTips * 0.2);
 
+                debugPrintln(" mm");
                 debugPrintln("------------------------------------------------------");
             }
 
