@@ -119,7 +119,7 @@ void getSSMData() {
 
 
   delayMillis(100);
-  SSMSerial.end();
+  //SSMSerial.end();
 
   if (dataSegmentCount == 0) {
     char noDataBuffer[200];
