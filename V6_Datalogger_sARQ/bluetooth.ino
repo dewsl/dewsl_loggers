@@ -11,8 +11,8 @@ void initBluetooth() {
 
   sprintf(btNameContainer, "sARQ_%s_BT", dlogName);
 
-  if (BTSerial.begin(btNameContainer)) Serial.println("Bluetooth ENABLED"); // Bt init  // append datalogger name here
-  else Serial.println("Bluetooth initialization ERROR");
+  if (BTSerial.begin(btNameContainer)) Serial.println("INFO: Bluetooth ENABLED"); // Bt init  // append datalogger name here
+  else Serial.println("WARNING: Bluetooth initialization ERROR");
 }
 
 // what else can we do here?

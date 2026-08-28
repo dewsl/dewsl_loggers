@@ -374,6 +374,47 @@ bool GSMWaitResponse(const char* targetResponse, int waitDuration, bool showResp
   // debugPrintln("function end");
   return responseValid;
 }
+
+// This is not a duplicate but an overload from the previous
+bool GSMWaitResponse(const char* targetResponse, int waitDuration, bool showResponse, char * responseLine) {
+  bool responseValid = false;
+  char toCheck[50];
+  char charBuffer;
+  char responseBuffer[300];
+  unsigned long waitStart = millis();
+  strcpy(toCheck, targetResponse);
+  toCheck[strlen(toCheck)] = 0x00;
+
+  do {
+      for (int i = 0; i < sizeof(responseBuffer); i++){
+        responseBuffer[i] = 0x00;
+      }
+      for (int j = 0; j < sizeof(responseBuffer) && GSMSerial.available() > 0 ; j++) {
+        charBuffer = GSMSerial.read();
+        if (charBuffer == '\n' || charBuffer == '\r') {
+          responseBuffer[j]=0x00;
+          break;
+        } else {
+          responseBuffer[j] = charBuffer;
+        }
+      }
+
+      if (strlen(responseBuffer) > 0 && strcmp(responseBuffer,"\n") != 0) {
+        if (showResponse) debugPrintln(responseBuffer);
+        if (strstr(responseBuffer, toCheck)) {
+          // debugPrintln(responseBuffer);
+          // debugPrintln(toCheck);
+          sprintf(responseLine, responseBuffer);
+          responseValid = true;
+          break;
+        }
+      }
+    delayMillis(50);
+  } while (!responseValid && millis() - waitStart < waitDuration);
+  // debugPrintln("function end");
+  return responseValid;
+}
+
 bool readCSQ(char * csqContainer) {
   bool responseValid = false;
   char csqSerialBuffer[50];
@@ -636,6 +677,51 @@ void sendSMSDump(const char* messageDelimilter, const char* dumpServer) {
   }  
 }
 
+void sendSMSDump2(const char* messageDelimilter, const char* dumpServer) {
+  char tokenBuffer[1000];
+  int sendCount = 1;
+
+  char testDump[1000];
+  sprintf(testDump, ">>MAMTB*AM*aP//8/0CAEQAAK/yCFFQE/Z+YB9GQHAJ+XCCIPv9w+lCBJPo+yDECGHQABZ+CCGKPnCVCXB9LPdCsC8CCMP8/5/VCGBQBAgAWCEOQH/x+5CEPQCAE/eCBSQF/ZARB/CQEAk/qCA*260821094707~>>MAMTB*AL*TP3/j/VCFXQA/m/2CFYQC/ZADCCZP//0/YB+bQK/a/qCE*260821094707~>>MAMTB*AM*XQC/Y/YCEYQB/fAbCCZQFAP/EB9*260821094707");
+
+  char * sendToken = strtok(testDump, messageDelimilter);
+  while (sendToken != NULL) {
+    if (GSMSerial) debugPrintln("GSMSerial OK");
+    else {debugPrintln("Check GSM serial/module"); break;}
+    debugPrint("\nSending segment no. ");
+    debugPrintln(sendCount);
+    
+    sprintf(tokenBuffer, "%s", sendToken);
+    // debugPrintln(_globalSMSDump);
+    if (loggerWithGSM(fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0))) {  // send thru GSM
+      if (sendThruGSM(tokenBuffer, dumpServer)) {
+        debugPrintln("Message segment sent");
+        delayMillis(random(5000,10000));                    //  introduce some delay to prevent network from blocking next SMS
+      } else {                                              //  goes here if first send attempt (if) does not go through
+        GSMReset();
+        debugPrintln("Retrying..");
+        delayMillis(5000);                                  //  add wait time for GSM module to connect 
+        if (sendThruGSM(tokenBuffer, dumpServer)) {
+          debugPrintln("Message segment sent");
+        } else {
+          debugPrintln("Retry failed");
+        }
+      }
+    } else {  // send thru LORA
+      if (sendThruLoRaWithAck(tokenBuffer,random(1000,3000),3))  {
+        debugPrintln("Message segment acknowledged");  // send thru LORA
+        delayMillis(random(1000,5000));
+      }
+      else {
+        debugPrintln("No valid response received");
+        debugPrintln("");
+      }
+    }
+    sendToken = strtok(NULL,messageDelimilter);
+    sendCount++;
+  }  
+}
+
 void clearGlobalSMSDump() {
   for (int d = 0; d < sizeof(_globalSMSDump);d++) _globalSMSDump[d]=0x00; 
 }
@@ -684,4 +770,21 @@ void mDiagnosticBuilder(char* mBuffer, size_t bufLen) {            //          T
 void ringFunction() {
   ringFlag = false;
   debugPrintln("RING");
+}
+
+float GSMVoltage() {
+  char responseLineBuffer[300];
+  float voltageBuffer = 0.00;
+  bool powerStateChange = false;
+
+  GSMSerial.write("AT+CBC\r");
+  if (GSMWaitResponse("+CBC:",1000, false, responseLineBuffer)) {
+    // debugPrintln(responseLineBuffer);
+    char * lineDelim = strrchr(responseLineBuffer, ',');
+    lineDelim++; // move index
+    float val = atof(lineDelim); // convert to int
+    voltageBuffer = (float)val/1000.0f; // scale to correct value
+    // debugPrintln(voltageBuffer);
+  }
+  return voltageBuffer;
 }

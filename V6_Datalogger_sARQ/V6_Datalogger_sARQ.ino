@@ -116,7 +116,7 @@ BluetoothSerial BTSerial;     // Change partition to Minimal spiffs with OTA or 
 bool BtSerialFlag = false;
 
 //  DEBUG
-#define FIRMWAREVERSION               2607.10     //YYMM.DD
+#define FIRMWAREVERSION               2608.27     //YYMM.DD
 #define DEBUGTIMEOUT                  300000
 #define MAX_DATALOGGER_NAME_LENGTH    10
 #define SERIALBAUDRATE                115200
@@ -124,7 +124,7 @@ bool BtSerialFlag = false;
 #define GATEWAYMODE                   1
 #define ROUTERMODE                    2
 #define arrayCount(x) (sizeof(x) / sizeof(x[0]))    // arrayCount(arr) = number of rows  arrayCount(arr[0]) = number of columns
-bool runOnceFlag                      = true; // safety  
+bool runOnceFlag                      = true;   // safety  
 bool loggerNameChange                 = false;
 bool workingMode                      = false;
 bool debugExitSkip                    = false;
@@ -158,8 +158,8 @@ volatile bool ringFlag = true;
 #define LORA_DIO1                     14
 #define LORA_DIO5                     255           //  placeholder only
 #define RF98_FREQ                     433     
-#define MAX_GATEWAY_WAIT_TIME         60000              //  300000
-#define MAX_ROUTER_COUNT              10
+#define MAX_GATEWAY_WAIT_TIME         60000         //  300000
+#define MAX_ROUTER_COUNT              10            
 SPIClass SPI3(VSPI); 
 RH_RF95 rf98(CS_NSS, LORA_DIO0);
 
@@ -218,6 +218,8 @@ void IRAM_ATTR RTCISR() {
 
 INA219 INA219Module(0x40);                                                //  create object and set address of INA219
 
+
+
 void setup() {
 
   Serial.begin(SERIALBAUDRATE);                                           //  initialize Serial
@@ -231,14 +233,14 @@ void setup() {
   syncRTCwithCompileTime();                                               //  Failsafe to prevent invalid timestamps when RTC power is removed
 
   loadDefaultParams(paramStorage);                                        //  by default this should not write to the NVS
-  uint8_t dMode = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);
-  if (dMode == 1 || dMode == 2) initializeLORA(VSPI_RST);                 //  only initialize if it will be used
+  debugPrintln("");
+  if (dMode() == 1 || dMode() == 2) initializeLORA(VSPI_RST);                 //  only initialize if it will be used
 
   delayMillis(1000);
   
   pinMode(COMM_SW, OUTPUT);                                               //  This is detached from GSM because other functions also use it
   GSMConfig();                                                            //  GSM pin congifurations
-  if (dMode != 2) GSMOn(); delayMillis(1000);                             //  set initial state as HIGH if GSM will be used
+  if (dMode() != 2) GSMOn(); delayMillis(1000);                             //  set initial state as HIGH if GSM will be used
   pinMode(AUX_TRIG, OUTPUT);                                              //  This is detached from SSM init because other functions also use it         
   digitalWrite(AUX_TRIG, LOW);                                            //  set initial state
 
@@ -266,10 +268,9 @@ void loop() {                                                             // try
     delayMillis(1000);                                                    //  wait a bit...
     
     fetchParam(paramStorage, SERVER_NUMBER, operationServer, sizeof(operationServer));    //  fetch saved server number
-    uint8_t dMode = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);                //  fetch saved datalogger mode
-    if (dMode != ROUTERMODE) GSMInit();                                   //  if datalogger has GSM module, check it first
+    if (dMode() != ROUTERMODE) GSMInit();                                   //  if datalogger has GSM module, check it first
                                                                           //  if connection is unstable it has a chance to connect before sending
-    Operation(operationServer, dMode);                                    //  run operation subprocess using saved parameters
+    Operation(operationServer, dMode());                                    //  run operation subprocess using saved parameters
     delayMillis(1000);                                                      
 
     setNextAlarm();                                                       //  set next alarm 
@@ -425,3 +426,8 @@ void auxPowerOff() {
   delayMillis(200);
 }
 
+int dMode() {
+  int modeBuffer = 0;  // error mode
+  modeBuffer = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);
+  return modeBuffer;
+}

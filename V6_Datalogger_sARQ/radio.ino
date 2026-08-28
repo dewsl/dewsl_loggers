@@ -23,8 +23,8 @@ void initializeLORA(byte RST_PIN) {
   digitalWrite(VSPI_RST, HIGH);
   delayMillis(100);                                           // wait for >5ms before any operations
 
-  if (rf98.init()) debugPrintln("LoRa initialization OK!");
-  else debugPrintln("LoRa initialization failed");
+  if (rf98.init()) debugPrintln("INFO: LoRa initialization OK!");
+  else debugPrintln("WARNING: LoRa initialization failed");
 
   if (rf98.setFrequency(RF98_FREQ)) {
     debugPrint("LoRa frequncy set to ");
@@ -45,7 +45,7 @@ void sendThruLoRa(const char *radioPacket) {
   if (!rf98.send((uint8_t *)radioPacket, packetLen))
     debugPrint("Radio packet sending failed");
   else
-    debugPrint("Radio packet sent");
+    debugPrintln("Radio packet sent");
 
   delayMillis(10);
   rf98.waitPacketSent();
@@ -274,42 +274,33 @@ int loRaFilterPass(char* payloadToCheck, int sizeOfPayload) {
 bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, uint8_t retryCount) {
   char ackResponseBuffer[300];
   char validResponse[30];
+  char nameBUffer[30];
   bool noResponse = true;
-  
-  loadNameArrayFromStorage(true);
 
-  sprintf(validResponse, "%s%s",dataloggerNameList[0],ackKey);
-  
+  getNameFromList(0, nameBUffer);
+  sprintf(validResponse, "%s%s",nameBUffer,ackKey);
+
   for (int retryIndex = 0; retryIndex <= retryCount; retryIndex++) {
     sendThruLoRa(payloadToSend);
-
     unsigned long ackWaitStart = millis();
-
     while (millis() - ackWaitStart < responseWaitTime && noResponse) {
       debugPrintln("Checking response..");
-
       receiveLoRaData(ackResponseBuffer, sizeof(ackResponseBuffer), responseWaitTime);
-
       debugPrint(ackResponseBuffer);
-
       if (inputHas(ackResponseBuffer, validResponse)) {
         debugPrintln(" << acknowledged by gateway");
-
         if (inputHas(ackResponseBuffer, "~ROUTER~")) {
           routerProcessOTAflag = true;
           sprintf(routerOTACommand, ackResponseBuffer);
         }
-
         noResponse = false;
         break;
       } else {
         debugPrintln("");
       }
     }
-
     if (!noResponse) break;
   }
-
   return !noResponse;
 }
 
@@ -323,3 +314,5 @@ void disableModems() {
   btStop();                // stops Classic BT
   esp_bt_controller_disable(); // disables BT controller
 }
+
+

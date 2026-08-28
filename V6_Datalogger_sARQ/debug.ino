@@ -89,6 +89,12 @@ void debugFunction() {
     
 // changed this function "B" for rain tips live monitor
 
+    } else if (inputIs(serialLineInput, "AA")) {
+      
+      const char* oNumber = "09762481329";
+      debugPrint("Rain tip count: ");
+      sendSMSDump2("~", oNumber);
+
     } else if (inputIs(serialLineInput, "B")) {
 
         uint8_t RainCollectorType = fetchParam(paramStorage, RAIN_COLLECTOR_TYPE, (uint8_t)0);
@@ -504,6 +510,11 @@ void debugFunction() {
       debugModeStart = millis();
       debugPrintln("------------------------------------------------------"); 
 
+    } else if (inputIs(serialLineInput, "GSM_VOLTAGE")) {
+      GSMVoltage();
+      debugModeStart = millis();
+      debugPrintln("------------------------------------------------------"); 
+
     } else if (inputIs(serialLineInput, "LORA_SEND")) {
       char testSend[50] = "sarQ test packet";
       sendThruLoRa(testSend);
@@ -727,7 +738,7 @@ void updateLoggerMode() {
     for (byte rPos = 0; rPos < initialRouterCount; rPos++) dataloggerNameList[rPos][0] = 0x00;  // obscure previous name list
     loggerNameChange = true;                                                                                // starts name change function after function end
   }
-  if (!loggerWithGSM(fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0))) GSMOff();
+  if (!loggerWithGSM(dMode()) GSMOff();
 }
 
 bool loggerWithGSM(uint8_t dMode) {

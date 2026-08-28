@@ -47,7 +47,7 @@ void getLoggerModeAndName() {
   debugPrint("Datalogger name: ");
   debugPrintln(printBuffer);
 
-  if (mode == GATEWAYMODE) {  //gateways
+  if (dMode() == GATEWAYMODE) {  //gateways
     debugPrint("\t\t GATEWAY MODE ");
     if (fetchParam(paramStorage, SUBSURFACE_SENSOR_FLAG, false)) debugPrint("with Subsurface Sensor ");
     if (fetchParam(paramStorage, UBLOX_FLAG, false)) debugPrint("+ UBLOX Module: ");
@@ -69,12 +69,12 @@ void getLoggerModeAndName() {
     
 
   } else {  // other standalone dataloggers
-    if (mode == STANDALONE) {
+    if (dMode() == STANDALONE) {
       debugPrint("\t\t STAND-ALONE DATALOGGER ");
       if (fetchParam(paramStorage, SUBSURFACE_SENSOR_FLAG, false)) debugPrint("with Subsurface Sensor ");
       if (fetchParam(paramStorage, UBLOX_FLAG, false)) debugPrint("+ UBLOX Module: ");
       if (fetchParam(paramStorage, SUBSURFACE_SENSOR_FLAG, false) == false && fetchParam(paramStorage, UBLOX_FLAG, false) == false) debugPrint("(Rain gauge only) ");
-    } else if (mode == ROUTERMODE) {
+    } else if (dMode() == ROUTERMODE) {
       Serial.print("\t\t ROUTER MODE ");
       if (fetchParam(paramStorage, SUBSURFACE_SENSOR_FLAG, false)) debugPrint("with Subsurface Sensor ");
       if (fetchParam(paramStorage, UBLOX_FLAG, false)) debugPrint("+ UBLOX Module: ");
@@ -137,6 +137,17 @@ void savedParameters() {
   debugPrint("Current Draw:\t ");
   debugPrint(readINA219VoltageCurrent(1));
   debugPrintln("mA");
+  
+  bool GSMStateChange = false;
+  if (gpio_get_level(GPIO_NUM_2) == 0) {digitalWrite(COMM_SW, HIGH); GSMStateChange = true;}
+  GSMSerial.write("AT\r");
+  if (GSMWaitResponse("OK", 2000, false)) {
+    debugPrint("GSM supply:\t ");
+    debugPrint(GSMVoltage());
+    debugPrintln("V");
+    if (GSMStateChange) digitalWrite(COMM_SW, LOW);
+  } else debugPrintln("GSM module not detected\t ");
+
   // debugPrint(readVMonADC());
   // readVMonADC();
   // readADC();

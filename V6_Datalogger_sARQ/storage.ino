@@ -192,7 +192,7 @@ void loadNameArrayFromStorage(bool showList) {
 
     if (showList) {
       for (int i = 0; i < MAX_DATALOGGER_NAME_LENGTH; i++) {
-        Serial.printf("Row %d: %s\n", i, dataloggerNameList[i]);
+        // Serial.printf("Row %d: %s\n", i, dataloggerNameList[i]);
       }
     }
 
