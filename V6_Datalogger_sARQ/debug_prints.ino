@@ -57,7 +57,7 @@ void getLoggerModeAndName() {
     debugPrintln(" Router(s) ");
     if (fetchParam(paramStorage, LISTEN_MODE, false)) debugPrintln("\t\t [Broadcasts Router Commands]");
     // Serial.println("");
-    debugPrint("\t\t Gateway name ");
+    debugPrint("\t\t Gateway name: ");
     getNameFromList(0, printBuffer);
     debugPrintln(printBuffer);
     for (byte rCount = 1; rCount <= fetchParam(paramStorage, ROUTER_COUNT, (uint8_t)0); rCount++) {

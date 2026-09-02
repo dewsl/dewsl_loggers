@@ -158,7 +158,7 @@ volatile bool ringFlag = true;
 #define LORA_DIO1                     14
 #define LORA_DIO5                     255           //  placeholder only
 #define RF98_FREQ                     433     
-#define MAX_GATEWAY_WAIT_TIME         60000         //  300000
+#define MAX_GATEWAY_WAIT_TIME         300000
 #define MAX_ROUTER_COUNT              10            
 SPIClass SPI3(VSPI); 
 RH_RF95 rf98(CS_NSS, LORA_DIO0);
@@ -391,7 +391,7 @@ void resetReason(uint8_t coreIndex) {
 void watchdogConfig() {
   esp_task_wdt_deinit();
   esp_task_wdt_config_t wdtConfig = {
-    .timeout_ms = 600000,   // 10 minutes
+    .timeout_ms = 900000,   // 15 minutes
     // .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,      // monitor only core 0 Idle task
     .idle_core_mask = 0,      // monitor only core 1 task and not Idle0
     .trigger_panic = true,    // trigger panic before reset

@@ -738,7 +738,7 @@ void updateLoggerMode() {
     for (byte rPos = 0; rPos < initialRouterCount; rPos++) dataloggerNameList[rPos][0] = 0x00;  // obscure previous name list
     loggerNameChange = true;                                                                                // starts name change function after function end
   }
-  if (!loggerWithGSM(dMode()) GSMOff();
+  if (!loggerWithGSM(dMode())) GSMOff();
 }
 
 bool loggerWithGSM(uint8_t dMode) {
