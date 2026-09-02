@@ -7,45 +7,45 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
   1 .text         0000f7c0  08000190  08000190  00001190  2**4
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-  2 .rodata       0000d5e8  0800f950  0800f950  00010950  2**3
+  2 .rodata       0000d858  0800f950  0800f950  00010950  2**3
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  3 .ARM.extab    00000000  0801cf38  0801cf38  0001e248  2**0
+  3 .ARM.extab    00000000  0801d1a8  0801d1a8  0001f248  2**0
                   CONTENTS, READONLY
-  4 .ARM          00000008  0801cf38  0801cf38  0001df38  2**2
+  4 .ARM          00000008  0801d1a8  0801d1a8  0001e1a8  2**2
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  5 .preinit_array 00000000  0801cf40  0801cf40  0001e248  2**0
+  5 .preinit_array 00000000  0801d1b0  0801d1b0  0001f248  2**0
                   CONTENTS, ALLOC, LOAD, DATA
-  6 .init_array   00000004  0801cf40  0801cf40  0001df40  2**2
+  6 .init_array   00000004  0801d1b0  0801d1b0  0001e1b0  2**2
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  7 .fini_array   00000004  0801cf44  0801cf44  0001df44  2**2
+  7 .fini_array   00000004  0801d1b4  0801d1b4  0001e1b4  2**2
                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-  8 .data         00000248  20000000  0801cf48  0001e000  2**2
+  8 .data         00000248  20000000  0801d1b8  0001f000  2**2
                   CONTENTS, ALLOC, LOAD, DATA
-  9 .bss          000064dc  20000248  0801d190  0001e248  2**2
+  9 .bss          000064dc  20000248  0801d400  0001f248  2**2
                   ALLOC
- 10 ._user_heap_stack 00000604  20006724  0801d190  0001e724  2**0
+ 10 ._user_heap_stack 00000604  20006724  0801d400  0001f724  2**0
                   ALLOC
- 11 .ARM.attributes 00000030  00000000  00000000  0001e248  2**0
+ 11 .ARM.attributes 00000030  00000000  00000000  0001f248  2**0
                   CONTENTS, READONLY
- 12 .debug_info   00017ea2  00000000  00000000  0001e278  2**0
+ 12 .debug_info   00017ea2  00000000  00000000  0001f278  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 000040d6  00000000  00000000  0003611a  2**0
+ 13 .debug_abbrev 000040d6  00000000  00000000  0003711a  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 000014d0  00000000  00000000  0003a1f0  2**3
+ 14 .debug_aranges 000014d0  00000000  00000000  0003b1f0  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_rnglists 00000ff1  00000000  00000000  0003b6c0  2**0
+ 15 .debug_rnglists 00000ff1  00000000  00000000  0003c6c0  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  0002a44c  00000000  00000000  0003c6b1  2**0
+ 16 .debug_macro  0002a44c  00000000  00000000  0003d6b1  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0001bf7c  00000000  00000000  00066afd  2**0
+ 17 .debug_line   0001bf7c  00000000  00000000  00067afd  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000f2420  00000000  00000000  00082a79  2**0
+ 18 .debug_str    000f2420  00000000  00000000  00083a79  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  00174e99  2**0
+ 19 .comment      00000043  00000000  00000000  00175e99  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00006a88  00000000  00000000  00174edc  2**2
+ 20 .debug_frame  00006a88  00000000  00000000  00175edc  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 21 .debug_line_str 0000006a  00000000  00000000  0017b964  2**0
+ 21 .debug_line_str 0000006a  00000000  00000000  0017c964  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -5574,7 +5574,7 @@ static void uppercase_inplace(char *str)
  8002d48:	f85d 7b04 	ldr.w	r7, [sp], #4
  8002d4c:	4770      	bx	lr
  8002d4e:	bf00      	nop
- 8002d50:	0801cb70 	.word	0x0801cb70
+ 8002d50:	0801cde0 	.word	0x0801cde0
 
 08002d54 <flash_fetch>:
 
@@ -6336,7 +6336,7 @@ static void uppercase_inplace(char *s)
  80032b8:	f85d 7b04 	ldr.w	r7, [sp], #4
  80032bc:	4770      	bx	lr
  80032be:	bf00      	nop
- 80032c0:	0801cb70 	.word	0x0801cb70
+ 80032c0:	0801cde0 	.word	0x0801cde0
 
 080032c4 <load_config_by_mastername>:
 
@@ -10188,7 +10188,7 @@ bool startsWithIgnoreCase(const char *str, const char *prefix)
  8004f40:	f85d 7b04 	ldr.w	r7, [sp], #4
  8004f44:	4770      	bx	lr
  8004f46:	bf00      	nop
- 8004f48:	0801cb70 	.word	0x0801cb70
+ 8004f48:	0801cde0 	.word	0x0801cde0
 
 08004f4c <process_config_line>:
 
@@ -11923,7 +11923,7 @@ LoopForever:
   ldr r1, =_edata
  800590c:	20000248 	.word	0x20000248
   ldr r2, =_sidata
- 8005910:	0801cf48 	.word	0x0801cf48
+ 8005910:	0801d1b8 	.word	0x0801d1b8
   ldr r2, =_sbss
  8005914:	20000248 	.word	0x20000248
   ldr r4, =_ebss
@@ -17396,7 +17396,7 @@ HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef  *RCC_OscInitStruct)
  8007620:	e014      	b.n	800764c <HAL_RCC_OscConfig+0x298>
  8007622:	bf00      	nop
  8007624:	40021000 	.word	0x40021000
- 8007628:	0801caa8 	.word	0x0801caa8
+ 8007628:	0801cd18 	.word	0x0801cd18
  800762c:	2000003c 	.word	0x2000003c
  8007630:	20000040 	.word	0x20000040
  8007634:	4ba0      	ldr	r3, [pc, #640]	@ (80078b8 <HAL_RCC_OscConfig+0x504>)
@@ -18701,7 +18701,7 @@ HAL_StatusTypeDef HAL_RCC_ClockConfig(RCC_ClkInitTypeDef  *RCC_ClkInitStruct, ui
  8007d56:	bd80      	pop	{r7, pc}
  8007d58:	40022000 	.word	0x40022000
  8007d5c:	40021000 	.word	0x40021000
- 8007d60:	0801caa8 	.word	0x0801caa8
+ 8007d60:	0801cd18 	.word	0x0801cd18
  8007d64:	2000003c 	.word	0x2000003c
  8007d68:	20000040 	.word	0x20000040
 
@@ -18906,7 +18906,7 @@ uint32_t HAL_RCC_GetSysClockFreq(void)
  8007e70:	4770      	bx	lr
  8007e72:	bf00      	nop
  8007e74:	40021000 	.word	0x40021000
- 8007e78:	0801cac0 	.word	0x0801cac0
+ 8007e78:	0801cd30 	.word	0x0801cd30
  8007e7c:	00f42400 	.word	0x00f42400
  8007e80:	007a1200 	.word	0x007a1200
 
@@ -18955,7 +18955,7 @@ uint32_t HAL_RCC_GetPCLK1Freq(void)
  8007ebc:	4618      	mov	r0, r3
  8007ebe:	bd80      	pop	{r7, pc}
  8007ec0:	40021000 	.word	0x40021000
- 8007ec4:	0801cab8 	.word	0x0801cab8
+ 8007ec4:	0801cd28 	.word	0x0801cd28
 
 08007ec8 <HAL_RCC_GetPCLK2Freq>:
   * @note   Each time PCLK2 changes, this function must be called to update the
@@ -18982,7 +18982,7 @@ uint32_t HAL_RCC_GetPCLK2Freq(void)
  8007ee8:	4618      	mov	r0, r3
  8007eea:	bd80      	pop	{r7, pc}
  8007eec:	40021000 	.word	0x40021000
- 8007ef0:	0801cab8 	.word	0x0801cab8
+ 8007ef0:	0801cd28 	.word	0x0801cd28
 
 08007ef4 <RCC_SetFlashLatencyFromMSIRange>:
             voltage range.
@@ -28192,7 +28192,7 @@ FRESULT create_name (	/* FR_OK: successful, FR_INVALID_NAME: could not create */
  800b4ae:	46bd      	mov	sp, r7
  800b4b0:	bd80      	pop	{r7, pc}
  800b4b2:	bf00      	nop
- 800b4b4:	0801caf0 	.word	0x0801caf0
+ 800b4b4:	0801cd60 	.word	0x0801cd60
  800b4b8:	080104b0 	.word	0x080104b0
 
 0800b4bc <follow_path>:
@@ -31322,7 +31322,7 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800c8b4:	d1f6      	bne.n	800c8a4 <_strtol_l.isra.0+0xd8>
  800c8b6:	f8c8 1000 	str.w	r1, [r8]
  800c8ba:	e794      	b.n	800c7e6 <_strtol_l.isra.0+0x1a>
- 800c8bc:	0801cb71 	.word	0x0801cb71
+ 800c8bc:	0801cde1 	.word	0x0801cde1
 
 0800c8c0 <strtol>:
  800c8c0:	4613      	mov	r3, r2
@@ -31755,11 +31755,11 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800ccd8:	e7ee      	b.n	800ccb8 <_printf_float+0x2a4>
  800ccda:	bf00      	nop
  800ccdc:	7fefffff 	.word	0x7fefffff
- 800cce0:	0801cc75 	.word	0x0801cc75
- 800cce4:	0801cc71 	.word	0x0801cc71
- 800cce8:	0801cc7d 	.word	0x0801cc7d
- 800ccec:	0801cc79 	.word	0x0801cc79
- 800ccf0:	0801cc81 	.word	0x0801cc81
+ 800cce0:	0801cee5 	.word	0x0801cee5
+ 800cce4:	0801cee1 	.word	0x0801cee1
+ 800cce8:	0801ceed 	.word	0x0801ceed
+ 800ccec:	0801cee9 	.word	0x0801cee9
+ 800ccf0:	0801cef1 	.word	0x0801cef1
  800ccf4:	6da3      	ldr	r3, [r4, #88]	@ 0x58
  800ccf6:	f8dd a028 	ldr.w	sl, [sp, #40]	@ 0x28
  800ccfa:	4553      	cmp	r3, sl
@@ -32237,8 +32237,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800d170:	2500      	movs	r5, #0
  800d172:	f104 0619 	add.w	r6, r4, #25
  800d176:	e7f5      	b.n	800d164 <_printf_i+0x220>
- 800d178:	0801cc83 	.word	0x0801cc83
- 800d17c:	0801cc94 	.word	0x0801cc94
+ 800d178:	0801cef3 	.word	0x0801cef3
+ 800d17c:	0801cf04 	.word	0x0801cf04
 
 0800d180 <std>:
  800d180:	2300      	movs	r3, #0
@@ -32999,8 +32999,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800d828:	e8bd 41f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, lr}
  800d82c:	f000 b806 	b.w	800d83c <__strtok_r>
  800d830:	2000008c 	.word	0x2000008c
- 800d834:	0801cca5 	.word	0x0801cca5
- 800d838:	0801ccbc 	.word	0x0801ccbc
+ 800d834:	0801cf15 	.word	0x0801cf15
+ 800d838:	0801cf2c 	.word	0x0801cf2c
 
 0800d83c <__strtok_r>:
  800d83c:	b5f0      	push	{r4, r5, r6, r7, lr}
@@ -33170,10 +33170,10 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800d98a:	4798      	blx	r3
  800d98c:	3601      	adds	r6, #1
  800d98e:	e7f2      	b.n	800d976 <__libc_init_array+0x1e>
- 800d990:	0801cf40 	.word	0x0801cf40
- 800d994:	0801cf40 	.word	0x0801cf40
- 800d998:	0801cf40 	.word	0x0801cf40
- 800d99c:	0801cf44 	.word	0x0801cf44
+ 800d990:	0801d1b0 	.word	0x0801d1b0
+ 800d994:	0801d1b0 	.word	0x0801d1b0
+ 800d998:	0801d1b0 	.word	0x0801d1b0
+ 800d99c:	0801d1b4 	.word	0x0801d1b4
 
 0800d9a0 <__retarget_lock_init_recursive>:
  800d9a0:	4770      	bx	lr
@@ -33227,9 +33227,9 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800d9fc:	e7f3      	b.n	800d9e6 <__assert_func+0x12>
  800d9fe:	bf00      	nop
  800da00:	2000008c 	.word	0x2000008c
- 800da04:	0801cd16 	.word	0x0801cd16
- 800da08:	0801cd23 	.word	0x0801cd23
- 800da0c:	0801cd51 	.word	0x0801cd51
+ 800da04:	0801cf86 	.word	0x0801cf86
+ 800da08:	0801cf93 	.word	0x0801cf93
+ 800da0c:	0801cfc1 	.word	0x0801cfc1
 
 0800da10 <quorem>:
  800da10:	e92d 4ff7 	stmdb	sp!, {r0, r1, r2, r4, r5, r6, r7, r8, r9, sl, fp, lr}
@@ -33614,15 +33614,15 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800dde4:	3fc68a28 	.word	0x3fc68a28
  800dde8:	509f79fb 	.word	0x509f79fb
  800ddec:	3fd34413 	.word	0x3fd34413
- 800ddf0:	0801cca5 	.word	0x0801cca5
- 800ddf4:	0801cd5f 	.word	0x0801cd5f
+ 800ddf0:	0801cf15 	.word	0x0801cf15
+ 800ddf4:	0801cfcf 	.word	0x0801cfcf
  800ddf8:	7ff00000 	.word	0x7ff00000
- 800ddfc:	0801cc82 	.word	0x0801cc82
+ 800ddfc:	0801cef2 	.word	0x0801cef2
  800de00:	3ff80000 	.word	0x3ff80000
- 800de04:	0801ce70 	.word	0x0801ce70
- 800de08:	0801cdb7 	.word	0x0801cdb7
- 800de0c:	0801cd5b 	.word	0x0801cd5b
- 800de10:	0801cc81 	.word	0x0801cc81
+ 800de04:	0801d0e0 	.word	0x0801d0e0
+ 800de08:	0801d027 	.word	0x0801d027
+ 800de0c:	0801cfcb 	.word	0x0801cfcb
+ 800de10:	0801cef1 	.word	0x0801cef1
  800de14:	f8d9 301c 	ldr.w	r3, [r9, #28]
  800de18:	6018      	str	r0, [r3, #0]
  800de1a:	9b03      	ldr	r3, [sp, #12]
@@ -33851,8 +33851,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800e098:	e9cd 0104 	strd	r0, r1, [sp, #16]
  800e09c:	e7c4      	b.n	800e028 <_dtoa_r+0x508>
  800e09e:	bf00      	nop
- 800e0a0:	0801ce70 	.word	0x0801ce70
- 800e0a4:	0801ce48 	.word	0x0801ce48
+ 800e0a0:	0801d0e0 	.word	0x0801d0e0
+ 800e0a4:	0801d0b8 	.word	0x0801d0b8
  800e0a8:	3ff00000 	.word	0x3ff00000
  800e0ac:	40240000 	.word	0x40240000
  800e0b0:	401c0000 	.word	0x401c0000
@@ -34481,8 +34481,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800e6b0:	f000 f968 	bl	800e984 <__multadd>
  800e6b4:	9002      	str	r0, [sp, #8]
  800e6b6:	e7eb      	b.n	800e690 <_dtoa_r+0xb70>
- 800e6b8:	0801cdb7 	.word	0x0801cdb7
- 800e6bc:	0801cd52 	.word	0x0801cd52
+ 800e6b8:	0801d027 	.word	0x0801d027
+ 800e6bc:	0801cfc2 	.word	0x0801cfc2
 
 0800e6c0 <_free_r>:
  800e6c0:	b538      	push	{r3, r4, r5, lr}
@@ -34766,8 +34766,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800e930:	e9c0 3303 	strd	r3, r3, [r0, #12]
  800e934:	e7f7      	b.n	800e926 <_Balloc+0x66>
  800e936:	bf00      	nop
- 800e938:	0801cca5 	.word	0x0801cca5
- 800e93c:	0801cdc8 	.word	0x0801cdc8
+ 800e938:	0801cf15 	.word	0x0801cf15
+ 800e93c:	0801d038 	.word	0x0801d038
 
 0800e940 <_Bfree>:
  800e940:	b570      	push	{r4, r5, r6, lr}
@@ -34795,8 +34795,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800e974:	6021      	str	r1, [r4, #0]
  800e976:	f843 4022 	str.w	r4, [r3, r2, lsl #2]
  800e97a:	bd70      	pop	{r4, r5, r6, pc}
- 800e97c:	0801cca5 	.word	0x0801cca5
- 800e980:	0801cdc8 	.word	0x0801cdc8
+ 800e97c:	0801cf15 	.word	0x0801cf15
+ 800e980:	0801d038 	.word	0x0801d038
 
 0800e984 <__multadd>:
  800e984:	e92d 41f0 	stmdb	sp!, {r4, r5, r6, r7, r8, lr}
@@ -34850,8 +34850,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800ea00:	6125      	str	r5, [r4, #16]
  800ea02:	4620      	mov	r0, r4
  800ea04:	e8bd 81f0 	ldmia.w	sp!, {r4, r5, r6, r7, r8, pc}
- 800ea08:	0801cdb7 	.word	0x0801cdb7
- 800ea0c:	0801cdc8 	.word	0x0801cdc8
+ 800ea08:	0801d027 	.word	0x0801d027
+ 800ea0c:	0801d038 	.word	0x0801d038
 
 0800ea10 <__hi0bits>:
  800ea10:	f5b0 3f80 	cmp.w	r0, #65536	@ 0x10000
@@ -34941,8 +34941,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800eac6:	6103      	str	r3, [r0, #16]
  800eac8:	bd10      	pop	{r4, pc}
  800eaca:	bf00      	nop
- 800eacc:	0801cdb7 	.word	0x0801cdb7
- 800ead0:	0801cdc8 	.word	0x0801cdc8
+ 800eacc:	0801d027 	.word	0x0801d027
+ 800ead0:	0801d038 	.word	0x0801d038
 
 0800ead4 <__multiply>:
  800ead4:	e92d 4ff0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, fp, lr}
@@ -35061,8 +35061,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800ec0a:	e79f      	b.n	800eb4c <__multiply+0x78>
  800ec0c:	3e01      	subs	r6, #1
  800ec0e:	e7a1      	b.n	800eb54 <__multiply+0x80>
- 800ec10:	0801cdb7 	.word	0x0801cdb7
- 800ec14:	0801cdc8 	.word	0x0801cdc8
+ 800ec10:	0801d027 	.word	0x0801d027
+ 800ec14:	0801d038 	.word	0x0801d038
 
 0800ec18 <__pow5mult>:
  800ec18:	e92d 43f8 	stmdb	sp!, {r3, r4, r5, r6, r7, r8, r9, lr}
@@ -35130,9 +35130,9 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800ecb8:	4630      	mov	r0, r6
  800ecba:	e8bd 83f8 	ldmia.w	sp!, {r3, r4, r5, r6, r7, r8, r9, pc}
  800ecbe:	bf00      	nop
- 800ecc0:	0801ce3c 	.word	0x0801ce3c
- 800ecc4:	0801cca5 	.word	0x0801cca5
- 800ecc8:	0801cdc8 	.word	0x0801cdc8
+ 800ecc0:	0801d0ac 	.word	0x0801d0ac
+ 800ecc4:	0801cf15 	.word	0x0801cf15
+ 800ecc8:	0801d038 	.word	0x0801d038
 
 0800eccc <__lshift>:
  800eccc:	e92d 47f0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, lr}
@@ -35211,8 +35211,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800ed96:	d8f9      	bhi.n	800ed8c <__lshift+0xc0>
  800ed98:	e7ea      	b.n	800ed70 <__lshift+0xa4>
  800ed9a:	bf00      	nop
- 800ed9c:	0801cdb7 	.word	0x0801cdb7
- 800eda0:	0801cdc8 	.word	0x0801cdc8
+ 800ed9c:	0801d027 	.word	0x0801d027
+ 800eda0:	0801d038 	.word	0x0801d038
 
 0800eda4 <__mcmp>:
  800eda4:	690a      	ldr	r2, [r1, #16]
@@ -35348,8 +35348,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800eef6:	3f01      	subs	r7, #1
  800eef8:	e7e7      	b.n	800eeca <__mdiff+0xee>
  800eefa:	bf00      	nop
- 800eefc:	0801cdb7 	.word	0x0801cdb7
- 800ef00:	0801cdc8 	.word	0x0801cdc8
+ 800eefc:	0801d027 	.word	0x0801d027
+ 800ef00:	0801d038 	.word	0x0801d038
 
 0800ef04 <__d2b>:
  800ef04:	e92d 43f7 	stmdb	sp!, {r0, r1, r2, r4, r5, r6, r7, r8, r9, lr}
@@ -35415,8 +35415,8 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800efa2:	f7ff fd35 	bl	800ea10 <__hi0bits>
  800efa6:	ebc0 1042 	rsb	r0, r0, r2, lsl #5
  800efaa:	e7e5      	b.n	800ef78 <__d2b+0x74>
- 800efac:	0801cdb7 	.word	0x0801cdb7
- 800efb0:	0801cdc8 	.word	0x0801cdc8
+ 800efac:	0801d027 	.word	0x0801d027
+ 800efb0:	0801d038 	.word	0x0801d038
 
 0800efb4 <__ssputs_r>:
  800efb4:	e92d 47f0 	stmdb	sp!, {r4, r5, r6, r7, r8, r9, sl, lr}
@@ -35693,11 +35693,11 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800f248:	4638      	mov	r0, r7
  800f24a:	f7fd fe7b 	bl	800cf44 <_printf_i>
  800f24e:	e7ed      	b.n	800f22c <_svfiprintf_r+0x1c0>
- 800f250:	0801ce21 	.word	0x0801ce21
- 800f254:	0801ce2b 	.word	0x0801ce2b
+ 800f250:	0801d091 	.word	0x0801d091
+ 800f254:	0801d09b 	.word	0x0801d09b
  800f258:	0800ca15 	.word	0x0800ca15
  800f25c:	0800efb5 	.word	0x0800efb5
- 800f260:	0801ce27 	.word	0x0801ce27
+ 800f260:	0801d097 	.word	0x0801d097
 
 0800f264 <__sfputc_r>:
  800f264:	6893      	ldr	r3, [r2, #8]
@@ -35963,11 +35963,11 @@ uint8_t FATFS_LinkDriver(const Diskio_drvTypeDef *drv, char *path)
  800f4cc:	4630      	mov	r0, r6
  800f4ce:	f7fd fd39 	bl	800cf44 <_printf_i>
  800f4d2:	e7e4      	b.n	800f49e <_vfiprintf_r+0x1e6>
- 800f4d4:	0801ce21 	.word	0x0801ce21
- 800f4d8:	0801ce2b 	.word	0x0801ce2b
+ 800f4d4:	0801d091 	.word	0x0801d091
+ 800f4d8:	0801d09b 	.word	0x0801d09b
  800f4dc:	0800ca15 	.word	0x0800ca15
  800f4e0:	0800f293 	.word	0x0800f293
- 800f4e4:	0801ce27 	.word	0x0801ce27
+ 800f4e4:	0801d097 	.word	0x0801d097
 
 0800f4e8 <__sflush_r>:
  800f4e8:	f9b1 200c 	ldrsh.w	r2, [r1, #12]

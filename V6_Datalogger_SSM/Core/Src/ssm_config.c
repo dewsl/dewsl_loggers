@@ -71,18 +71,18 @@ const libConfig config_container[] = {
 		    1                                 // b64
 		  },
 
-//		  {
-//		    "SARTB",                          // Mastername (5 char string)
-//		    "1144,1835,1977,2083,2208,2235,2292,2311,2378,2561,2932,3156,3239,3436,3543",  // column IDs
-//		    15,                                // number of nodes
-//		    3,                                // sensor version
-//		    4,                                // datalogger version
-//		    0,                                // piezo
-//		    1000,                              // turn on delay
-//		    10000,                             // broadcast timeout
-//		    3,                                // max sampling retry
-//		    1                                 // b64
-//		  },
+		  {
+		    "SARTB",                          // Mastername (5 char string)
+		    "2311,2346,3094,3156,3239,3252,3298,3543",  // column IDs
+		    8,                                // number of nodes
+		    3,                                // sensor version
+		    4,                                // datalogger version
+		    0,                                // piezo
+		    1000,                              // turn on delay
+		    10000,                             // broadcast timeout
+		    3,                                // max sampling retry
+		    1                                 // b64
+		  },
 
 		  { "AGBSB","2647,2674,2683,2695,2719,2738,2768,2779,2793,2794,2833,2857,2865,2800,2904,2946,2961,2903,2964,2965",20,3,4,0,1000,3000,2,1 },
 		  { "AGBTA","850,799,1134,967,637,580,510,492,432,429,383,245",12,2,4,0,1000,3000,2,1 },
