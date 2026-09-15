@@ -40,6 +40,7 @@ void loadDefaultParams(const char * namespaceName) {
     storageSpace.putInt(POWER_SAVING_MODE,0);
     storageSpace.putInt(RAIN_COLLECTOR_TYPE,0);
     storageSpace.putInt(RAIN_DATA_TYPE,0);
+    storageSpace.putBool(NERF_INFO_STRING, false);
     storageSpace.putInt(BATTERY_TYPE,0);
     storageSpace.putInt(LORA_RECEIVE_MODE,0);
     storageSpace.putInt(SELF_RESET_HOUR,0);

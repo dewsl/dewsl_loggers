@@ -597,13 +597,29 @@ void generateInfoMessage(char* infoContainer, size_t containerSize) {           
   }
   delayMillis(1000);
   rainBuffer = getRainCount(PCNT_UNIT_0, false);
-  sprintf(infoContainer,"%sW,%0.2f,%0.2f,%0.2f,%u,%s",
+
+  char delimiter = ',';
+
+  if (fetchParam(paramStorage, NERF_INFO_STRING, false)) {
+    delimiter = '^';
+  }
+
+  snprintf(
+    infoContainer,
+    containerSize,
+    "%sW%c%0.2f%c%0.2f%c%0.2f%c%u%c%s",
     dlogName,
+    delimiter,
     readRTCTemp(),
-    (rainBuffer*rainMultiplier),
+    delimiter,
+    (rainBuffer * rainMultiplier),
+    delimiter,
     battVolt,
+    delimiter,
     CSQ,
-    _timestamp); 
+    delimiter,
+    _timestamp
+  ); 
 }
 
 void addToSMSStack(const char* payloadToAdd) {

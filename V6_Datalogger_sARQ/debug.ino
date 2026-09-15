@@ -528,6 +528,47 @@ void debugFunction() {
       debugModeStart = millis();
       debugPrintln("------------------------------------------------------"); 
     
+    } else if (inputIs(serialLineInput, "NERF_INFO_STRING") || inputIs(serialLineInput, "S")) {
+
+      bool currentNerfState = fetchParam(paramStorage, NERF_INFO_STRING, false);
+
+      debugPrint("Info string Mode: ");
+
+      if (currentNerfState) {
+        debugPrintln("MODIFIED");
+        debugPrintln("Revert information/diagnostic string delimiter to NORMAL?");
+      } 
+      else {
+        debugPrintln("NORMAL");
+        debugPrintln("Modify information/diagnostic string delimiter?");
+        debugPrintln("This will prevent it from being parsed by office scripts.");
+      }
+
+      if (changeParameter()) {
+
+        currentNerfState = !currentNerfState;
+
+        storeParam(paramStorage, NERF_INFO_STRING, currentNerfState);
+
+        debugPrint("Info string Mode: ");
+
+        if (currentNerfState)
+          debugPrintln("MODIFIED");
+        else
+          debugPrintln("NORMAL");
+
+        delayMillis(1000);
+
+        char infoTemp[100];
+        generateInfoMessage(infoTemp, sizeof(infoTemp));
+
+        debugPrintln("Generated info string:");
+        debugPrintln(infoTemp);
+      }
+
+      debugModeStart = millis();
+      debugPrintln("------------------------------------------------------");
+
     } else if (inputIs(serialLineInput, "INFO_STRING")) {
       debugPrintln("Generating info strings");
       char infoStrContainer[100];

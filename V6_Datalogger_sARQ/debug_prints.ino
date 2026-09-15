@@ -26,6 +26,7 @@ void printMenu() {
   // Serial.println(F("[Q] Text [Thread] Mode"));
   // Serial.println(F("[R] Update SELF RESET alarm time."));
   // Serial.println(F("[X] Exit Debug mode."));
+  debugPrintln("[S] Toggle information/diagnostic string delimiter");
   debugPrintln(" ");
   debugPrintln("------------------------------------------------------");
 }
@@ -127,6 +128,12 @@ void savedParameters() {
   debugPrint("Rain data type:\t ");
   if (fetchParam(paramStorage, RAIN_DATA_TYPE, (uint8_t)0) == 0) debugPrintln("Sends converted \"mm\" equivalent");
   else debugPrintln("Sends RAW TIP COUNT");
+
+  debugPrint("Info string mode:\t ");
+  if (fetchParam(paramStorage, NERF_INFO_STRING, false))
+    debugPrintln("MODIFIED");
+  else
+    debugPrintln("NORMAL");  
 
   // debugPrint("Battery type:\t ");
   // if (fetchParam(paramStorage, BATTERY_TYPE, (uint8_t)0) == 1) debugPrintln("Li-ion");
