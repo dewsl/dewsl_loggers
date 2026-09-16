@@ -33,11 +33,13 @@ extern "C" {
 #include <esp_err.h>
 #include <nvs_flash.h>
 #include <INA219.h>
+#include <WiFi.h>
 #include "esp_task_wdt.h"
 #include "driver/pcnt.h"
 #include "esp_wifi.h"
 #include "esp_bt.h"
 #include "esp32/rom/rtc.h"
+#include "esp_system.h"
   // #include "esp_sleep.h"
 
 #define NO_ESP32_CRYPT              // Disable all SHA, AES and RSA hardware acceleration
@@ -81,7 +83,6 @@ RTC_DATA_ATTR volatile uint16_t rainCountFlag = 0;               //  test counte
 // const char* ssid = "ESP32OTA";
 // const char* password = "senslopeDay"; 
 
-
 //  NVS handler here and key IDS
 Preferences storageSpace;
 //  why is this defined instead of just using simple strings?
@@ -117,7 +118,7 @@ BluetoothSerial BTSerial;     // Change partition to Minimal spiffs with OTA or 
 bool BtSerialFlag = false;
 
 //  DEBUG
-#define FIRMWAREVERSION               2608.27     //YYMM.DD
+#define FIRMWAREVERSION               2609.16     //YYMM.DD
 #define DEBUGTIMEOUT                  300000
 #define MAX_DATALOGGER_NAME_LENGTH    10
 #define SERIALBAUDRATE                115200
@@ -146,7 +147,7 @@ const char dumpDelimiter[]            = "~";
 char _globalSMSDump[3000];
 char _resetCauseContainer[500];
 float _mValue[6];                                   //  this counts 3 the pairs of data for voltage and current monitoring (pre-peri-post) 
-volatile bool ringFlag = true;
+volatile bool ringFlag = false;
 
 //LoRa
 #define CS_NSS                        5             // this must be HIGH during boot or may cause errors; inherent to ESP32
@@ -211,6 +212,7 @@ void IRAM_ATTR LoRaISR() {
 ///
 void IRAM_ATTR GSMISR() {
   ringFlag = true;
+  // if (_debugReq) Serial.println("RNG");
 }
 
 void IRAM_ATTR RTCISR() {
@@ -223,9 +225,9 @@ INA219 INA219Module(0x40);                                                //  cr
 
 void setup() {
 
+  char resetMsg[100] = {0};
   Serial.begin(SERIALBAUDRATE);                                           //  initialize Serial
   Wire.begin();
-  resetReason(0); resetReason(1);                                         // check reset reasons
 
   rainCounterInit(RAIN_PIN, GPIO_NUM_36, PCNT_UNIT);
   resetRainCounter(PCNT_UNIT);
@@ -241,14 +243,22 @@ void setup() {
   
   pinMode(COMM_SW, OUTPUT);                                               //  This is detached from GSM because other functions also use it
   GSMConfig();                                                            //  GSM pin congifurations
-  if (dMode() != 2) GSMOn(); delayMillis(1000);                             //  set initial state as HIGH if GSM will be used
+  GSMInitInt(GSM_RING_INT);
+  if (dMode() != 2) GSMOn();
+  delayMillis(1000);                                                      //  set initial state as HIGH if GSM will be used
   pinMode(AUX_TRIG, OUTPUT);                                              //  This is detached from SSM init because other functions also use it         
   digitalWrite(AUX_TRIG, LOW);                                            //  set initial state
 
+  setupWiFi("ESP_WIFI_T", "senslopeDay");
   
   SSMInit();                                                              //  SSM config
   seTPowerMode(FREQ_DEFAULT);                                             //  test power mode here; revise this later..
   watchdogConfig();                                                       //  generate watchdog congif and run it
+
+  getResetReason(resetMsg);                                               //  Show reset reason
+  debugPrint("Last reset cause: ");
+  debugPrintln(resetMsg);
+  
   requestDebug();                                                         //  debug mode
 }
 
@@ -256,8 +266,19 @@ void loop() {                                                             // try
   
   esp_task_wdt_reset();                                                   //  reset watchdog counter
   if (_debugReq) {debugFunction(); cpuFrequency(FREQ_IDLE);}              //  debug subprocess
-  if (runOnceFlag) runOnce();                                             
-  if (ringFlag) ringFunction();                                           //  do something when ring is detected
+  if (runOnceFlag) {
+    cpuFrequency(FREQ_DEFAULT);
+    runOnce();
+    cpuFrequency(FREQ_IDLE);
+    }                                             
+  if (ringFlag) {                                                         //  do something when ring is detected
+    cpuFrequency(FREQ_DEFAULT);
+    GSMDeinitInt(GSM_RING_INT);
+    delayMillis(1000);                                                    //  addda abit of delay to overlap SMS arrival time
+    ringFunction();
+    GSMInitInt(GSM_RING_INT);
+    cpuFrequency(FREQ_IDLE);
+  }
   if (rainCountFlag) rainCheck(PCNT_UNIT);                                //  temporary rain check
 
   if (operationFlag) {                                                    // Only run if RTC/scheduler sets this
@@ -269,9 +290,10 @@ void loop() {                                                             // try
     delayMillis(1000);                                                    //  wait a bit...
     
     fetchParam(paramStorage, SERVER_NUMBER, operationServer, sizeof(operationServer));    //  fetch saved server number
-    if (dMode() != ROUTERMODE) GSMInit();                                   //  if datalogger has GSM module, check it first
+    if (dMode() != ROUTERMODE)  GSMInit();                                //  if datalogger has GSM module, check it first
                                                                           //  if connection is unstable it has a chance to connect before sending
-    Operation(operationServer, dMode());                                    //  run operation subprocess using saved parameters
+    GSMDeinitInt(GSM_RING_INT);
+    Operation(operationServer, dMode());                                  //  run operation subprocess using saved parameters
     delayMillis(1000);                                                      
 
     setNextAlarm();                                                       //  set next alarm 
@@ -279,12 +301,13 @@ void loop() {                                                             // try
     displayNextAlarm2(fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0));
     delayMillis(500);                                                     //  wait a bit so you get a chance to see whats happening
 
-    cpuFrequency(FREQ_IDLE);                                               //  throttle down CPU frequency to save power; this should keep current draw around 25mA
+    GSMInitInt(GSM_RING_INT);
+    cpuFrequency(FREQ_IDLE);                                              //  throttle down CPU frequency to save power; this should keep current draw around 25mA
     delayMillis(500);                                                     //  wait a bit so you get a chance to see whats happening
   }
-  delayMillis(20000);                                                        //  to keep thread busy 
-  debugPrint("Free heap: ");
-  debugPrintln(ESP.getFreeHeap());
+  delayMillis(1000);                                                      //  to keep thread busy 
+  // debugPrint("Free heap: ");
+  // debugPrintln(ESP.getFreeHeap());
 }
 
 void wakeReason() {
@@ -305,27 +328,21 @@ void wakeReason() {
   }
 }
 
-void resetReason(uint8_t coreIndex) {
-  if (coreIndex == 0)  debugPrint("CPU0 reset reason: ");
-  if (coreIndex == 1)  debugPrint("CPU1 reset reason: ");
-  if (coreIndex > 1)  {debugPrintln("Index ???"); return;}
-  switch (rtc_get_reset_reason(coreIndex)) {
-    case 1 : debugPrintln ("POWERON_RESET");break;          /**<1,  Vbat power on reset*/
-    case 3 : debugPrintln ("SW_RESET");break;               /**<3,  Software reset digital core*/
-    case 4 : debugPrintln ("OWDT_RESET");break;             /**<4,  Legacy watch dog reset digital core*/
-    case 5 : debugPrintln ("DEEPSLEEP_RESET");break;        /**<5,  Deep Sleep reset digital core*/
-    case 6 : debugPrintln ("SDIO_RESET");break;             /**<6,  Reset by SLC module, reset digital core*/
-    case 7 : debugPrintln ("TG0WDT_SYS_RESET");break;       /**<7,  Timer Group0 Watch dog reset digital core*/
-    case 8 : debugPrintln ("TG1WDT_SYS_RESET");break;       /**<8,  Timer Group1 Watch dog reset digital core*/
-    case 9 : debugPrintln ("RTCWDT_SYS_RESET");break;       /**<9,  RTC Watch dog Reset digital core*/
-    case 10 : debugPrintln ("INTRUSION_RESET");break;       /**<10, Instrusion tested to reset CPU*/
-    case 11 : debugPrintln ("TGWDT_CPU_RESET");break;       /**<11, Time Group reset CPU*/
-    case 12 : debugPrintln ("SW_CPU_RESET");break;          /**<12, Software reset CPU*/
-    case 13 : debugPrintln ("RTCWDT_CPU_RESET");break;      /**<13, RTC Watch dog Reset CPU*/
-    case 14 : debugPrintln ("EXT_CPU_RESET");break;         /**<14, for APP CPU, reseted by PRO CPU*/
-    case 15 : debugPrintln ("RTCWDT_BROWN_OUT_RESET");break;/**<15, Reset when the vdd voltage is not stable*/
-    case 16 : debugPrintln ("RTCWDT_RTC_RESET");break;      /**<16, RTC Watch dog reset digital core and rtc module*/
-    default : debugPrintln ("NO_MEAN");
+void getResetReason(char *errContainer) {
+  esp_reset_reason_t reason = esp_reset_reason();
+
+  switch (reason) {
+    case ESP_RST_UNKNOWN:   strcpy(errContainer, "[Unknown]"); break;                 // Unidentified cause
+    case ESP_RST_POWERON:   strcpy(errContainer, "Normal Power-on"); break;           // Normal boot after power is applied
+    case ESP_RST_EXT:       strcpy(errContainer, "External reset triggered"); break;  // External reset signal triggered
+    case ESP_RST_SW:        strcpy(errContainer, "Software reset requested"); break;  // Reset via software call
+    case ESP_RST_PANIC:     strcpy(errContainer, "Panic reset"); break;               // CPU panic or fatal error
+    case ESP_RST_INT_WDT:   strcpy(errContainer, "Interrupt watchdog"); break;        // Interrupt watchdog timeout
+    case ESP_RST_TASK_WDT:  strcpy(errContainer, "Task watchdog"); break;             // Task watchdog timeout
+    case ESP_RST_WDT:       strcpy(errContainer, "Other watchdog reset[?]"); break;   // General watchdog reset
+    case ESP_RST_DEEPSLEEP: strcpy(errContainer, "Wake from deep sleep"); break;      // Woke up from deep sleep
+    case ESP_RST_BROWNOUT:  strcpy(errContainer, "Brownout detected"); break;         // Voltage dropped below safe level or slide switch was actuated
+    default:                strcpy(errContainer, "[Unknown]"); break;                 // Not all reset causes are ported to Arduino framework
   }
 }
 
@@ -404,11 +421,13 @@ void runOnce() {                  //  as the name suggests, this should only be 
     runOnceFlag = false;          //  reset flag so it doesn't run again
     rainCountFlag = false;        //  reset RAIN flag; if gate should be initially false
     ringFlag = false;             //  reset RING flag; if gate should be initially false
+    if (dMode() != 2) bootMsg();  //  send boot message except for router mode
     setNextAlarm();               //  prime the alarm for first operation to trigger subsequent alarms       
     displayNextAlarm2(fetchParam(paramStorage, ALARM_INTERVAL,(uint8_t)0));         //  name
     debugPrintln("");   
-    disableModems();              // disable uncessary peripherals
-
+    disableModems();              // disable uncessary peripherals   
+    
+    debugPrintln("\n>>>>>> Starting loop operation >>>>>");
     //  check if datalogger has GSM
     //  send boot message if it does                 
     //  do something for the radio
@@ -431,4 +450,12 @@ int dMode() {
   int modeBuffer = 0;  // error mode
   modeBuffer = fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0);
   return modeBuffer;
+}
+
+
+void dataloggerReset() {
+  // Add reset necessary reset sequence here
+  debugPrintln("\nINFO: Datalogger will reset");
+  delayMillis(1000);
+  esp_restart();
 }

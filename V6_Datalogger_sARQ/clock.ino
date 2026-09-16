@@ -1,6 +1,6 @@
 void rtcInit(byte RTC_INT_PIN) {
   pinMode(RTC_INT_PIN, INPUT);
-  attachInterrupt(RTC_INT_PIN, RTCISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(RTC_INT_PIN), RTCISR, FALLING);
   if (!rtc.begin()) {                             
     debugPrintln("RTC module ERROR");
     delayMillis(1000);
@@ -38,6 +38,20 @@ void dateTimeNow() {
   sprintf(timeString, "  %s %d %s %d %02d:%02d:%02d %s",dayNames[now.dayOfTheWeek()],now.day(),monthNames[now.month()],now.year(),hour12f,now.minute(),now.second(),dayPeriod);
   debugPrintln(timeString);
 }
+
+// overload copy from above
+void dateTimeNow(char* dateTimeContainer, size_t containerSize) {
+  DateTime now = rtc.now();
+  char timeString[100];
+  const char * dayPeriod = (now.hour() < 12) ? "AM" : "PM";
+  const char * dayNames[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+  const char * monthNames[] = {"","Jan","Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+  uint8_t hour12f = (now.hour() % 12) == 0 ? 12 : (now.hour() % 12) ;
+  snprintf(dateTimeContainer, containerSize, "  %s %d %s %d %02d:%02d:%02d %s",dayNames[now.dayOfTheWeek()],now.day(),monthNames[now.month()],now.year(),hour12f,now.minute(),now.second(),dayPeriod);
+  //  make sure container is large enough
+}
+
+
 
 void timeNow() {
   DateTime now = rtc.now();

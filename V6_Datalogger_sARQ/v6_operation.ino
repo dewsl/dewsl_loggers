@@ -8,7 +8,7 @@ void Operation(const char * operationServerNumber, uint8_t dataloggerMode) {
   uint8_t ssmFlag = fetchParam(paramStorage, SUBSURFACE_SENSOR_FLAG, false);
   uint8_t ubloxFlag = fetchParam(paramStorage, UBLOX_FLAG, false);
   
-  debugPrintln(">>>>  Operation START");
+  debugPrintln(">>>>> Operation START >>>>>");
   GSMOn();                      //  if its is turned OFF caused by power saving; turn it of early to give time to connect
 
 
@@ -72,7 +72,7 @@ void Operation(const char * operationServerNumber, uint8_t dataloggerMode) {
       sendSMSDump("~", operationServerNumber);
 
   }
-  debugPrintln(">>>>  Operation END");
+  debugPrintln(">>>>> Operation END >>>>>");
 }  
 
 float inputVoltage(float Vmon, long res1, long res2) {

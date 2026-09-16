@@ -273,7 +273,7 @@ int loRaFilterPass(char* payloadToCheck, int sizeOfPayload) {
 
 bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, uint8_t retryCount) {
   char ackResponseBuffer[300];
-  char validResponse[30];
+  char validResponse[50];
   char nameBUffer[30];
   bool noResponse = true;
 
@@ -305,7 +305,6 @@ bool sendThruLoRaWithAck(const char* payloadToSend, uint32_t responseWaitTime, u
 }
 
 void disableModems() {
-  debugPrintln("Disabling Wifi & Bt...");
   // Disable Wi-Fi
   WiFi.disconnect(true);   // disconnect and erase config
   WiFi.mode(WIFI_OFF);     // turn off Wi-Fi hardware
@@ -313,6 +312,7 @@ void disableModems() {
   // Disable Bluetooth
   btStop();                // stops Classic BT
   esp_bt_controller_disable(); // disables BT controller
+  debugPrintln("INFO: Wifi & Bluetooth have been disabled");
 }
 
 

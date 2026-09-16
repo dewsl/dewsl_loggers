@@ -197,6 +197,7 @@ void savedParameters() {
 
 void checkSender(char* senderNum) {
   if(inputHas(senderNum,"9762481329")) debugPrint("[DAN]");
+  else if(inputHas(senderNum,"9498211578")) debugPrint("[CLIFF]");
   else if(inputHas(senderNum,"9175972526")) debugPrint("[GLOBE1]");
   else if(inputHas(senderNum,"9175388301")) debugPrint("[GLOBE2]");
   else if(inputHas(senderNum,"9476873967")) debugPrint("[KATE]");

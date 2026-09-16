@@ -190,6 +190,18 @@ void debugFunction() {
       debugModeStart = millis();
       debugPrintln("------------------------------------------------------");
 
+    } else if (inputIs(serialLineInput, "EE")) {
+
+      debugPrint("Current timestamp: ");
+      getTimeStamp(_timestamp, sizeof(_timestamp));
+      debugPrintln(_timestamp);
+      debugPrintln("Set timestamp to compile time.");
+      if (changeParameter()) {
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+      }
+      debugModeStart = millis();
+      debugPrintln("------------------------------------------------------");
+
     } else if (inputIs(serialLineInput, "F")) {
       bool GSMOnFlag = true;
       if (fetchParam(paramStorage, DATALOGGER_MODE, (uint8_t)0) != ROUTERMODE) {
@@ -439,7 +451,7 @@ void debugFunction() {
 
     } else if (inputIs(serialLineInput, "X") || inputIs(serialLineInput, "EXIT")) {
 
-      // CheckingSavedParameters();
+      if (dMode() != 2) deleteSIMMessages();
       debugPrintln("Quitting debug mode...");
       resetRainCounter(PCNT_UNIT);
       // resetRainTips();
@@ -509,6 +521,34 @@ void debugFunction() {
       savedParameters();
       debugModeStart = millis();
       debugPrintln("------------------------------------------------------"); 
+
+    } else if (inputIs(serialLineInput, "CPU80")) {
+      cpuFrequency(80);
+      debugModeStart = millis();
+      debugPrintln("------------------------------------------------------"); 
+
+    } else if (inputIs(serialLineInput, "CPU160")) {
+      cpuFrequency(160);
+      debugModeStart = millis();
+      debugPrintln("------------------------------------------------------"); 
+
+    } else if (inputIs(serialLineInput, "WIFI_CONNECT")) {
+      setupWiFi("ESP_WIFI_T", "senslopeDay");
+      debugModeStart = millis();
+      debugPrintln("------------------------------------------------------"); 
+
+    } else if (inputIs(serialLineInput, "WIFI_STATUS")) {
+      if (WiFi.status() == WL_CONNECTED) debugPrintln("WIFI connected");
+      debugModeStart = millis();
+      debugPrintln("------------------------------------------------------"); 
+
+    } else if (inputIs(serialLineInput, "WIFI_SCAN")) {
+      int n = WiFi.scanNetworks();
+      for (int i = 0; i < n; i++) Serial.printf("%d: %s (%d dBm)n", i+1, WiFi.SSID(i).c_str(), WiFi.RSSI(i));
+      debugModeStart = millis();
+      debugPrintln("------------------------------------------------------"); 
+
+
 
     } else if (inputIs(serialLineInput, "GSM_VOLTAGE")) {
       GSMVoltage();
@@ -779,7 +819,8 @@ void updateLoggerMode() {
     for (byte rPos = 0; rPos < initialRouterCount; rPos++) dataloggerNameList[rPos][0] = 0x00;  // obscure previous name list
     loggerNameChange = true;                                                                                // starts name change function after function end
   }
-  if (!loggerWithGSM(dMode())) GSMOff();
+  if (!loggerWithGSM(dMode())) {deleteSIMMessages(); GSMOff();}
+
 }
 
 bool loggerWithGSM(uint8_t dMode) {

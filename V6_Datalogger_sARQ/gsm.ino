@@ -1,16 +1,26 @@
 
 void GSMInitInt(byte INT_PIN) {
   pinMode(INT_PIN, INPUT);
-  attachInterrupt(INT_PIN, GSMISR, FALLING);
+  attachInterrupt(digitalPinToInterrupt(INT_PIN), GSMISR, FALLING);
+}
+void GSMDeinitInt(byte INT_PIN) {
+  detachInterrupt(digitalPinToInterrupt(INT_PIN));
 }
 
+
 void GSMOff(){
-  GSMSerial.write("AT+CMGDA=\"DEL ALL\"\r");
-  delayMillis(1000);
-  if (GSMWaitResponse("OK", 15000, false)) { if (Serial)Serial.println("Deleted all SMS from SIM");}
-  debugPrintln("Turning OFF GSM module..");
+  debugPrintln("INFO: GSM POWER OFF");
   digitalWrite(COMM_SW, LOW);
   delayMillis(500);
+}
+
+/// Deletes all SMS on SIM card
+void deleteSIMMessages() {
+  GSMSerial.flush();
+  GSMSerial.write("AT+CMGDA=\"DEL ALL\"\r");
+  delayMillis(300);
+  if (GSMWaitResponse("OK", 15000, false)) {if (Serial) Serial.println("Deleted all SMS from SIM");}
+  else {if (Serial) Serial.println("Delete SIM SMS failed");}
 }
 
 // void GSMOff(){
@@ -19,7 +29,7 @@ void GSMOff(){
 
 void GSMOn(){
   if (digitalRead(COMM_SW) == 0) {
-    debugPrintln("Turning ON GSM module..");
+    debugPrintln("INFO: GSM POWER ON");
     digitalWrite(GSM_RST, HIGH);
     delayMillis(500);
     digitalWrite(COMM_SW, HIGH);
@@ -217,7 +227,7 @@ bool GSMInit() {
   int initTimeout = 25000;
   uint8_t errorCount = 0;
 
-  debugPrintln("Connecting GSM to network...");
+  debugPrintln("Checking GSM status...");
 
   // detachInterrupt(digitalPinToInterrupt(GSM_RING_INT));
 
@@ -277,7 +287,7 @@ bool GSMInit() {
       // debugPrintln("");
       delayMillis(500);
       // attachInterrupt(digitalPinToInterrupt(GSMINT), GSMISR, FALLING);
-      attachInterrupt(digitalPinToInterrupt(GSM_RING_INT), GSMISR, FALLING);
+      // attachInterrupt(digitalPinToInterrupt(GSM_RING_INT), GSMISR, FALLING);
       initOK = true;
       break;
     }
@@ -375,7 +385,8 @@ bool GSMWaitResponse(const char* targetResponse, int waitDuration, bool showResp
   return responseValid;
 }
 
-// This is not a duplicate but an overload from the previous
+//  This is not a duplicate but an overload from the previous
+//  Provides a container for the response line targeted 
 bool GSMWaitResponse(const char* targetResponse, int waitDuration, bool showResponse, char * responseLine) {
   bool responseValid = false;
   char toCheck[50];
@@ -435,6 +446,7 @@ bool checkServerNumber(char * numberQuery) {
   char numberBuffer[20];
   strcpy(numberBuffer, numberQuery);
   if (inputIs(numberBuffer,"DAN")) strcpy(numberQuery,"09762481329");
+  else if (inputIs(numberBuffer,"CLIFF")) strcpy(numberQuery,"9498211578");
   else if (inputIs(numberBuffer,"GLOBE1")) strcpy(numberQuery,"09175972526");
   else if (inputIs(numberBuffer,"GLOBE2")) strcpy(numberQuery,"09175388301");
   else if (inputIs(numberBuffer,"KATE")) strcpy(numberQuery,"09476873967");
@@ -784,8 +796,19 @@ void mDiagnosticBuilder(char* mBuffer, size_t bufLen) {            //          T
 }
 
 void ringFunction() {
+  char senderNum[20] = {0};
+  char senderBod[500] = {0};
+  char sendTs[100] = {0};
   ringFlag = false;
   debugPrintln("RING");
+  delayMillis(2000);
+  extractSMSdata(senderBod, sizeof(senderBod), senderNum, sizeof(senderNum), sendTs, sizeof(sendTs));
+  debugPrintln("SMS Details: ");
+  debugPrintln(senderBod);
+  debugPrintln(senderNum);
+  debugPrintln(sendTs);
+  checkOTACommand(senderBod, senderNum, sendTs);
+  deleteSIMMessages();
 }
 
 float GSMVoltage() {
@@ -803,4 +826,99 @@ float GSMVoltage() {
     // debugPrintln(voltageBuffer);
   }
   return voltageBuffer;
+}
+
+void extractSMSdata(char *msgBody, size_t bodySize, char * senderNum, size_t numSize, char* msgTS, size_t tsSize) {
+
+  char OTALineBuffer[3000] = {0};
+  char msgDate[50] = {0};
+  char msgTime[50] = {0};
+  // char msgBodyBuffer[3000] = {0};
+  // char msgSenderBuffer[100] = {0};
+  char OTASegmentPosBuffer[100] = {0};
+  char OTAchar;
+  bool findCMGL = false;
+  int otaPos = 0;
+
+  GSMSerial.write("AT+CMGL=\"ALL\"\r");
+  delayMillis(500);
+
+  while (GSMSerial.available() > 0 ) {
+    OTAchar = GSMSerial.read();                                           //  read
+    if (OTAchar == '\n' || OTAchar == '\r') OTALineBuffer[otaPos] = ',';  //  replace character with delimiter
+    else OTALineBuffer[otaPos] = OTAchar;                                 //  use character as is
+    otaPos++;                                                             //  increment to fill buffer
+    if (otaPos > sizeof(OTALineBuffer)-2) break;                          //  overflow failsafe
+  }
+  OTALineBuffer[otaPos] = 0x00;
+
+  // process entire gsm buffer line here
+  uint8_t segmentPos = 0;
+  debugPrint("SERIAL DUMP: ");
+  debugPrintln(OTALineBuffer);
+  char * otaSegment = strtok(OTALineBuffer, ",\"");
+  while (otaSegment != NULL) {
+
+    sprintf(OTASegmentPosBuffer,"%s",otaSegment);                                         //  if inbox message "+CMGL: n" indicator is found, begin tracking segment position
+    // debugPrintln(OTASegmentPosBuffer);
+    if (strstr(OTASegmentPosBuffer, "+CMGL:") && !findCMGL) findCMGL = true;              //  this stops comparing once CMGL is found
+    if (segmentPos == 2 && findCMGL) sprintf(senderNum, "%s", otaSegment);          //  2nd index from CMGL should be the sender's number
+    if (segmentPos == 3 && findCMGL) sprintf(msgDate, "%s", otaSegment);                  //  
+    if (segmentPos == 4 && findCMGL) sprintf(msgTime, "%s", otaSegment);                  //
+    if (segmentPos == 5 && findCMGL) sprintf(msgBody, "%s", otaSegment);            //
+    if (segmentPos == 6) break;// add segmentPos for ts
+    otaSegment = strtok(NULL,",\"");
+
+    //  begin tracking message segment/token position here when +CMGL is found
+    //  minsan ay may naiiwan na extra characters sa gsm buffer from previous commands
+    //  kaya dito pa lang magsisimula and counting sa start ng actual output mulas sa "AT+CMGL" command
+    if (findCMGL) segmentPos++;
+    
+  }
+
+ sprintf(msgTS,"%s,%s",msgDate,msgTime);
+//  resetWatchdog();
+  // debugPrintln(msgSenderBuffer);
+  // debugPrintln(msgTS);
+  // debugPrintln(msgBodyBuffer);
+  GSMSerial.flush(); while(GSMSerial.available()) GSMSerial.read();
+}
+
+void checkOTACommand(const char * smsLine, const char * smsSender, const char * smsTS) {
+  char serverName[10], smsReply[1000];
+  getNameFromList(0, serverName);
+  
+
+  if (inputIs(smsLine, "RESET:SENSLOPE:")) {                        
+    sprintf(smsReply, "%s: Datalogger will reset.", serverName);        //  compose reply message
+    deleteSIMMessages();                                                //  delete message to prevent reset loop
+    sendThruGSM(smsReply, smsSender);                                   //  send reply first before resetting GSM
+    delayMillis(1000);
+    dataloggerReset();                                                  //  reset function
+  }
+  else if (inputIs(smsLine, "SMSTIMEUPDATE:SENSLOPE:")) {                        
+    char timeBuf[100] = {0};
+    updateTsNetworkFormat(smsTS);
+    dateTimeNow(timeBuf, sizeof(timeBuf));
+    sprintf(smsReply, "%s: Current datetime - %s", serverName, timeBuf);      //  compose reply message
+    sendThruGSM(smsReply, smsSender);                                   //  send reply first before resetting GSM
+    delayMillis(1000);
+  }
+
+  // else if (inputIs(smsLine, "SMSTIMEUPDATE:SENSLOPE:")) {      // insert other commands here
+  // }
+
+}
+
+void bootMsg() {
+  char dlogName[10] = {0}, bootMsgBody[1000] = {0}, resetMsg[100] = {0}, timeBuf[100] = {0}, bootServerNum[15] = {0};
+  fetchParam(paramStorage,SERVER_NUMBER, bootServerNum, sizeof(bootServerNum));
+  getNameFromList(0, dlogName);
+  getResetReason(resetMsg);
+  dateTimeNow(timeBuf, sizeof(timeBuf));
+  snprintf(bootMsgBody, sizeof(bootMsgBody), "%s: LOGGER POWER UP\nCurrent datetime - %s\n\nLast reset cause: %s", dlogName, timeBuf, resetMsg);
+  GSMDeinitInt(GSM_RING_INT);                                                //
+  sendThruGSM(bootMsgBody, bootServerNum);                                   //  send reply first before resetting GSM
+  GSMInitInt(GSM_RING_INT);
+  delayMillis(1000);
 }

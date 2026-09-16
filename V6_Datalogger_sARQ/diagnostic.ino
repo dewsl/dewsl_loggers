@@ -222,7 +222,8 @@ void cpuFrequency(uint8_t freQ) {
 
 //  This was used as a function because its cleaner, and you'll only edit instance item instead of multiple
 void diagnosticCheck(uint8_t mIndex) {
-  debugPrintln("dx check");
+  debugPrint("dx check ");
+  debugPrintln(mIndex);
   switch (mIndex) {
     case 1: _mValue[0] = readINA219VoltageCurrent(1); _mValue[1] = readINA219VoltageCurrent(0); break;
     case 2: _mValue[2] = readINA219VoltageCurrent(1); _mValue[3] = readINA219VoltageCurrent(0); break;
